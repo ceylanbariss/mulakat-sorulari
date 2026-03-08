@@ -14,14 +14,14 @@ interface Stats { questions: number; categories: number; announcements: number; 
 
 const CARD_VAR = {
   hidden: { opacity: 0, y: 20 },
-  show:   { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.45 } },
+  show: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1] as const, duration: 0.45 } },
 }
 
 const STAT_CARDS = [
-  { label: 'Toplam Soru',  key: 'questions'     as const, icon: BookOpen,  color: '#06b6d4', path: '/admin/sorular' },
-  { label: 'Kategori',     key: 'categories'    as const, icon: Tag,        color: '#8b5cf6', path: '/admin/kategoriler' },
-  { label: 'Duyuru',       key: 'announcements' as const, icon: Megaphone,  color: '#f59e0b', path: '/admin/duyurular' },
-  { label: 'Kullanıcı',    key: 'users'         as const, icon: Users,      color: '#10b981', path: '/admin/kullanicilar' },
+  { label: 'Toplam Soru', key: 'questions' as const, icon: BookOpen, color: '#06b6d4', path: '/admin/sorular' },
+  { label: 'Kategori', key: 'categories' as const, icon: Tag, color: '#8b5cf6', path: '/admin/kategoriler' },
+  { label: 'Duyuru', key: 'announcements' as const, icon: Megaphone, color: '#f59e0b', path: '/admin/duyurular' },
+  { label: 'Kullanıcı', key: 'users' as const, icon: Users, color: '#10b981', path: '/admin/kullanicilar' },
 ]
 
 export function AdminDashboard() {

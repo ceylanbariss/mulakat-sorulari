@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, ReactNode } from 'react'
+import React, { useEffect, useRef, type ReactNode } from 'react'
 
 interface GlowCardProps {
   children?: ReactNode
@@ -11,11 +11,11 @@ interface GlowCardProps {
 }
 
 const glowColorMap = {
-  blue:   { base: 220, spread: 200 },
+  blue: { base: 220, spread: 200 },
   purple: { base: 280, spread: 300 },
-  green:  { base: 120, spread: 200 },
-  red:    { base: 0,   spread: 200 },
-  orange: { base: 30,  spread: 200 },
+  green: { base: 120, spread: 200 },
+  red: { base: 0, spread: 200 },
+  orange: { base: 30, spread: 200 },
 }
 
 const sizeMap = {
@@ -128,7 +128,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
     touchAction: 'none',
   }
 
-  if (width !== undefined)  inlineStyles.width  = typeof width  === 'number' ? `${width}px`  : width
+  if (width !== undefined) inlineStyles.width = typeof width === 'number' ? `${width}px` : width
   if (height !== undefined) inlineStyles.height = typeof height === 'number' ? `${height}px` : height
 
   return (
@@ -136,11 +136,11 @@ const GlowCard: React.FC<GlowCardProps> = ({
       <style dangerouslySetInnerHTML={{ __html: beforeAfterStyles }} />
       <div
         ref={cardRef}
-        data-glow
+        data-glow="true"
         style={inlineStyles}
         className={`${customSize ? '' : sizeMap[size]} rounded-2xl relative grid grid-rows-[1fr_auto] shadow-[0_1rem_2rem_-1rem_black] p-6 gap-4 backdrop-blur-[5px] ${className}`}
       >
-        <div ref={innerRef} data-glow />
+        <div ref={innerRef} data-glow="true" />
         {children}
       </div>
     </>
