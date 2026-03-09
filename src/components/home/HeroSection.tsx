@@ -46,17 +46,17 @@ export function HeroSection() {
         <motion.div
           animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
           transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ position: 'absolute', top: '-15%', left: '-10%', width: '700px', height: '700px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 65%)', filter: 'blur(60px)' }}
+          style={{ position: 'absolute', top: '-15%', left: '-10%', width: '700px', height: '700px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 65%)', filter: 'blur(60px)', willChange: 'transform' }}
         />
         <motion.div
           animate={{ x: [0, -30, 0], y: [0, 40, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-          style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 65%)', filter: 'blur(60px)' }}
+          style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 65%)', filter: 'blur(60px)', willChange: 'transform' }}
         />
         <motion.div
           animate={{ x: [0, 20, 0], y: [0, 20, 0] }}
           transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          style={{ position: 'absolute', top: '30%', left: '45%', width: '350px', height: '350px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 65%)', filter: 'blur(40px)' }}
+          style={{ position: 'absolute', top: '30%', left: '45%', width: '350px', height: '350px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 65%)', filter: 'blur(40px)', willChange: 'transform' }}
         />
       </div>
 
