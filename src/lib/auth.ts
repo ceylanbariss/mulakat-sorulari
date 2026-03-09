@@ -2,12 +2,21 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as _signOut,
   sendPasswordResetEmail,
   updateProfile,
   type AuthError,
 } from 'firebase/auth'
 import { auth, googleProvider } from './firebase'
+
+// Mobile browsers block popups — use redirect flow instead
+const isMobile = () =>
+  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  ('ontouchstart' in window && window.innerWidth < 1024)
+
+export { getRedirectResult, auth as _auth }
 
 // ─── Türkçe hata mesajları ────────────────────────────────────────────────────
 
@@ -46,6 +55,10 @@ export async function signupWithEmail(name: string, email: string, password: str
 }
 
 export async function loginWithGoogle() {
+  if (isMobile()) {
+    // signInWithRedirect navigates away — onAuthStateChanged handles the result on return
+    return signInWithRedirect(auth, googleProvider)
+  }
   return signInWithPopup(auth, googleProvider)
 }
 

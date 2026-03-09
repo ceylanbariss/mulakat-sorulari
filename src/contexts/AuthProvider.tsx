@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { serverTimestamp } from 'firebase/firestore'
 import { auth } from '../lib/firebase'
+import { getRedirectResult } from '../lib/auth'
 import { useAuthStore } from '../store/useAuthStore'
 import { setDocument, userProfilesCol } from '../lib/firestore'
 
@@ -15,6 +16,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setLoading = useAuthStore(s => s.setLoading)
 
   useEffect(() => {
+    // On mobile, Google sign-in uses redirect flow — process the result on return
+    getRedirectResult(auth).catch(() => { /* ignore — onAuthStateChanged handles the user */ })
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       setLoading(false)

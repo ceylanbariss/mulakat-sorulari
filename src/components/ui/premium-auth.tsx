@@ -328,6 +328,9 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
     setLoading(true); setErrors({})
     try {
       const result = await firebaseLoginWithGoogle()
+      // Mobile: signInWithRedirect returns void and navigates away — result will be null/undefined
+      // Desktop: signInWithPopup returns UserCredential
+      if (!result || !('user' in result)) return
       setSuccessMsg('Google ile giriş başarılı!')
       onSuccess?.({ email: result.user.email ?? '', name: result.user.displayName ?? undefined })
     } catch (err) {
