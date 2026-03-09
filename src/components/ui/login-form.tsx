@@ -137,19 +137,37 @@ export function SmokeyBackground({
     const [r, g, b] = hexToRgb(color)
     gl.uniform3f(uColorLocation, r, g, b)
 
-    let rafId: number
-    const render = () => {
+    // Set canvas size once and on resize — NOT inside the render loop
+    const resizeCanvas = () => {
       const width = canvas.clientWidth
       const height = canvas.clientHeight
-      canvas.width = width
-      canvas.height = height
-      gl.viewport(0, 0, width, height)
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width
+        canvas.height = height
+        gl.viewport(0, 0, width, height)
+        gl.uniform2f(iResolutionLocation, width, height)
+      }
+    }
+    resizeCanvas()
+    window.addEventListener('resize', resizeCanvas)
+
+    // Cap to 30fps to prevent mobile lag
+    const TARGET_FPS = 30
+    const FRAME_INTERVAL = 1000 / TARGET_FPS
+    let lastFrameTime = 0
+
+    let rafId: number
+    const render = (timestamp: number) => {
+      rafId = requestAnimationFrame(render)
+      if (timestamp - lastFrameTime < FRAME_INTERVAL) return
+      lastFrameTime = timestamp
 
       const currentTime = (Date.now() - startTime) / 1000
       const { x, y } = mouseRef.current
       const hovering = hoveringRef.current
+      const width = canvas.width
+      const height = canvas.height
 
-      gl.uniform2f(iResolutionLocation, width, height)
       gl.uniform1f(iTimeLocation, currentTime)
       gl.uniform2f(
         iMouseLocation,
@@ -158,7 +176,6 @@ export function SmokeyBackground({
       )
 
       gl.drawArrays(gl.TRIANGLES, 0, 6)
-      rafId = requestAnimationFrame(render)
     }
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -172,10 +189,11 @@ export function SmokeyBackground({
     canvas.addEventListener('mouseenter', handleMouseEnter)
     canvas.addEventListener('mouseleave', handleMouseLeave)
 
-    render()
+    rafId = requestAnimationFrame(render)
 
     return () => {
       cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', resizeCanvas)
       canvas.removeEventListener('mousemove', handleMouseMove)
       canvas.removeEventListener('mouseenter', handleMouseEnter)
       canvas.removeEventListener('mouseleave', handleMouseLeave)

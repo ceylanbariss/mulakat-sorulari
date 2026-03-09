@@ -13,8 +13,9 @@ const AnoAI = () => {
     // Performance: disabled antialias and forced high-performance
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // Performance: cap pixel ratio to 1 for high-DPI screens/mobile
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+    // Performance: cap pixel ratio lower on mobile for better performance
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 768;
+    renderer.setPixelRatio(isMobile ? Math.min(window.devicePixelRatio, 0.6) : Math.min(window.devicePixelRatio, 1));
 
     // Add canvas class to make it fit properly
     renderer.domElement.className = "w-full h-full object-cover";
@@ -94,13 +95,20 @@ const AnoAI = () => {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
+    // Cap to 30fps to prevent lag on mobile/low-end devices
+    const TARGET_FPS = 30;
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
+    let lastFrameTime = 0;
     let frameId: number;
-    const animate = () => {
-      material.uniforms.iTime.value += 0.016;
-      renderer.render(scene, camera);
+    const animate = (timestamp: number) => {
       frameId = requestAnimationFrame(animate);
+      if (timestamp - lastFrameTime < FRAME_INTERVAL) return;
+      const delta = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
+      lastFrameTime = timestamp;
+      material.uniforms.iTime.value += delta;
+      renderer.render(scene, camera);
     };
-    animate();
+    frameId = requestAnimationFrame(animate);
 
     const handleResize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
