@@ -11,12 +11,7 @@ import {
 } from 'firebase/auth'
 import { auth, googleProvider } from './firebase'
 
-// Mobile browsers block popups — use redirect flow instead
-const isMobile = () =>
-  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-  ('ontouchstart' in window && window.innerWidth < 1024)
-
-export { getRedirectResult, auth as _auth }
+export { getRedirectResult }
 
 // ─── Türkçe hata mesajları ────────────────────────────────────────────────────
 
@@ -33,10 +28,14 @@ export function translateAuthError(error: unknown): string {
     case 'auth/network-request-failed':    return 'Bağlantı hatası. İnternet bağlantınızı kontrol edin'
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':   return 'Google girişi iptal edildi'
-    case 'auth/popup-blocked':             return 'Popup engellendi. Lütfen izin verin ve tekrar deneyin'
+    case 'auth/popup-blocked':             return 'Popup engellendi. Tarayıcı ayarlarından popup\'a izin verin ve tekrar deneyin'
     case 'auth/account-exists-with-different-credential':
                                            return 'Bu e-posta başka bir yöntemle kayıtlı'
-    default:                               return 'Bir hata oluştu. Lütfen tekrar deneyin'
+    case 'auth/unauthorized-domain':       return 'Bu alan adı Google girişi için yetkilendirilmemiş. Firebase Console\'dan domain ekleyin'
+    case 'auth/operation-not-supported-in-this-environment':
+                                           return 'Bu tarayıcıda Google girişi desteklenmiyor. E-posta ile giriş yapın'
+    case 'auth/internal-error':            return 'Google ile bağlantı kurulamadı. İnternet bağlantınızı kontrol edin'
+    default:                               return `Bir hata oluştu. Lütfen tekrar deneyin`
   }
 }
 
@@ -55,11 +54,17 @@ export async function signupWithEmail(name: string, email: string, password: str
 }
 
 export async function loginWithGoogle() {
-  if (isMobile()) {
-    // signInWithRedirect navigates away — onAuthStateChanged handles the result on return
-    return signInWithRedirect(auth, googleProvider)
+  try {
+    // Try popup first — works when triggered by direct user gesture
+    return await signInWithPopup(auth, googleProvider)
+  } catch (err) {
+    const code = (err as AuthError)?.code
+    // Only fall back to redirect if popup was explicitly blocked by the browser
+    if (code === 'auth/popup-blocked') {
+      return signInWithRedirect(auth, googleProvider)
+    }
+    throw err
   }
-  return signInWithPopup(auth, googleProvider)
 }
 
 export async function resetPassword(email: string) {
