@@ -67,18 +67,20 @@ export function CategoryGrid() {
           </p>
         </motion.div>
 
-        {/* Bento grid */}
+        {/* Bento grid — 2 cols on mobile, 5 cols bento on desktop */}
         <motion.div
           variants={container}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-60px' }}
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}
+          className="grid grid-cols-2 md:grid-cols-5"
+          style={{ gap: '14px' }}
         >
           {categories.map((cat, i) => {
             const Icon = ICONS[cat.id as keyof typeof ICONS]
             const glow = GLOW_COLORS[cat.id] || 'rgba(59,130,246,0.25)'
             const span = SPANS[i % SPANS.length]
+            const spanClass = span === 3 ? 'col-span-1 md:col-span-3' : 'col-span-1 md:col-span-2'
 
             return (
               <motion.div
@@ -86,17 +88,17 @@ export function CategoryGrid() {
                 variants={cardVariant}
                 onClick={() => navigate(`/sorular/${cat.id}`)}
                 whileHover={{ y: -6, transition: { duration: 0.22 } }}
+                className={spanClass}
                 style={{
-                  gridColumn: `span ${span}`,
-                  borderRadius: '24px',
-                  padding: '28px',
+                  borderRadius: '20px',
+                  padding: '20px',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '20px',
+                  gap: '16px',
                   overflow: 'hidden',
                   position: 'relative',
-                  minHeight: '200px',
+                  minHeight: '180px',
                   background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.75)',
                   border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
                   backdropFilter: 'blur(12px)',
@@ -120,8 +122,8 @@ export function CategoryGrid() {
 
                 {/* Icon + arrow */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cat.color}18`, border: `1px solid ${cat.color}30` }}>
-                    {Icon ? <Icon size={22} style={{ color: cat.color }} strokeWidth={1.75} /> : <span style={{ fontSize: 22 }}>{cat.emoji}</span>}
+                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cat.color}18`, border: `1px solid ${cat.color}30`, flexShrink: 0 }}>
+                    {Icon ? <Icon size={20} style={{ color: cat.color }} strokeWidth={1.75} /> : <span style={{ fontSize: 20 }}>{cat.emoji}</span>}
                   </div>
                   <div className="bento-arrow" style={{ width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', opacity: 0, transform: 'translateY(-4px)', transition: 'opacity 0.2s, transform 0.2s' }}>
                     <ArrowUpRight size={14} style={{ color: d ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)' }} />
@@ -130,8 +132,8 @@ export function CategoryGrid() {
 
                 {/* Content */}
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ fontWeight: 800, color: d ? 'white' : '#0f172a', fontSize: '18px', marginBottom: '8px', letterSpacing: '-0.02em' }}>{cat.label}</h3>
-                  <p style={{ fontSize: '14px', color: d ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.7)', lineHeight: 1.65 }}>
+                  <h3 style={{ fontWeight: 800, color: d ? 'white' : '#0f172a', fontSize: '16px', marginBottom: '6px', letterSpacing: '-0.02em' }}>{cat.label}</h3>
+                  <p style={{ fontSize: '13px', color: d ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.7)', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
                     {cat.description}
                   </p>
                 </div>

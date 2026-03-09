@@ -69,9 +69,9 @@ export function HowItWorks() {
         </motion.div>
 
         {/* Steps */}
-        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 relative" style={{ gap: '20px', marginBottom: '20px' }}>
           {/* Gradient connector — desktop only */}
-          <div style={{
+          <div className="hidden md:block" style={{
             position: 'absolute',
             top: '44px',
             left: 'calc(16.67% + 28px)',
@@ -88,7 +88,8 @@ export function HowItWorks() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
-              style={{ borderRadius: '24px', padding: '32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '20px', position: 'relative', background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.75)', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)', backdropFilter: 'blur(12px)' }}
+              className="flex flex-col items-center text-center relative"
+            style={{ borderRadius: '24px', padding: '28px 20px', gap: '16px', background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.75)', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)', backdropFilter: 'blur(12px)' }}
             >
               {/* Step number badge */}
               <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', width: '28px', height: '28px', borderRadius: '50%', background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900, color: 'white', boxShadow: `0 4px 12px ${glow}` }}>
