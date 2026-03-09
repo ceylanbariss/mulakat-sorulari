@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react'
 import { PageWrapper } from '../layout/PageWrapper'
 import { useAppStore } from '../../store/useAppStore'
-import AnoAI from '../ui/animated-shader-background'
 
 const STATS = [
   { value: '375+', label: 'Uzman Soru' },
@@ -39,8 +38,6 @@ export function HeroSection() {
           : 'linear-gradient(160deg, #eef2ff 0%, #f0f4ff 50%, #f8fafc 100%)',
       }}
     >
-      <AnoAI />
-
       {/* Animated ambient blobs */}
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         <motion.div
