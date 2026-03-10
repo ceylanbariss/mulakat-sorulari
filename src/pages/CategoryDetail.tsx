@@ -1,11 +1,13 @@
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { ChevronRight, CreditCard, ListChecks, PenLine, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Badge } from '../components/ui/Badge'
 import { useCategories } from '../hooks/useCategories'
 import { useQuestions } from '../hooks/useQuestions'
 import { useAppStore } from '../store/useAppStore'
+import { getAll, subcategoriesCol, where } from '../lib/firestore'
 
 const MODES = [
   {
@@ -64,8 +66,21 @@ export function CategoryDetail() {
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
 
+  const [selectedSub, setSelectedSub] = useState('')
+  const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string }>>([])
+
+  useEffect(() => {
+    if (!kategori) return
+    setSelectedSub('')
+    getAll<{ name: string; slug: string; orderIndex?: number }>(subcategoriesCol(), where('categoryId', '==', kategori))
+      .then(docs => {
+        const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
+        setSubcats(sorted as any)
+      })
+  }, [kategori])
+
   const { categories, loading: catsLoading } = useCategories()
-  const { questions, loading: qsLoading } = useQuestions(kategori)
+  const { questions, loading: qsLoading } = useQuestions(kategori, selectedSub || undefined)
 
   if (catsLoading || qsLoading) return null // Veya loading spinner
 
@@ -115,6 +130,49 @@ export function CategoryDetail() {
           </div>
         </motion.div>
 
+        {/* Alt Dal Filtresi */}
+        {subcats.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+            className="mb-8"
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alt Dal</p>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {[{ name: 'Tümü', slug: '' }, ...subcats].map(sub => {
+                const active = selectedSub === sub.slug
+                return (
+                  <button
+                    key={sub.slug || '__all__'}
+                    onClick={() => setSelectedSub(sub.slug)}
+                    style={{
+                      flexShrink: 0,
+                      padding: '7px 16px',
+                      borderRadius: 999,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      border: active
+                        ? `1px solid ${category?.color ?? '#3b82f6'}60`
+                        : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                      background: active
+                        ? `${category?.color ?? '#3b82f6'}18`
+                        : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
+                      color: active
+                        ? category?.color ?? '#3b82f6'
+                        : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
+                    }}
+                  >
+                    {sub.name}
+                  </button>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+
         {/* Mod Seçimi */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -132,7 +190,7 @@ export function CategoryDetail() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.08 }}
                   whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                  onClick={() => navigate(`/antrenman/${mode.id}?kategori=${kategori}`)}
+                  onClick={() => navigate(`/antrenman/${mode.id}?kategori=${kategori}${selectedSub ? `&altdal=${selectedSub}` : ''}`)}
                   style={{
                     cursor: 'pointer',
                     borderRadius: '20px',

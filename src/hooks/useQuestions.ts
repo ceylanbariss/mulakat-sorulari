@@ -4,7 +4,7 @@ import { getAllQuestions, type Question } from '../data/questions'
 
 export type QuestionDoc = Question & { _id: string }
 
-export function useQuestions(category?: string) {
+export function useQuestions(category?: string, subcategory?: string) {
   const [questions, setQuestions] = useState<QuestionDoc[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -21,6 +21,9 @@ export function useQuestions(category?: string) {
         if (category) {
           all = all.filter(q => q.category === category)
         }
+        if (subcategory) {
+          all = all.filter(q => q.subcategory === subcategory)
+        }
         if (isMounted) {
           setQuestions(all)
           setLoading(false)
@@ -31,7 +34,7 @@ export function useQuestions(category?: string) {
       isMounted = false
       unsub()
     }
-  }, [category])
+  }, [category, subcategory])
 
   return { questions, loading }
 }

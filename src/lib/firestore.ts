@@ -9,6 +9,7 @@ import {
   deleteDoc as _deleteDoc,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp,
   type DocumentData,
@@ -21,6 +22,7 @@ import { db } from './firebase'
 
 export const questionsCol = () => collection(db, 'questions')
 export const categoriesCol = () => collection(db, 'categories')
+export const subcategoriesCol = () => collection(db, 'subcategories')
 export const announcementsCol = () => collection(db, 'announcements')
 export const userProfilesCol = () => collection(db, 'userProfiles')
 
@@ -89,4 +91,4 @@ export function subscribeCollection<T>(
 
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────
 
-export { orderBy, serverTimestamp }
+export { orderBy, serverTimestamp, where }

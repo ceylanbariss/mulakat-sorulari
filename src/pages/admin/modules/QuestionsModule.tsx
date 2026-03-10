@@ -3,8 +3,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Plus, Search, Pencil, Trash2, X, BookOpen, Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  questionsCol, categoriesCol,
-  addDocument, setDocument, updateDocument, deleteDocument, subscribeCollection,
+  questionsCol, categoriesCol, subcategoriesCol,
+  getAll, addDocument, setDocument, updateDocument, deleteDocument, subscribeCollection,
+  where,
 } from '../../../lib/firestore'
 import type { Question } from '../../../data/questions'
 
@@ -146,6 +147,21 @@ export function QuestionsModule() {
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<QDoc | null>(null)
 
+
+  // ── Alt kategori (subcategory) state ──
+  const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string }>>([])
+  const [subcatsLoading, setSubcatsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!form.category) { setSubcats([]); return }
+    setSubcatsLoading(true)
+    getAll<{ name: string; slug: string; orderIndex?: number }>(subcategoriesCol(), where('categoryId', '==', form.category))
+      .then(docs => {
+        const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
+        setSubcats(sorted as any)
+      })
+      .finally(() => setSubcatsLoading(false))
+  }, [form.category])
 
   // ── Toplu yükleme state ──
   const [importOpen, setImportOpen] = useState(false)
@@ -440,8 +456,20 @@ Kurallar:
             </select>
           </div>
           <div>
-            <label style={LABEL_STYLE}>Alt Kategori</label>
-            <input value={form.subcategory ?? ''} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} placeholder="örn. Algoritmalar" style={fi('sub')} {...fb('sub')} />
+            <label style={LABEL_STYLE}>Alt Kategori{subcatsLoading ? ' …' : ''}</label>
+            {subcats.length > 0 ? (
+              <select
+                value={subcats.find(s => s.slug === form.subcategory) ? form.subcategory : ''}
+                onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
+                style={{ ...SELECT_STYLE, borderColor: fc['sub'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
+                {...fb('sub')}
+              >
+                <option value="" style={{ background: C.sidebar, color: C.t1 }}>Seç...</option>
+                {subcats.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+              </select>
+            ) : (
+              <input value={form.subcategory ?? ''} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} placeholder={form.category ? 'Alt dal yok — serbest giriş' : 'Önce kategori seçin'} style={fi('sub')} {...fb('sub')} />
+            )}
           </div>
         </div>
 

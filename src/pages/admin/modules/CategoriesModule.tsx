@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, X, Tag } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Tag, Database } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  categoriesCol, questionsCol,
-  getAll, setDocument, updateDocument, deleteDocument, subscribeCollection,
+  categoriesCol, questionsCol, subcategoriesCol,
+  getAll, addDocument, setDocument, updateDocument, deleteDocument, subscribeCollection,
+  where,
 } from '../../../lib/firestore'
 
 interface Category {
@@ -18,6 +19,40 @@ interface Category {
 }
 
 type CatDoc = Category & { _id: string }
+
+interface Subcategory {
+  categoryId: string
+  name: string
+  slug: string
+  description: string
+  color: string
+  orderIndex: number
+}
+
+type SubDoc = Subcategory & { _id: string }
+
+function toSlug(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+    .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+    .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+    .replace(/[&\s]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+const SEED_SUBCATEGORIES: Record<string, string[]> = {
+  yazilim: ['Frontend', 'Backend', 'Algoritma & Veri Yapıları', 'Sistem Tasarımı', 'DevOps', 'Mobil', 'Veritabanı'],
+  'yapay-zeka': ['Makine Öğrenmesi', 'Derin Öğrenme', 'NLP', 'MLOps', 'Prompt Mühendisliği', 'AI Etiği'],
+  kamu: ['Genel Kültür', 'Hukuk Temelleri', 'Kurum Kültürü', 'Mülakat Teknikleri'],
+  banka: ['Finans Temelleri', 'Risk Yönetimi', 'Muhasebe', 'Bankacılık Ürünleri'],
+  ik: ['Yetkinlik Bazlı Sorular', 'Davranışsal Sorular', 'Kariyer Motivasyonu', 'Liderlik & Yönetim'],
+  vibecoding: ['Genel'],
+  'vibe-coding': ['Genel'],
+}
 
 const PRESET_COLORS = [
   { color: '#3B82F6', bg: '#EFF6FF', name: 'Mavi' },
@@ -34,11 +69,15 @@ function emptyForm(): Category {
   return { id: '', label: '', emoji: '📌', description: '', color: '#3B82F6', bgColor: '#EFF6FF', order: 0 }
 }
 
+function emptySubForm(): Subcategory {
+  return { categoryId: '', name: '', slug: '', description: '', color: '#3B82F6', orderIndex: 0 }
+}
+
 // ─── Shared design tokens ──────────────────────────────────────────────────────
 const C = {
   bg: '#0a0f1e', card: '#111827', sidebar: '#0d1117',
   border: 'rgba(255,255,255,0.06)', borderHover: 'rgba(6,182,212,0.35)',
-  cyan: '#8b5cf6', purple: '#06b6d4', // Swapped accent to match Categories theme
+  cyan: '#8b5cf6', purple: '#06b6d4',
   t1: '#ffffff', t2: '#94a3b8', t3: '#64748b',
   gradient: 'linear-gradient(135deg, #8b5cf6, #06b6d4)',
 }
@@ -65,7 +104,7 @@ function Modal({ open, onClose, title, children, footer }: { open: boolean; onCl
       {open && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <motion.div
@@ -95,7 +134,7 @@ function DeleteConfirm({ open, message, errorMsg, onCancel, onConfirm }: { open:
       {open && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
         >
           <motion.div
             initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
@@ -143,17 +182,232 @@ function IconBtn({ onClick, hoverColor, children }: { onClick: () => void; hover
   )
 }
 
+// ─── SubRow ────────────────────────────────────────────────────────────────────
+
+function SubRow({ sub, qCount, onEdit, onDelete }: { sub: SubDoc; qCount: number; onEdit: () => void; onDelete: () => void }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: hov ? 'rgba(255,255,255,0.04)' : 'transparent', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.15s' }}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ color: C.t1, fontWeight: 600, fontSize: 13, margin: '0 0 3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.name}</p>
+        <p style={{ color: C.t3, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{sub.slug}</p>
+      </div>
+      <span style={{ fontSize: 11, color: C.t3, background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: 6, flexShrink: 0 }}>
+        {qCount} soru
+      </span>
+      <div style={{ display: 'flex', gap: 2, opacity: hov ? 1 : 0, transition: 'opacity 0.15s' }}>
+        <IconBtn onClick={onEdit} hoverColor={C.cyan}><Pencil size={13} /></IconBtn>
+        <IconBtn onClick={onDelete} hoverColor="#ef4444"><Trash2 size={13} /></IconBtn>
+      </div>
+    </div>
+  )
+}
+
+// ─── SubcategoryPanel ──────────────────────────────────────────────────────────
+
+function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }) {
+  const [subs, setSubs] = useState<SubDoc[]>([])
+  const [subQCounts, setSubQCounts] = useState<Record<string, number>>({})
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingSub, setEditingSub] = useState<SubDoc | null>(null)
+  const [subForm, setSubForm] = useState<Subcategory>(emptySubForm())
+  const [saving, setSaving] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<SubDoc | null>(null)
+  const unsubRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    unsubRef.current = subscribeCollection<Subcategory>(
+      subcategoriesCol(),
+      docs => {
+        const sorted = [...docs as SubDoc[]].sort((a, b) => a.orderIndex - b.orderIndex)
+        setSubs(sorted)
+      },
+      where('categoryId', '==', cat.id),
+    )
+    getAll<{ subcategory?: string }>(questionsCol(), where('category', '==', cat.id)).then(qs => {
+      const counts: Record<string, number> = {}
+      qs.forEach(q => { if (q.subcategory) counts[q.subcategory] = (counts[q.subcategory] ?? 0) + 1 })
+      setSubQCounts(counts)
+    })
+    return () => unsubRef.current?.()
+  }, [cat.id])
+
+  async function handleSeedDefaults() {
+    const names = SEED_SUBCATEGORIES[cat.id] || []
+    if (!names.length) { toast.error('Bu kategori için varsayılan alt dal tanımlı değil.'); return }
+    setSeeding(true)
+    try {
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i]
+        const slug = toSlug(name)
+        await addDocument(subcategoriesCol(), { categoryId: cat.id, name, slug, description: '', color: cat.color, orderIndex: i } as any)
+      }
+      toast.success(`${names.length} alt dal eklendi.`)
+    } catch { toast.error('Seed eklenemedi.') }
+    finally { setSeeding(false) }
+  }
+
+  function openAdd() {
+    setEditingSub(null)
+    setSubForm({ ...emptySubForm(), categoryId: cat.id, color: cat.color, orderIndex: subs.length })
+    setModalOpen(true)
+  }
+
+  function openEdit(sub: SubDoc) {
+    setEditingSub(sub)
+    setSubForm({ categoryId: sub.categoryId, name: sub.name, slug: sub.slug, description: sub.description, color: sub.color, orderIndex: sub.orderIndex })
+    setModalOpen(true)
+  }
+
+  async function handleSave() {
+    if (!subForm.name.trim()) { toast.error('Alt dal adı zorunludur.'); return }
+    const slug = subForm.slug.trim() || toSlug(subForm.name)
+    setSaving(true)
+    try {
+      if (editingSub) {
+        await updateDocument(subcategoriesCol(), editingSub._id, { ...subForm, slug })
+        toast.success('Alt dal güncellendi.')
+      } else {
+        await addDocument(subcategoriesCol(), { ...subForm, slug } as any)
+        toast.success('Alt dal eklendi.')
+      }
+      setModalOpen(false)
+    } catch { toast.error('Kaydedilemedi.') }
+    finally { setSaving(false) }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    const qc = subQCounts[deleteTarget.slug] ?? 0
+    if (qc > 0) {
+      toast.error(`Bu alt dalda ${qc} soru var. Önce soruları taşı.`)
+      setDeleteTarget(null)
+      return
+    }
+    try { await deleteDocument(subcategoriesCol(), deleteTarget._id); toast.success('Alt dal silindi.') }
+    catch { toast.error('Silinemedi.') }
+    finally { setDeleteTarget(null) }
+  }
+
+  const [fc, setFc] = useState<Record<string, boolean>>({})
+  const fi = (name: string): React.CSSProperties => ({ ...INPUT_STYLE, borderColor: fc[name] ? C.cyan : 'rgba(255,255,255,0.08)' })
+  const fb = (name: string) => ({ onFocus: () => setFc(s => ({ ...s, [name]: true })), onBlur: () => setFc(s => ({ ...s, [name]: false })) })
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
+      />
+
+      {/* Slide-over panel */}
+      <motion.div
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+        style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 480, zIndex: 50, background: '#0d1117', borderLeft: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+              <h2 style={{ color: C.t1, fontWeight: 700, fontSize: 16, margin: 0 }}>{cat.label}</h2>
+              <span style={{ color: C.t3, fontSize: 14 }}>·</span>
+              <span style={{ color: C.t2, fontSize: 14 }}>Alt Dallar</span>
+            </div>
+            <p style={{ color: C.t3, fontSize: 12, margin: '4px 0 0' }}>{subs.length} alt dal</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.gradient, color: '#fff', fontSize: 12, fontWeight: 600 }}>
+              <Plus size={13} /> Alt Dal Ekle
+            </button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.t3, padding: 6, borderRadius: 6, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = C.t1)} onMouseLeave={e => (e.currentTarget.style.color = C.t3)}>
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {subs.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, padding: '60px 0' }}>
+              <p style={{ color: C.t3, fontSize: 13, textAlign: 'center', margin: 0 }}>Bu kategoride henüz alt dal yok.</p>
+              {SEED_SUBCATEGORIES[cat.id] && (
+                <button onClick={handleSeedDefaults} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(255,255,255,0.04)', color: C.t1, fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
+                  <Database size={14} /> {seeding ? 'Ekleniyor...' : 'Varsayılan Alt Dalları Ekle'}
+                </button>
+              )}
+            </div>
+          ) : (
+            subs.map(sub => (
+              <SubRow key={sub._id} sub={sub} qCount={subQCounts[sub.slug] ?? 0} onEdit={() => openEdit(sub)} onDelete={() => setDeleteTarget(sub)} />
+            ))
+          )}
+        </div>
+      </motion.div>
+
+      {/* Sub form modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingSub ? 'Alt Dal Düzenle' : 'Yeni Alt Dal'}
+        footer={
+          <>
+            <CancelBtn onClick={() => setModalOpen(false)} />
+            <PrimaryBtn onClick={handleSave} disabled={saving}>{saving ? <Spinner /> : null}{editingSub ? 'Güncelle' : 'Kaydet'}</PrimaryBtn>
+          </>
+        }
+      >
+        <div>
+          <label style={LABEL_STYLE}>Ad *</label>
+          <input value={subForm.name} onChange={e => {
+            const name = e.target.value
+            setSubForm(f => ({ ...f, name, slug: toSlug(name) }))
+          }} placeholder="Frontend" style={fi('name')} {...fb('name')} />
+        </div>
+        <div>
+          <label style={LABEL_STYLE}>Slug</label>
+          <input value={subForm.slug} onChange={e => setSubForm(f => ({ ...f, slug: e.target.value }))} placeholder="frontend" style={{ ...fi('slug'), fontFamily: 'monospace' }} {...fb('slug')} />
+        </div>
+        <div>
+          <label style={LABEL_STYLE}>Açıklama</label>
+          <textarea value={subForm.description} onChange={e => setSubForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Kısa açıklama..." style={{ ...fi('desc'), resize: 'none' }} {...fb('desc')} />
+        </div>
+        <div>
+          <label style={LABEL_STYLE}>Sıra</label>
+          <input type="number" value={subForm.orderIndex} onChange={e => setSubForm(f => ({ ...f, orderIndex: Number(e.target.value) }))} style={fi('order')} {...fb('order')} />
+        </div>
+      </Modal>
+
+      {/* Delete confirm */}
+      <DeleteConfirm
+        open={!!deleteTarget}
+        message={`"${deleteTarget?.name ?? ''}" alt dalını silmek istediğinden emin misin?`}
+        errorMsg={(subQCounts[deleteTarget?.slug ?? ''] ?? 0) > 0 ? `Bu alt dalda ${subQCounts[deleteTarget?.slug ?? '']} soru var!` : undefined}
+        onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete}
+      />
+    </>
+  )
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export function CategoriesModule() {
   const [categories, setCategories] = useState<CatDoc[]>([])
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({})
+  const [subcountMap, setSubcountMap] = useState<Record<string, number>>({})
+  const [selectedCat, setSelectedCat] = useState<CatDoc | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<CatDoc | null>(null)
   const [form, setForm] = useState<Category>(emptyForm())
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CatDoc | null>(null)
   const unsubRef = useRef<(() => void) | null>(null)
+  const unsubSubRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     unsubRef.current = subscribeCollection<Category>(
@@ -163,12 +417,20 @@ export function CategoriesModule() {
         setCategories(sorted)
       },
     )
+    unsubSubRef.current = subscribeCollection<Subcategory>(
+      subcategoriesCol(),
+      docs => {
+        const counts: Record<string, number> = {}
+        docs.forEach(d => { counts[(d as SubDoc).categoryId] = (counts[(d as SubDoc).categoryId] ?? 0) + 1 })
+        setSubcountMap(counts)
+      },
+    )
     getAll<{ category: string }>(questionsCol()).then(qs => {
       const counts: Record<string, number> = {}
       qs.forEach(q => { counts[q.category] = (counts[q.category] ?? 0) + 1 })
       setQuestionCounts(counts)
     })
-    return () => unsubRef.current?.()
+    return () => { unsubRef.current?.(); unsubSubRef.current?.() }
   }, [])
 
   function openAdd() { setEditing(null); setForm({ ...emptyForm(), order: categories.length }); setModalOpen(true) }
@@ -181,7 +443,7 @@ export function CategoriesModule() {
       if (editing) { await updateDocument(categoriesCol(), editing._id, form); toast.success('Kategori güncellendi.') }
       else { await setDocument(categoriesCol(), form.id, form); toast.success('Kategori eklendi.') }
       setModalOpen(false)
-    } catch (e: any) { toast.error('Kaydedilemedi.') }
+    } catch { toast.error('Kaydedilemedi.') }
     finally { setSaving(false) }
   }
 
@@ -210,7 +472,7 @@ export function CategoriesModule() {
           <h1 style={{ color: C.t1, fontWeight: 700, fontSize: 24, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             <Tag size={22} style={{ color: C.cyan }} /> Kategoriler
           </h1>
-          <p style={{ color: C.t3, fontSize: 13, margin: '4px 0 0' }}>{categories.length} kategori</p>
+          <p style={{ color: C.t3, fontSize: 13, margin: '4px 0 0' }}>{categories.length} kategori · Karta tıkla → alt dalları yönet</p>
         </div>
         <button
           onClick={openAdd}
@@ -225,12 +487,14 @@ export function CategoriesModule() {
         {categories.map(cat => (
           <CatCard
             key={cat._id} cat={cat} count={questionCounts[cat.id] ?? 0}
+            subcount={subcountMap[cat.id] ?? 0}
             onEdit={() => openEdit(cat)} onDelete={() => setDeleteTarget(cat)}
+            onOpenPanel={() => setSelectedCat(cat)}
           />
         ))}
       </div>
 
-      {/* Modal */}
+      {/* Category form modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Kategori Düzenle' : 'Yeni Kategori'}
         footer={
           <>
@@ -283,25 +547,35 @@ export function CategoriesModule() {
         </div>
       </Modal>
 
-      {/* Delete */}
+      {/* Delete confirm */}
       <DeleteConfirm
         open={!!deleteTarget}
         message={`"${deleteTarget?.label ?? ''}" kategorisini silmek istediğinden emin misin?`}
-        errorMsg={(questionCounts[deleteTarget?.id ?? ''] ?? 0) > 0 ? `Bu kategoride ${questionCounts[deleteTarget?.id ?? '']} soru var! Önce onları silmelisin.` : null}
+        errorMsg={(questionCounts[deleteTarget?.id ?? ''] ?? 0) > 0 ? `Bu kategoride ${questionCounts[deleteTarget?.id ?? '']} soru var! Önce onları silmelisin.` : undefined}
         onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete}
       />
+
+      {/* Subcategory panel */}
+      <AnimatePresence>
+        {selectedCat && (
+          <SubcategoryPanel key={selectedCat._id} cat={selectedCat} onClose={() => setSelectedCat(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-function CatCard({ cat, count, onEdit, onDelete }: { cat: CatDoc; count: number; onEdit: () => void; onDelete: () => void }) {
+// ─── CatCard ───────────────────────────────────────────────────────────────────
+
+function CatCard({ cat, count, subcount, onEdit, onDelete, onOpenPanel }: { cat: CatDoc; count: number; subcount: number; onEdit: () => void; onDelete: () => void; onOpenPanel: () => void }) {
   const [hov, setHov] = useState(false)
   return (
     <div
+      onClick={onOpenPanel}
       style={{
         background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 14,
         transition: 'all 0.15s', transform: hov ? 'translateY(-2px)' : 'none', boxShadow: hov ? `0 8px 24px rgba(0,0,0,0.3)` : 'none',
-        borderColor: hov ? C.borderHover : C.border
+        borderColor: hov ? C.borderHover : C.border, cursor: 'pointer',
       }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
     >
@@ -315,7 +589,8 @@ function CatCard({ cat, count, onEdit, onDelete }: { cat: CatDoc; count: number;
             <p style={{ color: C.t3, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{cat.id}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 4, opacity: hov ? 1 : 0, transition: 'opacity 0.15s' }}>
+        {/* Stop propagation so card click (open panel) doesn't fire */}
+        <div style={{ display: 'flex', gap: 4, opacity: hov ? 1 : 0, transition: 'opacity 0.15s' }} onClick={e => e.stopPropagation()}>
           <IconBtn onClick={onEdit} hoverColor={C.cyan}><Pencil size={14} /></IconBtn>
           <IconBtn onClick={onDelete} hoverColor="#ef4444"><Trash2 size={14} /></IconBtn>
         </div>
@@ -330,9 +605,14 @@ function CatCard({ cat, count, onEdit, onDelete }: { cat: CatDoc; count: number;
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color }} />
           <span style={{ color: C.t3, fontSize: 11, fontFamily: 'monospace' }}>{cat.color}</span>
         </div>
-        <span style={{ color: C.t1, fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 6 }}>
-          {count} Soru
-        </span>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <span style={{ color: C.t1, fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 6 }}>
+            {count} Soru
+          </span>
+          <span style={{ color: cat.color, fontSize: 11, fontWeight: 700, background: cat.color + '18', padding: '4px 8px', borderRadius: 6 }}>
+            {subcount} Alt Dal
+          </span>
+        </div>
       </div>
     </div>
   )
