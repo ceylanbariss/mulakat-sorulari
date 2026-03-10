@@ -15,6 +15,16 @@ type CatDoc = { id: string; label: string; _id: string }
 const DIFFICULTIES = ['kolay', 'orta', 'zor'] as const
 const DIFF_COLOR: Record<string, string> = { kolay: '#10b981', orta: '#f59e0b', zor: '#ef4444' }
 
+function toSlug(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+    .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+    .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+    .replace(/[&\s]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
+}
+
 // ─── Shared design tokens ──────────────────────────────────────────────────────
 const C = {
   bg: '#0a0f1e', card: '#111827', sidebar: '#0d1117',
@@ -181,6 +191,25 @@ export function QuestionsModule() {
   const [catMappings, setCatMappings] = useState<Record<string, string>>({})
   // value: mevcut category id  | '__new__' (yeni oluştur)
 
+  // ── Subcategory eşleştirme ──
+  const [subMappings, setSubMappings] = useState<Record<string, string>>({})
+  const [subAvail, setSubAvail] = useState<Record<string, { _id: string; name: string; slug: string }[]>>({})
+
+  useEffect(() => {
+    const resolvedCats = [...new Set(Object.values(catMappings).filter(v => v && v !== '__new__'))]
+    if (!resolvedCats.length) { setSubAvail({}); return }
+    Promise.all(
+      resolvedCats.map(catId =>
+        getAll<{ name: string; slug: string; orderIndex?: number }>(subcategoriesCol(), where('categoryId', '==', catId))
+          .then(docs => ({ catId, docs: docs.sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0)) }))
+      )
+    ).then(results => {
+      const map: Record<string, any[]> = {}
+      results.forEach(({ catId, docs }) => { map[catId] = docs })
+      setSubAvail(map)
+    })
+  }, [JSON.stringify(catMappings)])
+
   useEffect(() => {
     const unsubQ = subscribeCollection<Question>(questionsCol(), docs => setQuestions(docs as QDoc[]))
     const unsubC = subscribeCollection<any>(categoriesCol(), docs => setCategories(docs as CatDoc[]))
@@ -202,7 +231,7 @@ export function QuestionsModule() {
   }
 
   async function handleSave() {
-    if (!form.category || !form.question.trim() || !form.answer.trim()) { toast.error('Kategori, soru ve cevap zorunludur.'); return }
+    if (!form.category || !form.subcategory || !form.question.trim() || !form.answer.trim()) { toast.error('Kategori, alt dal, soru ve cevap zorunludur.'); return }
     setSaving(true)
     try {
       const data = { ...form, hints: hintsText.split(',').map(h => h.trim()).filter(Boolean) }
@@ -240,7 +269,7 @@ export function QuestionsModule() {
   }
 
   function parseImportText(text: string) {
-    if (!text.trim()) { setImportParsed(null); setImportError(''); setCatMappings({}); return }
+    if (!text.trim()) { setImportParsed(null); setImportError(''); setCatMappings({}); setSubMappings({}); return }
     try {
       const data = JSON.parse(text)
       if (!Array.isArray(data)) { setImportError('JSON bir dizi (array) olmalı: [...]'); setImportParsed(null); return }
@@ -248,15 +277,21 @@ export function QuestionsModule() {
       const skipped = data.length - valid.length
       setImportError(skipped > 0 ? `${skipped} soruda zorunlu alan eksik (question/answer/category). Bunlar atlanacak.` : '')
       setImportParsed(valid as Question[])
-      // Kategori eşleştirme: JSON'daki unique kategoriler için otomatik eşleştir
+      // Kategori eşleştirme
       const uniqueCats = [...new Set(valid.map((q: Question) => q.category).filter(Boolean))]
-      const mappings: Record<string, string> = {}
-      for (const raw of uniqueCats) mappings[raw] = autoMatchCat(raw)
-      setCatMappings(mappings)
+      const catMap: Record<string, string> = {}
+      for (const raw of uniqueCats) catMap[raw] = autoMatchCat(raw)
+      setCatMappings(catMap)
+      // Subcategory eşleştirme — otomatik slug türet
+      const uniqueSubs = [...new Set(valid.map((q: Question) => q.subcategory).filter(Boolean))] as string[]
+      const subMap: Record<string, string> = {}
+      for (const raw of uniqueSubs) subMap[raw] = toSlug(raw)
+      setSubMappings(subMap)
     } catch {
       setImportError('Geçersiz JSON formatı. Dosyanın içeriği JSON array olmalı.')
       setImportParsed(null)
       setCatMappings({})
+      setSubMappings({})
     }
   }
 
@@ -287,13 +322,16 @@ export function QuestionsModule() {
       }
     }
 
-    // ── Adım 2: Soruları eşlenmiş kategorilerle yükle ──
+    // ── Adım 2: Soruları eşlenmiş kategori ve alt dal ile yükle ──
     let success = 0; let fail = 0
     for (let i = 0; i < importParsed.length; i++) {
       try {
         const { id: _id, ...data } = importParsed[i] as Question & { id?: string }
         const resolvedCat = resolved[data.category] ?? data.category
-        await addDocument(questionsCol(), { ...data, category: resolvedCat })
+        const resolvedSub = data.subcategory
+          ? (subMappings[data.subcategory] ?? toSlug(data.subcategory))
+          : ''
+        await addDocument(questionsCol(), { ...data, category: resolvedCat, subcategory: resolvedSub })
         success++
       } catch { fail++ }
       setImportProgress(i + 1)
@@ -301,7 +339,7 @@ export function QuestionsModule() {
     setImporting(false)
     if (fail === 0) toast.success(`${success} soru başarıyla yüklendi!`)
     else toast.error(`${success} yüklendi, ${fail} başarısız.`)
-    setImportOpen(false); setImportRaw(''); setImportParsed(null); setImportError(''); setCatMappings({})
+    setImportOpen(false); setImportRaw(''); setImportParsed(null); setImportError(''); setCatMappings({}); setSubMappings({}); setSubAvail({})
   }
 
   // ── AI Prompt üretici ──
@@ -647,12 +685,10 @@ Kurallar:
                 const isNew = mapped === '__new__'
                 return (
                   <div key={raw} style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    {/* JSON'dan gelen kategori */}
                     <div style={{ padding: '7px 12px', borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: C.t2, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {raw}
                     </div>
                     <span style={{ color: C.t3, fontSize: 12, textAlign: 'center' }}>→</span>
-                    {/* Hedef kategori seç */}
                     <select
                       value={mapped}
                       onChange={e => setCatMappings(m => ({ ...m, [raw]: e.target.value }))}
@@ -672,6 +708,40 @@ Kurallar:
                 </p>
               )}
             </div>
+
+            {/* ── Alt Dal (Subcategory) Eşleştirme ── */}
+            {Object.keys(subMappings).length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '14px 16px' }}>
+                <p style={{ color: C.t2, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 12px' }}>
+                  Alt Dal Eşleştirme
+                </p>
+                {Object.entries(subMappings).map(([raw, mapped]) => {
+                  const allAvail = Object.values(subAvail).flat()
+                  const matched = allAvail.find(s => s.slug === mapped)
+                  return (
+                    <div key={raw} style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <div style={{ padding: '7px 12px', borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: C.t2, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {raw}
+                      </div>
+                      <span style={{ color: C.t3, fontSize: 12, textAlign: 'center' }}>→</span>
+                      <select
+                        value={mapped}
+                        onChange={e => setSubMappings(m => ({ ...m, [raw]: e.target.value }))}
+                        style={{ ...SELECT_STYLE, fontSize: 12, borderColor: matched ? 'rgba(16,185,129,0.4)' : 'rgba(100,116,139,0.4)', color: matched ? '#34d399' : C.t2 }}
+                      >
+                        <option value={toSlug(raw)} style={{ background: C.card, color: C.t1 }}>Otomatik: {toSlug(raw)}</option>
+                        {allAvail.map(s => (
+                          <option key={s._id} value={s.slug} style={{ background: C.card, color: C.t1 }}>{s.name} — {s.slug}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                })}
+                <p style={{ color: C.t3, fontSize: 11, margin: '4px 0 0', lineHeight: 1.5 }}>
+                  Kategori seçildikten sonra o kategorideki alt dallar listede görünür.
+                </p>
+              </div>
+            )}
           </>
         )}
       </Modal>

@@ -401,6 +401,7 @@ export function CategoriesModule() {
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({})
   const [subcountMap, setSubcountMap] = useState<Record<string, number>>({})
   const [selectedCat, setSelectedCat] = useState<CatDoc | null>(null)
+  const [migrating, setMigrating] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<CatDoc | null>(null)
   const [form, setForm] = useState<Category>(emptyForm())
@@ -432,6 +433,52 @@ export function CategoriesModule() {
     })
     return () => { unsubRef.current?.(); unsubSubRef.current?.() }
   }, [])
+
+  async function handleMigrate() {
+    setMigrating(true)
+    toast.loading('Migration başlıyor…', { id: 'migrate' })
+    try {
+      let subCreated = 0
+      // Step 1: seed missing subcategories
+      for (const cat of categories) {
+        const existing = await getAll<{ name: string }>(subcategoriesCol(), where('categoryId', '==', cat.id))
+        if (existing.length === 0 && SEED_SUBCATEGORIES[cat.id]) {
+          const names = SEED_SUBCATEGORIES[cat.id]
+          for (let i = 0; i < names.length; i++) {
+            const name = names[i]
+            const slug = toSlug(name)
+            await addDocument(subcategoriesCol(), { categoryId: cat.id, name, slug, description: '', color: cat.color, orderIndex: i } as any)
+            subCreated++
+          }
+        }
+      }
+      // Step 2: load all subcategories after seeding
+      const allSubs = await getAll<{ categoryId: string; name: string; slug: string }>(subcategoriesCol())
+      // Step 3: match existing questions to subcategory slugs
+      const allQs = await getAll<{ category: string; subcategory?: string }>(questionsCol())
+      let updated = 0
+      for (const q of allQs) {
+        if (!q.subcategory?.trim()) continue
+        const catSubs = allSubs.filter(s => (s as any).categoryId === q.category)
+        if (!catSubs.length) continue
+        const qSlug = toSlug(q.subcategory)
+        const qNorm = q.subcategory.toLowerCase()
+        const match =
+          catSubs.find(s => s.slug === qSlug) ||
+          catSubs.find(s => s.slug.includes(qSlug) || qSlug.includes(s.slug)) ||
+          catSubs.find(s => s.name.toLowerCase().includes(qNorm) || qNorm.includes(s.name.toLowerCase()))
+        if (match && match.slug !== q.subcategory) {
+          await updateDocument(questionsCol(), q._id, { subcategory: match.slug })
+          updated++
+        }
+      }
+      toast.success(`${subCreated} alt dal oluşturuldu, ${updated} soru güncellendi.`, { id: 'migrate' })
+    } catch {
+      toast.error('Migration sırasında hata oluştu.', { id: 'migrate' })
+    } finally {
+      setMigrating(false)
+    }
+  }
 
   function openAdd() { setEditing(null); setForm({ ...emptyForm(), order: categories.length }); setModalOpen(true) }
   function openEdit(cat: CatDoc) { setEditing(cat); setForm({ ...cat }); setModalOpen(true) }
@@ -474,12 +521,21 @@ export function CategoriesModule() {
           </h1>
           <p style={{ color: C.t3, fontSize: 13, margin: '4px 0 0' }}>{categories.length} kategori · Karta tıkla → alt dalları yönet</p>
         </div>
-        <button
-          onClick={openAdd}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.gradient, color: '#fff', fontSize: 13, fontWeight: 600, boxShadow: '0 4px 14px rgba(139,92,246,0.25)' }}
-        >
-          <Plus size={15} /> Kategori Ekle
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={handleMigrate} disabled={migrating}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', cursor: migrating ? 'wait' : 'pointer', background: 'rgba(255,255,255,0.04)', color: C.t2, fontSize: 13, fontWeight: 600, opacity: migrating ? 0.6 : 1, transition: 'all 0.15s' }}
+            title="Mevcut soruları alt dal slug'larına eşle, eksik alt dalları oluştur"
+          >
+            <Database size={14} /> {migrating ? 'Migrate ediliyor…' : 'Soruları Migrate Et'}
+          </button>
+          <button
+            onClick={openAdd}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.gradient, color: '#fff', fontSize: 13, fontWeight: 600, boxShadow: '0 4px 14px rgba(139,92,246,0.25)' }}
+          >
+            <Plus size={15} /> Kategori Ekle
+          </button>
+        </div>
       </div>
 
       {/* Grid */}
