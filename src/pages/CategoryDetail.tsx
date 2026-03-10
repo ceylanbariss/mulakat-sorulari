@@ -66,12 +66,12 @@ export function CategoryDetail() {
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
 
-  const [selectedSub, setSelectedSub] = useState('')
+  const [selectedSubs, setSelectedSubs] = useState<string[]>([])
   const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string }>>([])
 
   useEffect(() => {
     if (!kategori) return
-    setSelectedSub('')
+    setSelectedSubs([])
     getAll<{ name: string; slug: string; orderIndex?: number }>(subcategoriesCol(), where('categoryId', '==', kategori))
       .then(docs => {
         const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
@@ -79,8 +79,14 @@ export function CategoryDetail() {
       })
   }, [kategori])
 
+  function toggleSub(slug: string) {
+    setSelectedSubs(prev =>
+      prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
+    )
+  }
+
   const { categories, loading: catsLoading } = useCategories()
-  const { questions, loading: qsLoading } = useQuestions(kategori, selectedSub || undefined)
+  const { questions, loading: qsLoading } = useQuestions(kategori, selectedSubs.length > 0 ? selectedSubs : undefined)
 
   if (catsLoading || qsLoading) return null // Veya loading spinner
 
@@ -140,29 +146,31 @@ export function CategoryDetail() {
           >
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alt Dal</p>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-              {[{ name: 'Tümü', slug: '' }, ...subcats].map(sub => {
-                const active = selectedSub === sub.slug
+              {/* "Tümü" chip */}
+              <button
+                onClick={() => setSelectedSubs([])}
+                style={{
+                  flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                  border: selectedSubs.length === 0 ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                  background: selectedSubs.length === 0 ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
+                  color: selectedSubs.length === 0 ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
+                }}
+              >
+                Tümü
+              </button>
+              {subcats.map(sub => {
+                const active = selectedSubs.includes(sub.slug)
                 return (
                   <button
-                    key={sub.slug || '__all__'}
-                    onClick={() => setSelectedSub(sub.slug)}
+                    key={sub.slug}
+                    onClick={() => toggleSub(sub.slug)}
                     style={{
-                      flexShrink: 0,
-                      padding: '7px 16px',
-                      borderRadius: 999,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      border: active
-                        ? `1px solid ${category?.color ?? '#3b82f6'}60`
-                        : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                      background: active
-                        ? `${category?.color ?? '#3b82f6'}18`
-                        : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                      color: active
-                        ? category?.color ?? '#3b82f6'
-                        : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
+                      flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                      border: active ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                      background: active ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
+                      color: active ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
+                      outline: active ? `2px solid ${category?.color ?? '#3b82f6'}30` : 'none',
+                      outlineOffset: 1,
                     }}
                   >
                     {sub.name}
@@ -190,7 +198,7 @@ export function CategoryDetail() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.08 }}
                   whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                  onClick={() => navigate(`/antrenman/${mode.id}?kategori=${kategori}${selectedSub ? `&altdal=${selectedSub}` : ''}`)}
+                  onClick={() => navigate(`/antrenman/${mode.id}?kategori=${kategori}${selectedSubs.length > 0 ? `&altdal=${selectedSubs.join(',')}` : ''}`)}
                   style={{
                     cursor: 'pointer',
                     borderRadius: '20px',

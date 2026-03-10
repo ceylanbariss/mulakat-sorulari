@@ -4,9 +4,11 @@ import { getAllQuestions, type Question } from '../data/questions'
 
 export type QuestionDoc = Question & { _id: string }
 
-export function useQuestions(category?: string, subcategory?: string) {
+export function useQuestions(category?: string, subcategories?: string[]) {
   const [questions, setQuestions] = useState<QuestionDoc[]>([])
   const [loading, setLoading] = useState(true)
+
+  const subKey = subcategories?.join(',') ?? ''
 
   useEffect(() => {
     let isMounted = true
@@ -21,8 +23,8 @@ export function useQuestions(category?: string, subcategory?: string) {
         if (category) {
           all = all.filter(q => q.category === category)
         }
-        if (subcategory) {
-          all = all.filter(q => q.subcategory === subcategory)
+        if (subcategories && subcategories.length > 0) {
+          all = all.filter(q => subcategories.includes(q.subcategory ?? ''))
         }
         if (isMounted) {
           setQuestions(all)
@@ -34,7 +36,8 @@ export function useQuestions(category?: string, subcategory?: string) {
       isMounted = false
       unsub()
     }
-  }, [category, subcategory])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, subKey])
 
   return { questions, loading }
 }

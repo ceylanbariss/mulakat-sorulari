@@ -12,8 +12,10 @@ export function Training() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const kategori = searchParams.get('kategori') || ''
+  const altdalParam = searchParams.get('altdal')
+  const subcategories = altdalParam ? altdalParam.split(',').filter(Boolean) : undefined
 
-  const { questions, loading } = useQuestions(kategori)
+  const { questions, loading } = useQuestions(kategori, subcategories)
 
   if (loading) return null // Veya loading spinner
 
