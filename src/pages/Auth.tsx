@@ -37,7 +37,7 @@ export function Auth() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
             <Zap size={18} className="text-white fill-white" />
           </div>
-          <span className="font-bold text-lg text-white tracking-tight">Mülakata Soruları</span>
+          <span className="font-bold text-lg text-white tracking-tight">Mülakat Soruları</span>
         </div>
 
         {/* Glassmorphism Kart */}

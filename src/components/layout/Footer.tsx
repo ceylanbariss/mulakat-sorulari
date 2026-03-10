@@ -45,7 +45,7 @@ export function Footer() {
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
                 <Zap size={17} color="white" fill="white" />
               </div>
-              <span style={{ fontWeight: 700, fontSize: '15px', color: 'white' }}>Mülakata Soruları</span>
+              <span style={{ fontWeight: 700, fontSize: '15px', color: 'white' }}>Mülakat Soruları</span>
             </Link>
             <p style={{ fontSize: '14px', color: 'rgba(148,163,184,0.75)', lineHeight: 1.7, maxWidth: '280px' }}>
               İş mülakatlarına hazırlanmayı kolaylaştıran akıllı antrenman platformu.
@@ -130,7 +130,7 @@ export function Footer() {
           flexWrap: 'wrap',
         }}>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
-            © {new Date().getFullYear()} Mülakata Soruları. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} Mülakat Soruları. Tüm hakları saklıdır.
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
