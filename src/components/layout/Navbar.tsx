@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, BarChart2, Info, Menu, X, Zap, LogOut } from 'lucide-react'
+import { BookOpen, BarChart2, Info, Menu, X, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ThemeToggle } from '../ui/ThemeToggle'
@@ -50,9 +50,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* ─── Logo ─── */}
           <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-shadow">
-              <Zap size={16} className="text-white fill-white" />
-            </div>
+            <img src="/logo.png" alt="logo" className="w-11 h-11 object-contain flex-shrink-0" />
             <span className="font-bold text-slate-900 dark:text-white hidden sm:block text-[15px] tracking-tight">
               Mülakat Soruları
             </span>

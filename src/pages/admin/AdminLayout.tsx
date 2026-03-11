@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { Menu, X, Zap, LogOut } from 'lucide-react'
+import { Menu, X, LogOut } from 'lucide-react'
 import { ADMIN_MODULES } from './modules'
 import { useAuthStore } from '../../store/useAuthStore'
 import { logout } from '../../lib/auth'
@@ -75,9 +75,7 @@ export function AdminLayout() {
     <>
       {/* Logo */}
       <div style={S.logoBox}>
-        <div style={S.logoIcon}>
-          <Zap size={15} style={{ color: '#fff', fill: '#fff' }} />
-        </div>
+        <img src="/logo.png" alt="logo" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.2 }}>Admin Panel</p>
           <p style={{ color: '#64748b', fontSize: 11, lineHeight: 1.3 }}>Mülakat Soruları</p>

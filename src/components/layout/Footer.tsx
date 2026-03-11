@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Zap, Github, Twitter, ArrowUp } from 'lucide-react'
+import { Github, Twitter, ArrowUp } from 'lucide-react'
 
 const links = [
   { label: 'Sorular', to: '/sorular' },
@@ -42,9 +42,7 @@ export function Footer() {
           {/* Sol: Logo + Açıklama */}
           <div>
             <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '16px', textDecoration: 'none' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
-                <Zap size={17} color="white" fill="white" />
-              </div>
+              <img src="/logo.png" alt="logo" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
               <span style={{ fontWeight: 700, fontSize: '15px', color: 'white' }}>Mülakat Soruları</span>
             </Link>
             <p style={{ fontSize: '14px', color: 'rgba(148,163,184,0.75)', lineHeight: 1.7, maxWidth: '280px' }}>

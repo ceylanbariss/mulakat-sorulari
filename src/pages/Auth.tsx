@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Zap } from 'lucide-react'
 import { AuthForm } from '../components/ui/premium-auth'
 import AnoAI from '../components/ui/animated-shader-background'
 import { useAuthStore } from '../store/useAuthStore'
@@ -34,9 +33,7 @@ export function Auth() {
       >
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Zap size={18} className="text-white fill-white" />
-          </div>
+          <img src="/logo.png" alt="logo" className="w-12 h-12 object-contain" />
           <span className="font-bold text-lg text-white tracking-tight">Mülakat Soruları</span>
         </div>
 
