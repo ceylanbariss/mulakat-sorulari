@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { BarChart2, Clock, CheckCircle, Flame, Lock, ArrowRight } from 'lucide-react'
-import AnoAI from '../components/ui/animated-shader-background'
 
 const stats = [
   { label: 'Toplam Çözülen', value: '—', icon: BarChart2, color: '#3b82f6', iconBg: 'rgba(59,130,246,0.15)' },
@@ -18,8 +17,7 @@ const cardVar = {
 
 export function Statistics() {
   return (
-    <div className="relative overflow-hidden" style={{ minHeight: '100vh', background: '#0d1524', paddingTop: '120px', paddingBottom: '80px' }}>
-      <AnoAI />
+    <div className="relative overflow-hidden" style={{ minHeight: '100vh', paddingTop: '120px', paddingBottom: '80px' }}>
       <div className="relative z-10" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px' }}>
 
         {/* ── Başlık ── */}

@@ -1,7 +1,6 @@
 import { ChevronDown, Target, Zap, Users, Mail, ArrowUp } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import AnoAI from '../components/ui/animated-shader-background'
 
 const FAQ = [
   { q: 'Uygulama ücretsiz mi?', a: 'Evet, temel özellikler tamamen ücretsizdir.' },
@@ -137,20 +136,16 @@ export function About() {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20 relative overflow-hidden">
-      <AnoAI />
+    <div className="min-h-screen pb-20 relative overflow-hidden">
       <div className="relative z-10">
         {/* ── Hero ── */}
         <div style={{
           paddingTop: '120px',
           paddingBottom: '60px',
-          background: 'linear-gradient(160deg, #080e1a 0%, #0d1525 60%, #0a1020 100%)',
           position: 'relative',
           overflow: 'hidden',
         }}>
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 65%)', filter: 'blur(40px)' }} />
-            <div style={{ position: 'absolute', bottom: '-10%', right: '-5%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 65%)', filter: 'blur(40px)' }} />
           </div>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 10 }}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ textAlign: 'center' }}>

@@ -9,7 +9,7 @@ export function CtaBanner() {
   const d = theme === 'dark'
 
   return (
-    <section style={{ padding: '80px 0', background: d ? 'linear-gradient(180deg, #0a1020 0%, #080e1a 100%)' : 'linear-gradient(180deg, #f0f4ff 0%, #f8fafc 100%)' }}>
+    <section style={{ padding: '80px 0' }}>
       <PageWrapper>
         <motion.div
           initial={{ opacity: 0, y: 32 }}

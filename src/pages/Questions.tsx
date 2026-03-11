@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { Code2, Landmark, Banknote, Users, ArrowRight } from 'lucide-react'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { useCategories } from '../hooks/useCategories'
-import AnoAI from '../components/ui/animated-shader-background'
 
 const ICONS = { yazilim: Code2, kamu: Landmark, banka: Banknote, ik: Users } as const
 
@@ -23,8 +22,7 @@ export function Questions() {
   if (loading) return null
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative overflow-hidden" style={{ paddingTop: '120px', paddingBottom: '160px' }}>
-      <AnoAI />
+    <div className="min-h-screen relative overflow-hidden" style={{ paddingTop: '120px', paddingBottom: '160px' }}>
       <div className="relative z-10">
         <PageWrapper>
           {/* Başlık */}

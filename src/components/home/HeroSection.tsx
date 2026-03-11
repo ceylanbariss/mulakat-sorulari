@@ -33,41 +33,57 @@ export function HeroSection() {
         alignItems: 'center',
         overflow: 'hidden',
         paddingTop: '64px',
-        background: d
-          ? 'linear-gradient(160deg, #060c18 0%, #090f1e 50%, #0a1020 100%)'
-          : 'linear-gradient(160deg, #eef2ff 0%, #f0f4ff 50%, #f8fafc 100%)',
       }}
     >
-      {/* Animated ambient blobs */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        <motion.div
-          animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
-          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ position: 'absolute', top: '-15%', left: '-10%', width: '700px', height: '700px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 65%)', filter: 'blur(60px)', willChange: 'transform' }}
-        />
-        <motion.div
-          animate={{ x: [0, -30, 0], y: [0, 40, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-          style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 65%)', filter: 'blur(60px)', willChange: 'transform' }}
-        />
-        <motion.div
-          animate={{ x: [0, 20, 0], y: [0, 20, 0] }}
-          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          style={{ position: 'absolute', top: '30%', left: '45%', width: '350px', height: '350px', borderRadius: '50%', background: d ? 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 65%)', filter: 'blur(40px)', willChange: 'transform' }}
-        />
-      </div>
-
-      {/* Subtle dot grid */}
-      <div style={{ position: 'absolute', inset: 0, backgroundImage: d ? 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)' : 'radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
 
       <PageWrapper className="relative z-10">
-        <div style={{ paddingTop: '80px', paddingBottom: '160px' }}>
+        <div style={{ paddingTop: '40px', paddingBottom: '160px' }}>
           <motion.div
             variants={container}
             initial="hidden"
             animate="show"
             style={{ textAlign: 'center', maxWidth: '860px', marginLeft: 'auto', marginRight: 'auto' }}
           >
+
+            {/* Logo */}
+            <motion.div
+              variants={item}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '280px',
+                  height: '280px',
+                }}
+              >
+                {/* Glow effect behind logo */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: '-20%',
+                    borderRadius: '50%',
+                    background: d
+                      ? 'radial-gradient(circle, rgba(234,179,8,0.35) 0%, rgba(245,158,11,0.18) 40%, transparent 70%)'
+                      : 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, rgba(245,158,11,0.1) 40%, transparent 70%)',
+                    filter: 'blur(20px)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <img
+                  src="/logo.png"
+                  alt="Mülakat Soruları Logo"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    position: 'relative',
+                    zIndex: 1,
+                    filter: d ? 'drop-shadow(0 8px 24px rgba(234,179,8,0.3))' : 'drop-shadow(0 8px 24px rgba(234,179,8,0.18))',
+                  }}
+                />
+              </div>
+            </motion.div>
 
             {/* Heading */}
             <motion.h1

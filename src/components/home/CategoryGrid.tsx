@@ -40,7 +40,7 @@ export function CategoryGrid() {
   if (loading) return null // Veya loading spinner
 
   return (
-    <section className="pt-28 pb-32 relative overflow-hidden" style={{ background: d ? 'linear-gradient(180deg, #080e1a 0%, #0a1020 100%)' : 'linear-gradient(180deg, #f8fafc 0%, #f0f4ff 100%)' }}>
+    <section className="pt-28 pb-32 relative overflow-hidden">
       {/* Ambient blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)', filter: 'blur(40px)' }} />

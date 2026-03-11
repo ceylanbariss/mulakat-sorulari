@@ -44,7 +44,7 @@ export function HowItWorks() {
   const d = theme === 'dark'
 
   return (
-    <section id="nasil-calisir" className="pt-28 pb-36 relative overflow-hidden" style={{ background: d ? 'linear-gradient(180deg, #080e1a 0%, #0a1020 100%)' : 'linear-gradient(180deg, #f0f4ff 0%, #f8fafc 100%)' }}>
+    <section id="nasil-calisir" className="pt-28 pb-36 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div style={{ position: 'absolute', top: '10%', right: '5%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)', filter: 'blur(40px)' }} />
       </div>

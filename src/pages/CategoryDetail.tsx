@@ -101,7 +101,7 @@ export function CategoryDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16" style={{ paddingTop: '120px' }}>
+    <div className="min-h-screen pb-16" style={{ paddingTop: '120px' }}>
       <PageWrapper>
         {/* Breadcrumb */}
         <motion.nav
