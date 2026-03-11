@@ -239,7 +239,7 @@ export function FlashCardMode({ questions, kategori }: Props) {
                 <motion.div
                   animate={{ rotateY: flipped ? 180 : 0 }}
                   transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
-                  style={{ transformStyle: 'preserve-3d', minHeight: '320px', position: 'relative' }}
+                  style={{ transformStyle: 'preserve-3d', minHeight: 'clamp(320px, 50vh, 420px)', position: 'relative' }}
                 >
                   {/* ─ Ön yüz (Soru) ─ */}
                   <div
@@ -251,8 +251,8 @@ export function FlashCardMode({ questions, kategori }: Props) {
                       WebkitBackdropFilter: 'blur(24px)',
                       border: '1px solid rgba(255,255,255,0.12)',
                       boxShadow: '0 0 0 1px rgba(99,102,241,0.1), 0 40px 80px -20px rgba(99,102,241,0.3)',
-                      padding: '40px',
-                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '24px',
+                      padding: 'clamp(20px, 5vw, 40px)',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px',
                       backfaceVisibility: 'hidden',
                     }}
                   >
@@ -296,10 +296,11 @@ export function FlashCardMode({ questions, kategori }: Props) {
                       WebkitBackdropFilter: 'blur(24px)',
                       border: '1px solid rgba(99,102,241,0.25)',
                       boxShadow: '0 0 0 1px rgba(99,102,241,0.15), 0 40px 80px -20px rgba(99,102,241,0.4)',
-                      padding: '40px',
-                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px',
+                      padding: 'clamp(20px, 5vw, 40px)',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px',
                       backfaceVisibility: 'hidden',
                       transform: 'rotateY(180deg)',
+                      overflow: 'hidden',
                     }}
                   >
                     <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.5), transparent)' }} />
@@ -312,17 +313,17 @@ export function FlashCardMode({ questions, kategori }: Props) {
                     </div>
 
                     {/* Cevap metni */}
-                    <p style={{ fontSize: '20px', color: 'rgba(226,232,240,0.9)', lineHeight: 1.7, flex: 1 }}>
+                    <p style={{ fontSize: 'clamp(15px, 4vw, 20px)', color: 'rgba(226,232,240,0.9)', lineHeight: 1.65, flex: 1, overflow: 'auto' }}>
                       {current.answer}
                     </p>
 
                     {/* Tag'ler */}
                     {current.hints && current.hints.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flexShrink: 0 }}>
                         {current.hints.map((h) => (
                           <span
                             key={h}
-                            style={{ padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(196,181,253,0.85)', fontSize: '12px', fontWeight: 500, background: 'rgba(99,102,241,0.12)' }}
+                            style={{ padding: '3px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(196,181,253,0.85)', fontSize: '11px', fontWeight: 500, background: 'rgba(99,102,241,0.12)', whiteSpace: 'nowrap' }}
                           >
                             {h}
                           </span>
@@ -343,7 +344,7 @@ export function FlashCardMode({ questions, kategori }: Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.25 }}
-                style={{ display: 'flex', gap: '12px', marginTop: '24px' }}
+                style={{ display: 'flex', gap: '10px', marginTop: '20px' }}
               >
                 {(['wrong', 'partial', 'correct'] as Result[]).map((r) => (
                   <ResultButton key={r} result={r} onClick={() => goNext(r)} />
