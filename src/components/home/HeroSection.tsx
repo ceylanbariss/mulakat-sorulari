@@ -3,12 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { PageWrapper } from '../layout/PageWrapper'
 import { useAppStore } from '../../store/useAppStore'
-
-const STATS = [
-  { value: '375+', label: 'Uzman Soru' },
-  { value: '4', label: 'Kategori' },
-  { value: '3', label: 'Antrenman Modu' },
-]
+import { useCategories } from '../../hooks/useCategories'
 
 const container = {
   hidden: {},
@@ -22,6 +17,16 @@ const item = {
 export function HeroSection() {
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
+  const { categories, loading: catsLoading } = useCategories()
+
+  const totalQuestions = categories.reduce((sum, cat) => sum + (cat.count ?? 0), 0)
+  const categoryCount = categories.length
+
+  const STATS = [
+    { value: catsLoading ? '…' : `${totalQuestions}+`, label: 'Uzman Soru' },
+    { value: catsLoading ? '…' : String(categoryCount), label: 'Kategori' },
+    { value: '3', label: 'Antrenman Modu' },
+  ]
 
   return (
     <section
