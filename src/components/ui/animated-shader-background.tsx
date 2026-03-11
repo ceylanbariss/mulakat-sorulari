@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-const AnoAI = () => {
+const AnoAI = ({ className }: { className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -131,7 +131,7 @@ const AnoAI = () => {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 w-full h-full opacity-50 dark:opacity-30 z-0 pointer-events-none overflow-hidden mix-blend-screen"
+      className={className ?? "absolute inset-0 w-full h-full opacity-50 dark:opacity-30 z-0 pointer-events-none overflow-hidden mix-blend-screen"}
     />
   );
 };

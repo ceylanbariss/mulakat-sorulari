@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Zap } from 'lucide-react'
 import { AuthForm } from '../components/ui/premium-auth'
-import { SmokeyBackground } from '../components/ui/login-form'
+import AnoAI from '../components/ui/animated-shader-background'
 import { useAuthStore } from '../store/useAuthStore'
 
 export function Auth() {
@@ -23,8 +23,8 @@ export function Auth() {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-16 relative overflow-hidden">
 
-      {/* Smokey Background */}
-      <SmokeyBackground color="#1E3A8A" backdropBlurAmount="none" />
+      {/* Aurora Background */}
+      <AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" />
 
       <motion.div
         initial={{ opacity: 0, y: 28 }}
