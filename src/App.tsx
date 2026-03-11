@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthProvider'
 import { Navbar } from './components/layout/Navbar'
 import { Footer } from './components/layout/Footer'
 import { AdminGuard } from './components/admin/AdminGuard'
+import AnoAI from './components/ui/animated-shader-background'
 import { Home } from './pages/Home'
 import { Questions } from './pages/Questions'
 import { CategoryDetail } from './pages/CategoryDetail'
@@ -58,6 +59,7 @@ function AppLayout() {
   const location = useLocation()
   const isTraining = location.pathname.startsWith('/antrenman')
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const isAuthRoute = location.pathname === '/giris'
 
   if (isAdminRoute) {
     return (
@@ -79,7 +81,9 @@ function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 relative overflow-hidden">
+      {/* Global Aurora Background — Auth sayfası hariç (auth kendi AnoAI'ını kullanıyor) */}
+      {!isAuthRoute && <AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" />}
       <div className="relative z-10 flex flex-col flex-1">
         {!isTraining && <Navbar />}
         <main className="flex-1">
