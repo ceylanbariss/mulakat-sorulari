@@ -11,9 +11,9 @@ export interface Category {
 export const CATEGORIES: Category[] = [
   {
     id: 'yazilim',
-    label: 'Yazılım',
-    emoji: '💻',
-    description: 'Algoritmalar, veri yapıları, OOP, sistem tasarımı ve daha fazlası.',
+    label: 'IT / Bilişim',
+    emoji: '🖥️',
+    description: 'Yazılım geliştirme, veri, DevOps, siber güvenlik ve daha fazlası.',
     color: '#3B82F6',
     bgColor: '#EFF6FF',
     count: 20,

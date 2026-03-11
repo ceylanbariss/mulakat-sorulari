@@ -66,16 +66,13 @@ export function CategoryDetail() {
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
 
-  const [selectedSubs, setSelectedSubs] = useState<string[]>([])
   const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string; parentId?: string }>>([])
-  const [selectedAlan, setSelectedAlan] = useState<string | null>(null)   // _id of selected alan
-  const [selectedAltDal, setSelectedAltDal] = useState<string | null>(null) // slug of selected alt dal
+  // selectedPath: her seviyede seçilen node (en derin seçim filtreyi belirler)
+  const [selectedPath, setSelectedPath] = useState<Array<{ _id: string; slug: string; name: string }>>([])
 
   useEffect(() => {
     if (!kategori) return
-    setSelectedSubs([])
-    setSelectedAlan(null)
-    setSelectedAltDal(null)
+    setSelectedPath([])
     getAll<{ name: string; slug: string; orderIndex?: number; parentId?: string }>(subcategoriesCol(), where('categoryId', '==', kategori))
       .then(docs => {
         const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
@@ -83,39 +80,47 @@ export function CategoryDetail() {
       })
   }, [kategori])
 
-  // Client-side hiyerarşi ayrımı
-  const alanlar = subcats.filter(s => !s.parentId || s.parentId === '')
-  const isHierarchical = alanlar.length > 0
+  // Top-level alanlar
+  const topLevel = subcats.filter(s => !s.parentId || s.parentId === '')
+  const isHierarchical = topLevel.length > 0
 
-  // Seçili alana ait alt dallar
-  const altdallarOfAlan = selectedAlan ? subcats.filter(s => s.parentId === selectedAlan) : []
+  // Verilen parentId'nin doğrudan çocukları
+  const getChildren = (parentId: string) => subcats.filter(s => s.parentId === parentId)
 
-  // Alan seçilince: o alanın tüm alt dal slug'larını selectedSubs olarak set et
-  function handleAlanSelect(alanId: string | null) {
-    setSelectedAlan(alanId)
-    setSelectedAltDal(null)
-    if (!alanId) {
-      setSelectedSubs([])
-    } else {
-      const children = subcats.filter(s => s.parentId === alanId)
-      setSelectedSubs(children.map(s => s.slug))
-    }
+  // Bir node'un tüm torun slug'ları (recursive)
+  function getAllDescendantSlugs(nodeId: string): string[] {
+    const children = subcats.filter(s => s.parentId === nodeId)
+    if (!children.length) return []
+    return children.flatMap(c => [c.slug, ...getAllDescendantSlugs(c._id)])
   }
 
-  // Alt dal seçilince: sadece o alt dal slug'ı
-  function handleAltDalSelect(slug: string | null) {
-    setSelectedAltDal(slug)
-    setSelectedSubs(slug ? [slug] : (selectedAlan ? subcats.filter(s => s.parentId === selectedAlan).map(s => s.slug) : []))
+  // Seçili en derin node + tüm torunları → question filter slugs
+  function getFilterSlugs(): string[] | undefined {
+    if (!selectedPath.length) return undefined
+    const deepest = selectedPath[selectedPath.length - 1]
+    const descendants = getAllDescendantSlugs(deepest._id)
+    return descendants.length > 0 ? descendants : [deepest.slug]
+  }
+
+  // Seviye seçim handler
+  function handleSelect(level: number, node: { _id: string; slug: string; name: string } | null) {
+    if (!node) setSelectedPath(prev => prev.slice(0, level))
+    else setSelectedPath(prev => [...prev.slice(0, level), node])
   }
 
   function toggleSub(slug: string) {
-    setSelectedSubs(prev =>
-      prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
-    )
+    // flat kategoriler için (isHierarchical === false)
+    setSelectedPath(prev => {
+      const exists = prev.find(p => p.slug === slug)
+      if (exists) return []
+      const node = subcats.find(s => s.slug === slug)
+      return node ? [{ _id: node._id, slug: node.slug, name: node.name }] : prev
+    })
   }
 
   const { categories, loading: catsLoading } = useCategories()
-  const { questions, loading: qsLoading } = useQuestions(kategori, selectedSubs.length > 0 ? selectedSubs : undefined)
+  const filterSlugs = getFilterSlugs()
+  const { questions, loading: qsLoading } = useQuestions(kategori, filterSlugs)
 
   if (catsLoading || qsLoading) return null // Veya loading spinner
 
@@ -174,87 +179,62 @@ export function CategoryDetail() {
             className="mb-8"
           >
             {isHierarchical ? (
-              /* 2-kademeli hiyerarşik filtre (yazilim) */
+              /* N-kademeli hiyerarşik filtre */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Satır 1: Alanlar */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alan</p>
-                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                    <button
-                      onClick={() => handleAlanSelect(null)}
-                      style={{
-                        flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                        border: !selectedAlan ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                        background: !selectedAlan ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                        color: !selectedAlan ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
-                      }}
+                {[0, 1, 2].map(level => {
+                  const parentId = level === 0 ? '' : selectedPath[level - 1]?._id
+                  if (level > 0 && !selectedPath[level - 1]) return null
+                  const items = getChildren(parentId ?? '')
+                  if (!items.length) return null
+                  const levelLabel = ['Alan', 'Alt Alan', 'Rol'][level]
+                  const currentSelection = selectedPath[level]
+                  const isActive = (item: { _id: string }) => currentSelection?._id === item._id
+                  const fontSize = level === 0 ? 13 : 12
+                  const padding = level === 0 ? '7px 16px' : '6px 14px'
+
+                  return (
+                    <motion.div
+                      key={level}
+                      initial={level > 0 ? { opacity: 0, y: -6 } : false}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25 }}
                     >
-                      Tümü
-                    </button>
-                    {alanlar.map(alan => {
-                      const active = selectedAlan === alan._id
-                      return (
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">{levelLabel}</p>
+                      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                         <button
-                          key={alan._id}
-                          onClick={() => handleAlanSelect(active ? null : alan._id)}
+                          onClick={() => handleSelect(level, null)}
                           style={{
-                            flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                            border: active ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                            background: active ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                            color: active ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
-                            outline: active ? `2px solid ${category?.color ?? '#3b82f6'}30` : 'none',
-                            outlineOffset: 1,
+                            flexShrink: 0, padding, borderRadius: 999, fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                            border: !currentSelection ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                            background: !currentSelection ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
+                            color: !currentSelection ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
                           }}
                         >
-                          {alan.name}
+                          Tümü
                         </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Satır 2: Alt Dallar (alan seçilince görünür) */}
-                {selectedAlan && altdallarOfAlan.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}
-                  >
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alt Dal</p>
-                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                      <button
-                        onClick={() => handleAltDalSelect(null)}
-                        style={{
-                          flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                          border: !selectedAltDal ? `1px solid ${category?.color ?? '#3b82f6'}50` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                          background: !selectedAltDal ? `${category?.color ?? '#3b82f6'}14` : d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.6)',
-                          color: !selectedAltDal ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)',
-                        }}
-                      >
-                        Tümü
-                      </button>
-                      {altdallarOfAlan.map(alt => {
-                        const active = selectedAltDal === alt.slug
-                        return (
-                          <button
-                            key={alt.slug}
-                            onClick={() => handleAltDalSelect(active ? null : alt.slug)}
-                            style={{
-                              flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                              border: active ? `1px solid ${category?.color ?? '#3b82f6'}50` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                              background: active ? `${category?.color ?? '#3b82f6'}14` : d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.6)',
-                              color: active ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)',
-                              outline: active ? `2px solid ${category?.color ?? '#3b82f6'}25` : 'none',
-                              outlineOffset: 1,
-                            }}
-                          >
-                            {alt.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </motion.div>
-                )}
+                        {items.map(item => {
+                          const active = isActive(item)
+                          return (
+                            <button
+                              key={item._id}
+                              onClick={() => handleSelect(level, active ? null : { _id: item._id, slug: item.slug, name: item.name })}
+                              style={{
+                                flexShrink: 0, padding, borderRadius: 999, fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                border: active ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                                background: active ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
+                                color: active ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
+                                outline: active ? `2px solid ${category?.color ?? '#3b82f6'}30` : 'none',
+                                outlineOffset: 1,
+                              }}
+                            >
+                              {item.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </div>
             ) : (
               /* Düz (flat) filtre — diğer kategoriler */
@@ -262,18 +242,18 @@ export function CategoryDetail() {
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alt Dal</p>
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginTop: 12 }}>
                   <button
-                    onClick={() => setSelectedSubs([])}
+                    onClick={() => setSelectedPath([])}
                     style={{
                       flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                      border: selectedSubs.length === 0 ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                      background: selectedSubs.length === 0 ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                      color: selectedSubs.length === 0 ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
+                      border: selectedPath.length === 0 ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                      background: selectedPath.length === 0 ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
+                      color: selectedPath.length === 0 ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
                     }}
                   >
                     Tümü
                   </button>
                   {subcats.map(sub => {
-                    const active = selectedSubs.includes(sub.slug)
+                    const active = selectedPath.some(p => p.slug === sub.slug)
                     return (
                       <button
                         key={sub.slug}
@@ -314,7 +294,7 @@ export function CategoryDetail() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.08 }}
                   whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                  onClick={() => navigate(`/antrenman/${mode.id}?kategori=${kategori}${selectedSubs.length > 0 ? `&altdal=${selectedSubs.join(',')}` : ''}`)}
+                  onClick={() => navigate(`/antrenman/${mode.id}?kategori=${kategori}${filterSlugs ? `&altdal=${filterSlugs.join(',')}` : ''}`)}
                   style={{
                     cursor: 'pointer',
                     borderRadius: '20px',

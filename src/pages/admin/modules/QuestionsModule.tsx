@@ -161,12 +161,14 @@ export function QuestionsModule() {
   // ── Alt kategori (subcategory) state ──
   const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string; parentId?: string }>>([])
   const [subcatsLoading, setSubcatsLoading] = useState(false)
-  const [selectedAlan, setSelectedAlan] = useState('')   // yazilim için alan seçimi
+  const [selectedAlan, setSelectedAlan] = useState('')      // yazilim: alan _id
+  const [selectedAltDal, setSelectedAltDal] = useState('')  // yazilim: alt dal _id
 
   useEffect(() => {
-    if (!form.category) { setSubcats([]); setSelectedAlan(''); return }
+    if (!form.category) { setSubcats([]); setSelectedAlan(''); setSelectedAltDal(''); return }
     setSubcatsLoading(true)
     setSelectedAlan('')
+    setSelectedAltDal('')
     getAll<{ name: string; slug: string; orderIndex?: number; parentId?: string }>(subcategoriesCol(), where('categoryId', '==', form.category))
       .then(docs => {
         const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
@@ -175,9 +177,10 @@ export function QuestionsModule() {
       .finally(() => setSubcatsLoading(false))
   }, [form.category])
 
-  // yazilim: alanlar (parentId === '' veya yok) ve altdallar (parentId dolu)
+  // yazilim: alanlar (top-level), alt dallar, roller
   const alanlar = subcats.filter(s => !s.parentId || s.parentId === '')
   const altdallarOfAlan = selectedAlan ? subcats.filter(s => s.parentId === selectedAlan) : []
+  const rollerOfAltDal = selectedAltDal ? subcats.filter(s => s.parentId === selectedAltDal) : []
 
   // ── Toplu yükleme state ──
   const [importOpen, setImportOpen] = useState(false)
@@ -228,11 +231,13 @@ export function QuestionsModule() {
     (!filterDiff || q.difficulty === filterDiff)
   )
 
-  function openAdd() { setEditing(null); setForm(emptyForm()); setHintsText(''); setModalOpen(true) }
+  function openAdd() { setEditing(null); setForm(emptyForm()); setHintsText(''); setSelectedAlan(''); setSelectedAltDal(''); setModalOpen(true) }
   function openEdit(q: QDoc) {
     setEditing(q)
     setForm({ category: q.category, subcategory: q.subcategory ?? '', difficulty: q.difficulty, question: q.question, answer: q.answer, hints: q.hints ?? [], options: q.options?.length ? q.options : [{ label: 'A', text: '', correct: false }, { label: 'B', text: '', correct: false }, { label: 'C', text: '', correct: false }, { label: 'D', text: '', correct: false }] })
     setHintsText((q.hints ?? []).join(', '))
+    setSelectedAlan('')
+    setSelectedAltDal('')
     setModalOpen(true)
   }
 
@@ -500,14 +505,18 @@ Kurallar:
             </select>
           </div>
 
-          {/* Yazılım: 2-kademeli Alan + Alt Dal */}
+          {/* Yazılım: 3-kademeli Alan + Alt Dal + Rol */}
           {form.category === 'yazilim' ? (
             <>
               <div>
                 <label style={LABEL_STYLE}>Alan{subcatsLoading ? ' …' : ''}</label>
                 <select
                   value={selectedAlan}
-                  onChange={e => { setSelectedAlan(e.target.value); setForm(f => ({ ...f, subcategory: '' })) }}
+                  onChange={e => {
+                    setSelectedAlan(e.target.value)
+                    setSelectedAltDal('')
+                    setForm(f => ({ ...f, subcategory: '' }))
+                  }}
                   style={{ ...SELECT_STYLE, borderColor: fc['alan'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
                   {...fb('alan')}
                 >
@@ -515,22 +524,47 @@ Kurallar:
                   {alanlar.map(s => <option key={s._id} value={s._id} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
                 </select>
               </div>
-              <div style={{ gridColumn: '1 / -1' }}>
+              <div>
                 <label style={LABEL_STYLE}>Alt Dal</label>
                 {altdallarOfAlan.length > 0 ? (
                   <select
-                    value={form.subcategory ?? ''}
-                    onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
+                    value={selectedAltDal}
+                    onChange={e => {
+                      const altDalId = e.target.value
+                      setSelectedAltDal(altDalId)
+                      // Eğer bu alt dalın çocukları varsa subcategory'i temizle, yoksa bu alt dalın slug'ını set et
+                      const hasChildren = subcats.some(s => s.parentId === altDalId)
+                      if (!hasChildren && altDalId) {
+                        const node = subcats.find(s => s._id === altDalId)
+                        setForm(f => ({ ...f, subcategory: node?.slug ?? '' }))
+                      } else {
+                        setForm(f => ({ ...f, subcategory: '' }))
+                      }
+                    }}
                     style={{ ...SELECT_STYLE, borderColor: fc['altdal'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
                     {...fb('altdal')}
                   >
                     <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alt dal seç…</option>
-                    {altdallarOfAlan.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                    {altdallarOfAlan.map(s => <option key={s._id} value={s._id} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
                   </select>
                 ) : (
-                  <input value='' disabled placeholder={selectedAlan ? 'Bu alan için alt dal yok' : 'Önce alan seçin'} style={{ ...fi('altdal'), opacity: 0.5 }} />
+                  <input value='' disabled placeholder={selectedAlan ? 'Alt dal yok' : 'Önce alan seçin'} style={{ ...fi('altdal'), opacity: 0.5 }} />
                 )}
               </div>
+              {rollerOfAltDal.length > 0 && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={LABEL_STYLE}>Rol</label>
+                  <select
+                    value={form.subcategory ?? ''}
+                    onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
+                    style={{ ...SELECT_STYLE, borderColor: fc['rol'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
+                    {...fb('rol')}
+                  >
+                    <option value="" style={{ background: C.sidebar, color: C.t1 }}>Rol seç…</option>
+                    {rollerOfAltDal.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
             </>
           ) : (
             /* Diğer kategoriler: tek dropdown */

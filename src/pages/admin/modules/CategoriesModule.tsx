@@ -74,12 +74,34 @@ function emptySubForm(): Subcategory {
   return { categoryId: '', parentId: '', name: '', slug: '', description: '', color: '#3B82F6', orderIndex: 0 }
 }
 
-// ─── Yazılım 2-kademeli hiyerarşi seed verisi ──────────────────────────────────
-const YAZILIM_HIERARCHY: Array<{ name: string; slug: string; children: Array<{ name: string; slug: string }> }> = [
+// ─── Yazılım 3-kademeli hiyerarşi seed verisi ──────────────────────────────────
+interface HierarchyNode { name: string; slug: string; children?: HierarchyNode[] }
+
+const YAZILIM_HIERARCHY: HierarchyNode[] = [
   { name: 'Yazılım Geliştirme', slug: 'yazilim-gelistirme', children: [
-    { name: 'Backend', slug: 'backend' }, { name: 'Frontend', slug: 'frontend' },
-    { name: 'Mobil', slug: 'mobil' }, { name: 'Full Stack', slug: 'full-stack' },
-    { name: 'Oyun / Game', slug: 'oyun-game' },
+    { name: 'Backend', slug: 'backend', children: [
+      { name: 'Java Developer', slug: 'java-developer' },
+      { name: '.NET Developer', slug: 'net-developer' },
+      { name: 'Python Developer', slug: 'python-developer' },
+      { name: 'Node.js Developer', slug: 'nodejs-developer' },
+    ]},
+    { name: 'Frontend', slug: 'frontend', children: [
+      { name: 'React Developer', slug: 'react-developer' },
+      { name: 'Angular Developer', slug: 'angular-developer' },
+      { name: 'Vue Developer', slug: 'vue-developer' },
+    ]},
+    { name: 'Mobil', slug: 'mobil', children: [
+      { name: 'Android Developer', slug: 'android-developer' },
+      { name: 'iOS Developer', slug: 'ios-developer' },
+      { name: 'Flutter Developer', slug: 'flutter-developer' },
+    ]},
+    { name: 'Full Stack', slug: 'full-stack', children: [
+      { name: 'Full Stack Developer', slug: 'full-stack-developer' },
+    ]},
+    { name: 'Oyun / Game', slug: 'oyun-game', children: [
+      { name: 'Unity Developer', slug: 'unity-developer' },
+      { name: 'Unreal Engine Developer', slug: 'unreal-engine-developer' },
+    ]},
   ]},
   { name: 'Analiz', slug: 'analiz', children: [
     { name: 'İş Analisti', slug: 'is-analisti' }, { name: 'Sistem Analisti', slug: 'sistem-analisti' },
@@ -306,24 +328,28 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
   async function handleSeedYazilimHierarchy() {
     setSeeding(true)
     try {
+      // 1. Mevcut yazilim subcatlerini temizle
+      const existing = await getAll(subcategoriesCol(), where('categoryId', '==', 'yazilim'))
+      for (const doc of existing) await deleteDocument(subcategoriesCol(), (doc as any)._id)
+
+      // 2. Recursive seed
       let total = 0
-      for (let i = 0; i < YAZILIM_HIERARCHY.length; i++) {
-        const alan = YAZILIM_HIERARCHY[i]
-        const alanDoc = await addDocument(subcategoriesCol(), {
-          categoryId: 'yazilim', parentId: '', name: alan.name, slug: alan.slug,
-          description: '', color: cat.color, orderIndex: i,
+      async function seedNode(node: HierarchyNode, parentId: string, order: number) {
+        const doc = await addDocument(subcategoriesCol(), {
+          categoryId: 'yazilim', parentId, name: node.name, slug: node.slug,
+          description: '', color: cat.color, orderIndex: order,
         } as any) as any
-        const alanId = alanDoc?.id ?? alanDoc?._id ?? ''
-        for (let j = 0; j < alan.children.length; j++) {
-          const child = alan.children[j]
-          await addDocument(subcategoriesCol(), {
-            categoryId: 'yazilim', parentId: alanId, name: child.name, slug: child.slug,
-            description: '', color: cat.color, orderIndex: j,
-          } as any)
-          total++
+        total++
+        const nodeId = doc?.id ?? doc?._id ?? ''
+        for (let i = 0; i < (node.children ?? []).length; i++) {
+          await seedNode(node.children![i], nodeId, i)
         }
       }
-      toast.success(`${YAZILIM_HIERARCHY.length} alan + ${total} alt dal eklendi.`)
+
+      for (let i = 0; i < YAZILIM_HIERARCHY.length; i++) {
+        await seedNode(YAZILIM_HIERARCHY[i], '', i)
+      }
+      toast.success(`${existing.length} eski kayıt silindi, ${total} yeni node oluşturuldu.`)
     } catch { toast.error('Seed eklenemedi.') }
     finally { setSeeding(false) }
   }
@@ -336,7 +362,7 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
 
   function openEdit(sub: SubDoc) {
     setEditingSub(sub)
-    setSubForm({ categoryId: sub.categoryId, name: sub.name, slug: sub.slug, description: sub.description, color: sub.color, orderIndex: sub.orderIndex })
+    setSubForm({ categoryId: sub.categoryId, parentId: sub.parentId ?? '', name: sub.name, slug: sub.slug, description: sub.description, color: sub.color, orderIndex: sub.orderIndex })
     setModalOpen(true)
   }
 
@@ -418,7 +444,7 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
               <p style={{ color: C.t3, fontSize: 13, textAlign: 'center', margin: 0 }}>Bu kategoride henüz alt dal yok.</p>
               {cat.id === 'yazilim' && (
                 <button onClick={handleSeedYazilimHierarchy} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.4)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
-                  <Database size={14} /> {seeding ? 'Ekleniyor...' : '12 Alan + Alt Dalları Seed Et'}
+                  <Database size={14} /> {seeding ? 'Ekleniyor...' : '3-Kademeli Hiyerarşi Seed Et'}
                 </button>
               )}
               {cat.id !== 'yazilim' && SEED_SUBCATEGORIES[cat.id] && (
