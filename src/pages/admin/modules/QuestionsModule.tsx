@@ -159,19 +159,25 @@ export function QuestionsModule() {
 
 
   // ── Alt kategori (subcategory) state ──
-  const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string }>>([])
+  const [subcats, setSubcats] = useState<Array<{ _id: string; name: string; slug: string; parentId?: string }>>([])
   const [subcatsLoading, setSubcatsLoading] = useState(false)
+  const [selectedAlan, setSelectedAlan] = useState('')   // yazilim için alan seçimi
 
   useEffect(() => {
-    if (!form.category) { setSubcats([]); return }
+    if (!form.category) { setSubcats([]); setSelectedAlan(''); return }
     setSubcatsLoading(true)
-    getAll<{ name: string; slug: string; orderIndex?: number }>(subcategoriesCol(), where('categoryId', '==', form.category))
+    setSelectedAlan('')
+    getAll<{ name: string; slug: string; orderIndex?: number; parentId?: string }>(subcategoriesCol(), where('categoryId', '==', form.category))
       .then(docs => {
         const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
         setSubcats(sorted as any)
       })
       .finally(() => setSubcatsLoading(false))
   }, [form.category])
+
+  // yazilim: alanlar (parentId === '' veya yok) ve altdallar (parentId dolu)
+  const alanlar = subcats.filter(s => !s.parentId || s.parentId === '')
+  const altdallarOfAlan = selectedAlan ? subcats.filter(s => s.parentId === selectedAlan) : []
 
   // ── Toplu yükleme state ──
   const [importOpen, setImportOpen] = useState(false)
@@ -231,7 +237,7 @@ export function QuestionsModule() {
   }
 
   async function handleSave() {
-    if (!form.category || !form.subcategory || !form.question.trim() || !form.answer.trim()) { toast.error('Kategori, alt dal, soru ve cevap zorunludur.'); return }
+    if (!form.category || !form.question.trim() || !form.answer.trim()) { toast.error('Kategori, soru ve cevap zorunludur.'); return }
     setSaving(true)
     try {
       const data = { ...form, hints: hintsText.split(',').map(h => h.trim()).filter(Boolean) }
@@ -488,27 +494,63 @@ Kurallar:
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={LABEL_STYLE}>Kategori *</label>
-            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ ...SELECT_STYLE, borderColor: fc['cat'] ? C.cyan : 'rgba(255,255,255,0.08)' }} {...fb('cat')}>
+            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value, subcategory: '' }))} style={{ ...SELECT_STYLE, borderColor: fc['cat'] ? C.cyan : 'rgba(255,255,255,0.08)' }} {...fb('cat')}>
               <option value="" style={{ background: C.sidebar, color: C.t1 }}>Seç...</option>
               {categories.map(c => <option key={c._id} value={c.id} style={{ background: C.sidebar, color: C.t1 }}>{c.label}</option>)}
             </select>
           </div>
-          <div>
-            <label style={LABEL_STYLE}>Alt Kategori{subcatsLoading ? ' …' : ''}</label>
-            {subcats.length > 0 ? (
-              <select
-                value={subcats.find(s => s.slug === form.subcategory) ? form.subcategory : ''}
-                onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
-                style={{ ...SELECT_STYLE, borderColor: fc['sub'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
-                {...fb('sub')}
-              >
-                <option value="" style={{ background: C.sidebar, color: C.t1 }}>Seç...</option>
-                {subcats.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
-              </select>
-            ) : (
-              <input value={form.subcategory ?? ''} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} placeholder={form.category ? 'Alt dal yok — serbest giriş' : 'Önce kategori seçin'} style={fi('sub')} {...fb('sub')} />
-            )}
-          </div>
+
+          {/* Yazılım: 2-kademeli Alan + Alt Dal */}
+          {form.category === 'yazilim' ? (
+            <>
+              <div>
+                <label style={LABEL_STYLE}>Alan{subcatsLoading ? ' …' : ''}</label>
+                <select
+                  value={selectedAlan}
+                  onChange={e => { setSelectedAlan(e.target.value); setForm(f => ({ ...f, subcategory: '' })) }}
+                  style={{ ...SELECT_STYLE, borderColor: fc['alan'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
+                  {...fb('alan')}
+                >
+                  <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alan seç…</option>
+                  {alanlar.map(s => <option key={s._id} value={s._id} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                </select>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={LABEL_STYLE}>Alt Dal</label>
+                {altdallarOfAlan.length > 0 ? (
+                  <select
+                    value={form.subcategory ?? ''}
+                    onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
+                    style={{ ...SELECT_STYLE, borderColor: fc['altdal'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
+                    {...fb('altdal')}
+                  >
+                    <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alt dal seç…</option>
+                    {altdallarOfAlan.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                  </select>
+                ) : (
+                  <input value='' disabled placeholder={selectedAlan ? 'Bu alan için alt dal yok' : 'Önce alan seçin'} style={{ ...fi('altdal'), opacity: 0.5 }} />
+                )}
+              </div>
+            </>
+          ) : (
+            /* Diğer kategoriler: tek dropdown */
+            <div>
+              <label style={LABEL_STYLE}>Alt Kategori{subcatsLoading ? ' …' : ''}</label>
+              {subcats.length > 0 ? (
+                <select
+                  value={subcats.find(s => s.slug === form.subcategory) ? form.subcategory : ''}
+                  onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
+                  style={{ ...SELECT_STYLE, borderColor: fc['sub'] ? C.cyan : 'rgba(255,255,255,0.08)' }}
+                  {...fb('sub')}
+                >
+                  <option value="" style={{ background: C.sidebar, color: C.t1 }}>Seç...</option>
+                  {subcats.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                </select>
+              ) : (
+                <input value={form.subcategory ?? ''} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} placeholder={form.category ? 'Alt dal yok — serbest giriş' : 'Önce kategori seçin'} style={fi('sub')} {...fb('sub')} />
+              )}
+            </div>
+          )}
         </div>
 
         <div>

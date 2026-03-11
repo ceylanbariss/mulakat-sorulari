@@ -22,6 +22,7 @@ type CatDoc = Category & { _id: string }
 
 interface Subcategory {
   categoryId: string
+  parentId: string          // '' = alan (top-level), '<docId>' = alt dal
   name: string
   slug: string
   description: string
@@ -70,8 +71,59 @@ function emptyForm(): Category {
 }
 
 function emptySubForm(): Subcategory {
-  return { categoryId: '', name: '', slug: '', description: '', color: '#3B82F6', orderIndex: 0 }
+  return { categoryId: '', parentId: '', name: '', slug: '', description: '', color: '#3B82F6', orderIndex: 0 }
 }
+
+// ─── Yazılım 2-kademeli hiyerarşi seed verisi ──────────────────────────────────
+const YAZILIM_HIERARCHY: Array<{ name: string; slug: string; children: Array<{ name: string; slug: string }> }> = [
+  { name: 'Yazılım Geliştirme', slug: 'yazilim-gelistirme', children: [
+    { name: 'Backend', slug: 'backend' }, { name: 'Frontend', slug: 'frontend' },
+    { name: 'Mobil', slug: 'mobil' }, { name: 'Full Stack', slug: 'full-stack' },
+    { name: 'Oyun / Game', slug: 'oyun-game' },
+  ]},
+  { name: 'Analiz', slug: 'analiz', children: [
+    { name: 'İş Analisti', slug: 'is-analisti' }, { name: 'Sistem Analisti', slug: 'sistem-analisti' },
+    { name: 'Technical Analyst', slug: 'technical-analyst' }, { name: 'Product Analyst', slug: 'product-analyst' },
+  ]},
+  { name: 'Test & QA', slug: 'test-qa', children: [
+    { name: 'Manual Tester', slug: 'manual-tester' }, { name: 'Test Automation Engineer', slug: 'test-automation-engineer' },
+    { name: 'QA Engineer', slug: 'qa-engineer' }, { name: 'Performance Tester', slug: 'performance-tester' },
+  ]},
+  { name: 'Veri', slug: 'veri', children: [
+    { name: 'Data Analyst', slug: 'data-analyst' }, { name: 'Data Scientist', slug: 'data-scientist' },
+    { name: 'Data Engineer', slug: 'data-engineer' }, { name: 'BI Developer', slug: 'bi-developer' },
+    { name: 'Database Administrator', slug: 'database-administrator' },
+  ]},
+  { name: 'DevOps & Sistem', slug: 'devops-sistem', children: [
+    { name: 'DevOps Engineer', slug: 'devops-engineer' }, { name: 'Site Reliability Engineer', slug: 'site-reliability-engineer' },
+    { name: 'System Administrator', slug: 'system-administrator' }, { name: 'CI/CD Engineer', slug: 'ci-cd-engineer' },
+  ]},
+  { name: 'Siber Güvenlik', slug: 'siber-guvenlik', children: [
+    { name: 'SOC Analyst', slug: 'soc-analyst' }, { name: 'Penetration Tester', slug: 'penetration-tester' },
+    { name: 'Security Engineer', slug: 'security-engineer' }, { name: 'GRC Specialist', slug: 'grc-specialist' },
+  ]},
+  { name: 'Ağ & Cloud', slug: 'ag-cloud', children: [
+    { name: 'Network Engineer', slug: 'network-engineer' }, { name: 'Cloud Engineer', slug: 'cloud-engineer' },
+    { name: 'Cloud Architect', slug: 'cloud-architect' },
+  ]},
+  { name: 'Proje & Ürün', slug: 'proje-urun', children: [
+    { name: 'IT Project Manager', slug: 'it-project-manager' }, { name: 'Scrum Master', slug: 'scrum-master' },
+    { name: 'Product Owner', slug: 'product-owner' }, { name: 'Product Manager', slug: 'product-manager' },
+  ]},
+  { name: 'UX/UI', slug: 'ux-ui', children: [
+    { name: 'UX Designer', slug: 'ux-designer' }, { name: 'UI Designer', slug: 'ui-designer' },
+    { name: 'Product Designer', slug: 'product-designer' }, { name: 'UX Researcher', slug: 'ux-researcher' },
+  ]},
+  { name: 'Kurumsal / ERP', slug: 'kurumsal-erp', children: [
+    { name: 'SAP Danışmanı', slug: 'sap-danismani' }, { name: 'ABAP Developer', slug: 'abap-developer' },
+  ]},
+  { name: 'IT Destek', slug: 'it-destek', children: [
+    { name: 'Bilgi İşlem / Help Desk', slug: 'bilgi-islem-help-desk' },
+  ]},
+  { name: 'Otomasyon', slug: 'otomasyon', children: [
+    { name: 'RPA Developer (UiPath)', slug: 'rpa-developer-uipath' },
+  ]},
+]
 
 // ─── Shared design tokens ──────────────────────────────────────────────────────
 const C = {
@@ -244,9 +296,34 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
       for (let i = 0; i < names.length; i++) {
         const name = names[i]
         const slug = toSlug(name)
-        await addDocument(subcategoriesCol(), { categoryId: cat.id, name, slug, description: '', color: cat.color, orderIndex: i } as any)
+        await addDocument(subcategoriesCol(), { categoryId: cat.id, parentId: '', name, slug, description: '', color: cat.color, orderIndex: i } as any)
       }
       toast.success(`${names.length} alt dal eklendi.`)
+    } catch { toast.error('Seed eklenemedi.') }
+    finally { setSeeding(false) }
+  }
+
+  async function handleSeedYazilimHierarchy() {
+    setSeeding(true)
+    try {
+      let total = 0
+      for (let i = 0; i < YAZILIM_HIERARCHY.length; i++) {
+        const alan = YAZILIM_HIERARCHY[i]
+        const alanDoc = await addDocument(subcategoriesCol(), {
+          categoryId: 'yazilim', parentId: '', name: alan.name, slug: alan.slug,
+          description: '', color: cat.color, orderIndex: i,
+        } as any) as any
+        const alanId = alanDoc?.id ?? alanDoc?._id ?? ''
+        for (let j = 0; j < alan.children.length; j++) {
+          const child = alan.children[j]
+          await addDocument(subcategoriesCol(), {
+            categoryId: 'yazilim', parentId: alanId, name: child.name, slug: child.slug,
+            description: '', color: cat.color, orderIndex: j,
+          } as any)
+          total++
+        }
+      }
+      toast.success(`${YAZILIM_HIERARCHY.length} alan + ${total} alt dal eklendi.`)
     } catch { toast.error('Seed eklenemedi.') }
     finally { setSeeding(false) }
   }
@@ -339,16 +416,28 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
           {subs.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, padding: '60px 0' }}>
               <p style={{ color: C.t3, fontSize: 13, textAlign: 'center', margin: 0 }}>Bu kategoride henüz alt dal yok.</p>
-              {SEED_SUBCATEGORIES[cat.id] && (
+              {cat.id === 'yazilim' && (
+                <button onClick={handleSeedYazilimHierarchy} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.4)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
+                  <Database size={14} /> {seeding ? 'Ekleniyor...' : '12 Alan + Alt Dalları Seed Et'}
+                </button>
+              )}
+              {cat.id !== 'yazilim' && SEED_SUBCATEGORIES[cat.id] && (
                 <button onClick={handleSeedDefaults} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(255,255,255,0.04)', color: C.t1, fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
                   <Database size={14} /> {seeding ? 'Ekleniyor...' : 'Varsayılan Alt Dalları Ekle'}
                 </button>
               )}
             </div>
           ) : (
-            subs.map(sub => (
-              <SubRow key={sub._id} sub={sub} qCount={subQCounts[sub.slug] ?? 0} onEdit={() => openEdit(sub)} onDelete={() => setDeleteTarget(sub)} />
-            ))
+            <>
+              {cat.id === 'yazilim' && subs.some(s => !s.parentId) && (
+                <div style={{ marginBottom: 8 }}>
+                  <p style={{ color: C.t3, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 8px' }}>Alanlar + Alt Dallar ({subs.length} toplam)</p>
+                </div>
+              )}
+              {subs.map(sub => (
+                <SubRow key={sub._id} sub={sub} qCount={subQCounts[sub.slug] ?? 0} onEdit={() => openEdit(sub)} onDelete={() => setDeleteTarget(sub)} />
+              ))}
+            </>
           )}
         </div>
       </motion.div>
