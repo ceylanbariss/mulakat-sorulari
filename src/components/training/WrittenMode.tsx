@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { type Question } from '../../data/questions'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { useAuthStore } from '../../store/useAuthStore'
+import { addDocument, trainingSessionsCol } from '../../lib/firestore'
 
 interface Props {
   questions: Question[]
@@ -67,8 +69,25 @@ export function WrittenMode({ questions, kategori }: Props) {
   const handleReveal = () => setShowAnswer(true)
 
   const handleScore = (score: SelfScore) => {
-    setResults((r) => [...r, score])
+    const newResults = [...results, score]
+    setResults(newResults)
     if (index + 1 >= deck.length) {
+      const user = useAuthStore.getState().user
+      if (user) {
+        const correctCount = newResults.filter(r => r === 'correct').length
+        const partialCount = newResults.filter(r => r === 'partial').length
+        const wrongCount = newResults.filter(r => r === 'wrong').length
+        addDocument(trainingSessionsCol(), {
+          userId: user.uid,
+          mode: 'written',
+          category: kategori,
+          totalQuestions: deck.length,
+          correctCount,
+          partialCount,
+          wrongCount,
+          score: Math.round((correctCount / deck.length) * 100),
+        }).catch(() => {})
+      }
       setDone(true)
     } else {
       setIndex((i) => i + 1)

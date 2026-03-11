@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Code2, Landmark, Banknote, Users, ArrowRight } from 'lucide-react'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { useCategories } from '../hooks/useCategories'
+import { useAppStore } from '../store/useAppStore'
 
 const ICONS = { yazilim: Code2, kamu: Landmark, banka: Banknote, ik: Users } as const
 
@@ -18,6 +19,8 @@ const cardVariant = {
 export function Questions() {
   const navigate = useNavigate()
   const { categories, loading } = useCategories()
+  const theme = useAppStore(s => s.theme)
+  const d = theme === 'dark'
 
   if (loading) return null
 
@@ -65,21 +68,20 @@ export function Questions() {
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
                     backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: 'rgba(255,255,255,0.03)',
+                    border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                    background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)',
                     transition: 'all 0.25s',
                     ...(isLastOdd ? { gridColumn: 'span 1' } : {}),
                   }}
-                  className="hover:border-white/20 dark:hover:border-white/10"
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 16px 48px rgba(0,0,0,0.2)'
-                      ; (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.06)'
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 16px 48px rgba(0,0,0,0.15)'
+                      ; (e.currentTarget as HTMLDivElement).style.background = d ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,1)'
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.12)'
-                      ; (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.08)'
+                      ; (e.currentTarget as HTMLDivElement).style.background = d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)'
                   }}
                 >
                   {/* İkon */}

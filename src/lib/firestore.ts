@@ -25,6 +25,7 @@ export const categoriesCol = () => collection(db, 'categories')
 export const subcategoriesCol = () => collection(db, 'subcategories')
 export const announcementsCol = () => collection(db, 'announcements')
 export const userProfilesCol = () => collection(db, 'userProfiles')
+export const trainingSessionsCol = () => collection(db, 'trainingSessions')
 
 // ─── Generic helpers ──────────────────────────────────────────────────────────
 

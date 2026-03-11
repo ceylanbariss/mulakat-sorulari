@@ -7,6 +7,8 @@ import { type Question } from '../../data/questions'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
+import { useAuthStore } from '../../store/useAuthStore'
+import { addDocument, trainingSessionsCol } from '../../lib/firestore'
 
 interface Props {
   questions: Question[]
@@ -74,9 +76,26 @@ export function FlashCardMode({ questions, kategori }: Props) {
   const goNext = useCallback(
     (result: Result) => {
       setDirection(result === 'correct' ? 'right' : result === 'wrong' ? 'left' : null)
-      setResults((r) => [...r, result])
+      const newResults = [...results, result]
+      setResults(newResults)
       setTimeout(() => {
         if (index + 1 >= deck.length) {
+          const user = useAuthStore.getState().user
+          if (user) {
+            const correctCount = newResults.filter(r => r === 'correct').length
+            const partialCount = newResults.filter(r => r === 'partial').length
+            const wrongCount = newResults.filter(r => r === 'wrong').length
+            addDocument(trainingSessionsCol(), {
+              userId: user.uid,
+              mode: 'flashcard',
+              category: kategori,
+              totalQuestions: deck.length,
+              correctCount,
+              partialCount,
+              wrongCount,
+              score: Math.round((correctCount / deck.length) * 100),
+            }).catch(() => {})
+          }
           setDone(true)
         } else {
           setIndex((i) => i + 1)
@@ -85,7 +104,7 @@ export function FlashCardMode({ questions, kategori }: Props) {
         }
       }, 200)
     },
-    [index, deck.length]
+    [index, deck.length, results, kategori]
   )
 
   useEffect(() => {

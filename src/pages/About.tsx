@@ -1,6 +1,7 @@
 import { ChevronDown, Target, Zap, Users, Mail, ArrowUp } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAppStore } from '../store/useAppStore'
 
 const FAQ = [
   { q: 'Uygulama ücretsiz mi?', a: 'Evet, temel özellikler tamamen ücretsizdir.' },
@@ -134,6 +135,8 @@ const cardShadow = { boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }
 
 export function About() {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+  const theme = useAppStore(s => s.theme)
+  const d = theme === 'dark'
 
   return (
     <div className="min-h-screen pb-20 relative overflow-hidden">
@@ -149,10 +152,10 @@ export function About() {
           </div>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 10 }}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ textAlign: 'center' }}>
-              <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', fontWeight: 900, color: 'white', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+              <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
                 Mülakatına hazırlanmanın<br />en akıllı yolu
               </h1>
-              <p style={{ color: 'rgba(148,163,184,0.75)', maxWidth: '500px', margin: '0 auto', fontSize: '17px', lineHeight: 1.75 }}>
+              <p style={{ color: d ? 'rgba(148,163,184,0.75)' : 'rgba(71,85,105,0.8)', maxWidth: '500px', margin: '0 auto', fontSize: '17px', lineHeight: 1.75 }}>
                 İş mülakatlarına hazırlanmayı kolaylaştıran, akıllı antrenman sistemiyle fark yaratmanı sağlayan bir platform.
               </p>
             </motion.div>

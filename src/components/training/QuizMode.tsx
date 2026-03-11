@@ -7,6 +7,8 @@ import { type Question } from '../../data/questions'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { PageWrapper } from '../layout/PageWrapper'
+import { useAuthStore } from '../../store/useAuthStore'
+import { addDocument, trainingSessionsCol } from '../../lib/firestore'
 
 interface Props {
   questions: Question[]
@@ -163,6 +165,19 @@ export function QuizMode({ questions, kategori }: Props) {
 
   const goNext = () => {
     if (index + 1 >= deck.length) {
+      const user = useAuthStore.getState().user
+      if (user) {
+        addDocument(trainingSessionsCol(), {
+          userId: user.uid,
+          mode: 'quiz',
+          category: kategori,
+          totalQuestions: deck.length,
+          correctCount: score,
+          partialCount: 0,
+          wrongCount: wrongAnswers.length,
+          score: Math.round((score / deck.length) * 100),
+        }).catch(() => {})
+      }
       setDone(true)
     } else {
       setIndex((i) => i + 1)
