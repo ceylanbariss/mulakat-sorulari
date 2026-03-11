@@ -147,56 +147,114 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* ─── Mobile Menu ─── */}
-        <AnimatePresence>
-          {menuOpen && (
+      </div>
+
+      {/* ─── Mobile Menu Overlay ─── */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 z-40"
+            style={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(8,12,28,0.82)' }}
+            onClick={() => setMenuOpen(false)}
+          >
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-              className="md:hidden overflow-hidden"
+              initial={{ y: -16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -16, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              style={{ paddingTop: '80px', paddingLeft: '24px', paddingRight: '24px' }}
+              onClick={e => e.stopPropagation()}
             >
-              <div className="py-3 border-t border-slate-200/80 dark:border-slate-700/80 flex flex-col gap-1">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {navLinks.map(({ to, label, icon: Icon }, i) => (
                   <motion.div
                     key={to}
-                    initial={{ x: -16, opacity: 0 }}
+                    initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.06 }}
+                    transition={{ delay: i * 0.07, ease: [0.16, 1, 0.3, 1] }}
                   >
                     <Link
                       to={to}
                       onClick={() => setMenuOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors',
-                        pathname.startsWith(to)
-                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
-                      )}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: '18px 20px',
+                        borderRadius: '16px',
+                        fontSize: '17px',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        background: pathname.startsWith(to)
+                          ? 'rgba(99,102,241,0.18)'
+                          : 'rgba(255,255,255,0.05)',
+                        color: pathname.startsWith(to) ? '#818cf8' : 'rgba(255,255,255,0.85)',
+                        border: pathname.startsWith(to)
+                          ? '1px solid rgba(99,102,241,0.3)'
+                          : '1px solid rgba(255,255,255,0.07)',
+                      }}
                     >
-                      <Icon size={16} />
+                      <Icon size={20} />
                       {label}
                     </Link>
                   </motion.div>
                 ))}
+
                 <motion.div
-                  initial={{ x: -16, opacity: 0 }}
+                  initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: navLinks.length * 0.06 }}
+                  transition={{ delay: navLinks.length * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ marginTop: '12px' }}
                 >
                   {user ? (
-                    <button
-                      onClick={() => { setMenuOpen(false); handleLogout() }}
-                      className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 text-sm font-semibold"
-                    >
-                      <LogOut size={15} /> Çıkış Yap
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        padding: '16px 20px',
+                        borderRadius: '16px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                      }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: 'white', fontWeight: 700, fontSize: '14px', flexShrink: 0,
+                        }}>
+                          {initials}
+                        </div>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.displayName ?? user.email}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => { setMenuOpen(false); handleLogout() }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                          padding: '16px 20px', borderRadius: '16px', fontSize: '15px', fontWeight: 600,
+                          background: 'rgba(239,68,68,0.12)', color: '#f87171',
+                          border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer', width: '100%',
+                        }}
+                      >
+                        <LogOut size={18} /> Çıkış Yap
+                      </button>
+                    </div>
                   ) : (
                     <Link
                       to="/giris"
                       onClick={() => setMenuOpen(false)}
-                      className="mt-2 block px-4 py-3 rounded-xl bg-blue-500 text-white text-sm font-semibold text-center"
+                      style={{
+                        display: 'block', padding: '18px 20px', borderRadius: '16px',
+                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        color: 'white', fontSize: '17px', fontWeight: 700,
+                        textAlign: 'center', textDecoration: 'none',
+                      }}
                     >
                       Giriş Yap
                     </Link>
@@ -204,9 +262,9 @@ export function Navbar() {
                 </motion.div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   )
 }

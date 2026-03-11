@@ -62,19 +62,7 @@ export function HeroSection() {
                   height: '280px',
                 }}
               >
-                {/* Glow effect behind logo */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: '-20%',
-                    borderRadius: '50%',
-                    background: d
-                      ? 'radial-gradient(circle, rgba(234,179,8,0.35) 0%, rgba(245,158,11,0.18) 40%, transparent 70%)'
-                      : 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, rgba(245,158,11,0.1) 40%, transparent 70%)',
-                    filter: 'blur(20px)',
-                    pointerEvents: 'none',
-                  }}
-                />
+
                 <img
                   src="/logo.png"
                   alt="Mülakat Soruları Logo"
@@ -84,7 +72,7 @@ export function HeroSection() {
                     objectFit: 'contain',
                     position: 'relative',
                     zIndex: 1,
-                    filter: d ? 'drop-shadow(0 8px 24px rgba(234,179,8,0.3))' : 'drop-shadow(0 8px 24px rgba(234,179,8,0.18))',
+                    filter: d ? 'drop-shadow(0 8px 24px rgba(255,255,255,0.3))' : 'drop-shadow(0 8px 24px rgba(255,255,255,0.18))',
                   }}
                 />
               </div>

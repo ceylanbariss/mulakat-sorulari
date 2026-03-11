@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Github, Twitter, ArrowUp } from 'lucide-react'
+import { Instagram, ArrowUp } from 'lucide-react'
 
 const links = [
   { label: 'Sorular', to: '/sorular' },
@@ -80,38 +80,34 @@ export function Footer() {
               iletisim@mulakatsorulari.com
             </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {[
-                { icon: Github, label: 'GitHub' },
-                { icon: Twitter, label: 'Twitter' },
-              ].map(({ icon: Icon, label }) => (
-                <a
-                  key={label}
-                  href="#"
-                  aria-label={label}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(255,255,255,0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'rgba(148,163,184,0.7)',
-                    transition: 'background 0.2s, color 0.2s',
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.16)'
-                    e.currentTarget.style.color = 'white'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-                    e.currentTarget.style.color = 'rgba(148,163,184,0.7)'
-                  }}
-                >
-                  <Icon size={17} />
-                </a>
-              ))}
+              <a
+                href="https://www.instagram.com/mulakatsorulari.com.tr?igsh=Nm5qenlnNzU4Z2Fy"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'rgba(148,163,184,0.7)',
+                  transition: 'background 0.2s, color 0.2s',
+                  textDecoration: 'none',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(225,48,108,0.25)'
+                  e.currentTarget.style.color = '#e1306c'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                  e.currentTarget.style.color = 'rgba(148,163,184,0.7)'
+                }}
+              >
+                <Instagram size={17} />
+              </a>
             </div>
           </div>
         </motion.div>
