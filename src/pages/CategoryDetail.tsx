@@ -108,7 +108,7 @@ export function CategoryDetail() {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-8 flex-wrap"
+          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-6 flex-wrap"
         >
           <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight size={14} />
@@ -122,7 +122,7 @@ export function CategoryDetail() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center gap-4 sm:gap-5 mb-10"
+          className="flex items-center gap-4 sm:gap-5 mb-6"
         >
           <div
             className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-sm flex-shrink-0"
@@ -145,7 +145,7 @@ export function CategoryDetail() {
             className="mb-8"
           >
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alt Dal</p>
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginTop: 12 }}>
               {/* "Tümü" chip */}
               <button
                 onClick={() => setSelectedSubs([])}
@@ -187,8 +187,8 @@ export function CategoryDetail() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5 }}
         >
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Antrenman Modunu Seç</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 mt-4">Antrenman Modunu Seç</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             {MODES.map((mode, i) => {
               const Icon = mode.icon
               return (
@@ -246,7 +246,7 @@ export function CategoryDetail() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Soru Önizlemesi</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6 mt-4">Soru Önizlemesi</h2>
           <motion.div variants={container} initial="hidden" animate="show" className="flex flex-col gap-4">
             {questions.slice(0, 5).map((q, i) => (
               <motion.div
@@ -257,7 +257,7 @@ export function CategoryDetail() {
                   background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)',
                   border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
                   borderRadius: '20px',
-                  padding: '20px 24px',
+                  padding: '16px 24px',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '16px',

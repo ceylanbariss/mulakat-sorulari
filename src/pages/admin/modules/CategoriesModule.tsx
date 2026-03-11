@@ -438,8 +438,10 @@ export function CategoriesModule() {
     setMigrating(true)
     toast.loading('Migration başlıyor…', { id: 'migrate' })
     try {
+      const catMap = Object.fromEntries(categories.map(c => [c.id, c]))
       let subCreated = 0
-      // Step 1: seed missing subcategories
+
+      // Step 1: preset seed — eğer kategori hiç alt dalı yoksa varsayılanları ekle
       for (const cat of categories) {
         const existing = await getAll<{ name: string }>(subcategoriesCol(), where('categoryId', '==', cat.id))
         if (existing.length === 0 && SEED_SUBCATEGORIES[cat.id]) {
@@ -452,10 +454,50 @@ export function CategoriesModule() {
           }
         }
       }
-      // Step 2: load all subcategories after seeding
-      const allSubs = await getAll<{ categoryId: string; name: string; slug: string }>(subcategoriesCol())
-      // Step 3: match existing questions to subcategory slugs
+
+      // Step 2: tüm mevcut alt dalları ve soruları yükle
+      let allSubs = await getAll<{ categoryId: string; name: string; slug: string }>(subcategoriesCol())
       const allQs = await getAll<{ category: string; subcategory?: string }>(questionsCol())
+
+      // Step 3: eşleşmeyen subcategory değerlerini kategori bazında topla
+      // Map<catId, Map<slug, displayName>>
+      const newSubsNeeded = new Map<string, Map<string, string>>()
+      for (const q of allQs) {
+        if (!q.subcategory?.trim()) continue
+        const catSubs = allSubs.filter(s => (s as any).categoryId === q.category)
+        const qSlug = toSlug(q.subcategory)
+        const qNorm = q.subcategory.toLowerCase()
+        const match =
+          catSubs.find(s => s.slug === qSlug) ||
+          catSubs.find(s => s.slug.includes(qSlug) || qSlug.includes(s.slug)) ||
+          catSubs.find(s => s.name.toLowerCase().includes(qNorm) || qNorm.includes(s.name.toLowerCase()))
+        if (!match) {
+          if (!newSubsNeeded.has(q.category)) newSubsNeeded.set(q.category, new Map())
+          const nameMap = newSubsNeeded.get(q.category)!
+          if (!nameMap.has(qSlug)) nameMap.set(qSlug, q.subcategory.trim())
+        }
+      }
+
+      // Step 4: eşleşmeyen subcategory'leri otomatik oluştur
+      for (const [catId, slugToName] of newSubsNeeded) {
+        const cat = catMap[catId]
+        const existingInCat = allSubs.filter(s => (s as any).categoryId === catId)
+        let orderIndex = existingInCat.length
+        for (const [slug, name] of slugToName) {
+          await addDocument(subcategoriesCol(), {
+            categoryId: catId, name, slug, description: '',
+            color: cat?.color ?? '#3b82f6', orderIndex: orderIndex++,
+          } as any)
+          subCreated++
+        }
+      }
+
+      // Step 5: yeni oluşturulanlar dahil tüm alt dalları tekrar yükle
+      if (newSubsNeeded.size > 0) {
+        allSubs = await getAll<{ categoryId: string; name: string; slug: string }>(subcategoriesCol())
+      }
+
+      // Step 6: soruları doğru slug'a güncelle
       let updated = 0
       for (const q of allQs) {
         if (!q.subcategory?.trim()) continue
@@ -472,7 +514,8 @@ export function CategoriesModule() {
           updated++
         }
       }
-      toast.success(`${subCreated} alt dal oluşturuldu, ${updated} soru güncellendi.`, { id: 'migrate' })
+
+      toast.success(`${subCreated} yeni alt dal oluşturuldu, ${updated} soru güncellendi.`, { id: 'migrate' })
     } catch {
       toast.error('Migration sırasında hata oluştu.', { id: 'migrate' })
     } finally {
@@ -496,15 +539,26 @@ export function CategoriesModule() {
 
   async function handleDelete() {
     if (!deleteTarget) return
-    const count = questionCounts[deleteTarget.id] ?? 0
-    if (count > 0) {
-      toast.error(`Bu kategoride ${count} soru var. Önce soruları taşı veya sil.`)
-      setDeleteTarget(null)
-      return
-    }
-    try { await deleteDocument(categoriesCol(), deleteTarget._id); toast.success('Kategori silindi.') }
-    catch { toast.error('Silinemedi.') }
-    finally { setDeleteTarget(null) }
+    const catToDelete = deleteTarget
+    setDeleteTarget(null)
+    try {
+      await deleteDocument(categoriesCol(), catToDelete._id)
+      toast(`"${catToDelete.label}" silindi`, {
+        action: {
+          label: 'Geri Al',
+          onClick: async () => {
+            try {
+              const { _id, ...catData } = catToDelete
+              await setDocument(categoriesCol(), catToDelete.id, catData)
+              toast.success('Kategori geri alındı.')
+            } catch {
+              toast.error('Geri alınamadı.')
+            }
+          },
+        },
+        duration: 5000,
+      })
+    } catch { toast.error('Silinemedi.') }
   }
 
   const [fc, setFc] = useState<Record<string, boolean>>({})
@@ -607,7 +661,7 @@ export function CategoriesModule() {
       <DeleteConfirm
         open={!!deleteTarget}
         message={`"${deleteTarget?.label ?? ''}" kategorisini silmek istediğinden emin misin?`}
-        errorMsg={(questionCounts[deleteTarget?.id ?? ''] ?? 0) > 0 ? `Bu kategoride ${questionCounts[deleteTarget?.id ?? '']} soru var! Önce onları silmelisin.` : undefined}
+        errorMsg={(questionCounts[deleteTarget?.id ?? ''] ?? 0) > 0 ? <span style={{ color: '#f59e0b' }}>Bu kategorideki {questionCounts[deleteTarget?.id ?? '']} soru veritabanında kalacak.</span> : undefined}
         onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete}
       />
 

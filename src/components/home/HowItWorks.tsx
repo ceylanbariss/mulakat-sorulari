@@ -44,7 +44,7 @@ export function HowItWorks() {
   const d = theme === 'dark'
 
   return (
-    <section id="nasil-calisir" className="py-28 relative overflow-hidden" style={{ background: d ? 'linear-gradient(180deg, #080e1a 0%, #0a1020 100%)' : 'linear-gradient(180deg, #f0f4ff 0%, #f8fafc 100%)' }}>
+    <section id="nasil-calisir" className="pt-28 pb-36 relative overflow-hidden" style={{ background: d ? 'linear-gradient(180deg, #080e1a 0%, #0a1020 100%)' : 'linear-gradient(180deg, #f0f4ff 0%, #f8fafc 100%)' }}>
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div style={{ position: 'absolute', top: '10%', right: '5%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)', filter: 'blur(40px)' }} />
       </div>
@@ -55,11 +55,8 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center', marginBottom: '56px' }}
+          style={{ textAlign: 'center', paddingTop: '48px', marginBottom: '56px' }}
         >
-          <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: '999px', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', background: d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', color: d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '20px' }}>
-            Nasıl Çalışır?
-          </span>
           <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', letterSpacing: '-0.03em', marginBottom: '14px' }}>
             3 adımda mülakata hazırlan
           </h2>

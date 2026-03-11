@@ -205,9 +205,12 @@ export function SmokeyBackground({
   const blurClass = blurClassMap[backdropBlurAmount] ?? blurClassMap['sm']
 
   return (
-    <div className={`absolute inset-0 w-full h-full overflow-hidden ${className}`}>
-      <canvas ref={canvasRef} className="w-full h-full" />
-      <div className={`absolute inset-0 ${blurClass}`} />
+    <div
+      className={className}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden' }}
+    >
+      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+      <div className={blurClass} style={{ position: 'absolute', inset: 0 }} />
     </div>
   )
 }

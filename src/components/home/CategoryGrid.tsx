@@ -40,7 +40,7 @@ export function CategoryGrid() {
   if (loading) return null // Veya loading spinner
 
   return (
-    <section className="py-28 relative overflow-hidden" style={{ background: d ? 'linear-gradient(180deg, #080e1a 0%, #0a1020 100%)' : 'linear-gradient(180deg, #f8fafc 0%, #f0f4ff 100%)' }}>
+    <section className="pt-28 pb-32 relative overflow-hidden" style={{ background: d ? 'linear-gradient(180deg, #080e1a 0%, #0a1020 100%)' : 'linear-gradient(180deg, #f8fafc 0%, #f0f4ff 100%)' }}>
       {/* Ambient blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)', filter: 'blur(40px)' }} />
@@ -54,11 +54,8 @@ export function CategoryGrid() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center', marginBottom: '56px' }}
+          style={{ textAlign: 'center', paddingTop: '48px', marginBottom: '56px' }}
         >
-          <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: '999px', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', background: d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', color: d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '20px' }}>
-            Kategoriler
-          </span>
           <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', letterSpacing: '-0.03em', marginBottom: '16px', lineHeight: 1.15 }}>
             Hangi alanda hazırlanıyorsun?
           </h2>

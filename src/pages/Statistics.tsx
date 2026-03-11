@@ -29,9 +29,6 @@ export function Statistics() {
           transition={{ duration: 0.5 }}
           style={{ marginBottom: '40px' }}
         >
-          <span style={{ display: 'inline-block', padding: '4px 14px', borderRadius: '999px', border: '1px solid rgba(139,92,246,0.5)', background: 'rgba(139,92,246,0.1)', color: '#a78bfa', fontSize: '13px', fontWeight: 600, marginBottom: '20px' }}>
-            İstatistikler
-          </span>
           <h1 style={{ fontSize: '40px', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '0' }}>
             İlerleme Paneli
           </h1>

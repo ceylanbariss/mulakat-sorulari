@@ -32,9 +32,9 @@ export function Auth() {
         className="relative z-10 w-full min-w-[320px] max-w-[460px]"
       >
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <img src="/logo.png" alt="logo" className="w-12 h-12 object-contain" />
-          <span className="font-bold text-lg text-white tracking-tight">Mülakat Soruları</span>
+        <div className="flex flex-col items-center">
+          <img src="/logo.png" alt="logo" className="w-56 h-56 object-contain" />
+          <span className="font-bold text-xl text-white tracking-tight text-center mx-auto" style={{ marginTop: '-20px', marginBottom: '32px' }}>Mülakat Soruları</span>
         </div>
 
         {/* Glassmorphism Kart */}

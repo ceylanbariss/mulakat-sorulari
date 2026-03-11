@@ -39,11 +39,6 @@ export function CtaBanner() {
 
           {/* Content */}
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '999px', border: d ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(59,130,246,0.2)', background: d ? 'rgba(255,255,255,0.07)' : 'rgba(59,130,246,0.07)', color: d ? 'rgba(186,230,253,0.9)' : '#2563eb', fontSize: '13px', fontWeight: 600, marginBottom: '28px' }}>
-              <Sparkles size={13} style={{ fill: d ? 'rgba(186,230,253,0.7)' : '#3b82f6', color: d ? 'rgba(186,230,253,0.7)' : '#3b82f6' }} />
-              Tamamen Ücretsiz
-            </div>
-
             <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', marginBottom: '20px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
               Bugün antrenmanına başla
             </h2>

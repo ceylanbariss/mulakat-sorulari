@@ -61,21 +61,13 @@ export function HeroSection() {
       <div style={{ position: 'absolute', inset: 0, backgroundImage: d ? 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)' : 'radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
 
       <PageWrapper className="relative z-10">
-        <div style={{ paddingTop: '80px', paddingBottom: '80px' }}>
+        <div style={{ paddingTop: '80px', paddingBottom: '160px' }}>
           <motion.div
             variants={container}
             initial="hidden"
             animate="show"
             style={{ textAlign: 'center', maxWidth: '860px', marginLeft: 'auto', marginRight: 'auto' }}
           >
-            {/* Badge */}
-            <motion.div variants={item} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '36px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '8px 20px', borderRadius: '999px', border: '1px solid rgba(59,130,246,0.3)', background: d ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.08)', backdropFilter: 'blur(8px)', color: d ? '#93c5fd' : '#2563eb', fontSize: '13px', fontWeight: 600 }}>
-                <Sparkles size={13} style={{ fill: d ? '#60a5fa' : '#3b82f6', color: d ? '#60a5fa' : '#3b82f6' }} />
-                375+ Uzman Onaylı Mülakat Sorusu
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: d ? '#60a5fa' : '#3b82f6', animation: 'pulse 2s infinite' }} />
-              </span>
-            </motion.div>
 
             {/* Heading */}
             <motion.h1

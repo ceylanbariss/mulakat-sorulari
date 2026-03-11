@@ -154,9 +154,6 @@ export function About() {
           </div>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 10 }}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ textAlign: 'center' }}>
-              <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: '999px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#a78bfa', fontSize: '12px', fontWeight: 600, marginBottom: '24px' }}>
-                Hakkımızda
-              </span>
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)', fontWeight: 900, color: 'white', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
                 Mülakatına hazırlanmanın<br />en akıllı yolu
               </h1>

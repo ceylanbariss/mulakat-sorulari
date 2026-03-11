@@ -132,16 +132,16 @@ function InputField({ icon, error, rightElement, className: _cls, ...rest }: Inp
           {...rest}
           style={{
             width: '100%',
-            minHeight: 52,
-            paddingTop: 14,
-            paddingBottom: 14,
+            minHeight: 56,
+            paddingTop: 16,
+            paddingBottom: 16,
             paddingLeft: 44,
             paddingRight: rightElement ? 44 : 16,
             borderRadius: 12,
             border: `1px solid ${borderColor}`,
             background: 'rgba(255,255,255,0.08)',
             color: 'rgba(226,232,240,0.95)',
-            fontSize: 15,
+            fontSize: 16,
             outline: 'none',
             boxSizing: 'border-box',
             transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -474,7 +474,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
 
     // Main login / signup
     return (
-      <div className="space-y-4" style={{ gap: 16 }}>
+      <div className="space-y-5" style={{ gap: 20 }}>
         {authMode === 'signup' && (
           <InputField
             icon={<User className="h-4 w-4" />}
@@ -487,15 +487,17 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           />
         )}
 
-        <InputField
-          icon={<Mail className="h-4 w-4" />}
-          type="email"
-          placeholder="E-posta Adresi"
-          value={form.email}
-          onChange={e => onChange('email', e.target.value)}
-          onBlur={() => onBlur('email')}
-          error={errors.email}
-        />
+        <div style={{ paddingBottom: 12 }}>
+          <InputField
+            icon={<Mail className="h-4 w-4" />}
+            type="email"
+            placeholder="E-posta Adresi"
+            value={form.email}
+            onChange={e => onChange('email', e.target.value)}
+            onBlur={() => onBlur('email')}
+            error={errors.email}
+          />
+        </div>
 
         <div>
           <InputField
@@ -533,21 +535,21 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           />
         </>)}
 
-        <div className="flex items-center justify-between pt-0.5">
+        <div className="flex items-center justify-between mt-3 mb-3">
           {authMode === 'login' ? (<>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
+            <label className="flex items-center gap-2 cursor-pointer select-none py-2">
               <input
                 type="checkbox"
                 checked={form.rememberMe}
                 onChange={e => onChange('rememberMe', e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/10 accent-indigo-500 cursor-pointer"
+                className="w-5 h-5 rounded border-white/20 bg-white/10 accent-indigo-500 cursor-pointer"
               />
-              <span className="text-sm text-slate-500">Beni hatırla</span>
+              <span className="text-base text-slate-500">Beni hatırla</span>
             </label>
             <button
               type="button"
               onClick={() => setAuthMode('reset')}
-              className="text-sm text-slate-500 hover:text-blue-400 transition-colors"
+              className="text-sm text-slate-500 hover:text-blue-400 transition-colors py-2 px-1"
             >
               Şifremi unuttum?
             </button>
@@ -575,7 +577,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           </p>
         )}
 
-        <div className="pt-2">
+        <div className="pt-5">
           <button
             type="submit"
             disabled={loading}
@@ -583,7 +585,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
               bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30
               hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-500/30
               disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            style={{ minHeight: 52, padding: '14px 24px' }}
+            style={{ minHeight: 60, padding: '18px 28px' }}
           >
             {loading
               ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -596,7 +598,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
   }
 
   return (
-    <div className={cn(className)} style={{ paddingTop: 48, paddingBottom: 48, paddingLeft: 40, paddingRight: 40 }}>
+    <div className={cn(className)} style={{ paddingTop: 72, paddingBottom: 72, paddingLeft: 60, paddingRight: 60 }}>
       {/* Başarı bildirimi */}
       {successMsg && (
         <div className="flex items-center gap-2 mb-5 rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20">
@@ -624,7 +626,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           >
             {authMode === 'login' ? 'Tekrar Hoş Geldin' : 'Hesabını Oluştur'}
           </h2>
-          <p className="text-sm text-slate-500" style={{ marginTop: 8 }}>
+          <p className="text-sm text-slate-500" style={{ marginTop: 14 }}>
             {authMode === 'login' ? 'Hesabına giriş yap' : 'Dakikalar içinde ücretsiz başla'}
           </p>
         </div>
@@ -633,7 +635,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       {/* Tab Switcher — underline */}
       {showSocial && (
         <div
-          className="flex mb-7"
+          className="flex mb-4"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
         >
           {(['login', 'signup'] as AuthMode[]).map(m => (
@@ -669,15 +671,15 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 rounded-xl font-semibold text-sm mb-6
+            className="w-full flex items-center justify-center gap-3 rounded-xl font-semibold text-sm mb-8
               focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed transition-all"
             style={{
-              minHeight: 52,
-              padding: '14px 20px',
+              minHeight: 56,
+              padding: '16px 20px',
               background: 'rgba(255,255,255,0.07)',
               border: '1px solid rgba(255,255,255,0.12)',
               color: '#cbd5e1',
-              fontSize: 15,
+              fontSize: 16,
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.11)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
@@ -686,7 +688,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
             Google ile devam et
           </button>
 
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
             <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#334155' }}>veya e-posta ile</span>
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
@@ -701,7 +703,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
 
       {/* Alt link */}
       {showSocial && (
-        <p className="text-center text-sm mt-6 text-slate-600">
+        <p className="text-center text-sm mt-8 text-slate-600">
           {authMode === 'login' ? 'Hesabın yok mu?' : 'Zaten hesabın var mı?'}{' '}
           <button
             type="button"

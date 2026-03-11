@@ -23,7 +23,7 @@ export function Questions() {
   if (loading) return null
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-16 relative overflow-hidden" style={{ paddingTop: '120px' }}>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative overflow-hidden" style={{ paddingTop: '120px', paddingBottom: '160px' }}>
       <AnoAI />
       <div className="relative z-10">
         <PageWrapper>
@@ -35,12 +35,6 @@ export function Questions() {
             className="text-center"
             style={{ paddingBottom: '48px' }}
           >
-            <span
-              className="inline-block text-blue-600 dark:text-blue-400 text-xs font-semibold mb-5"
-              style={{ padding: '6px 16px', borderRadius: '999px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)' }}
-            >
-              Kategoriler
-            </span>
             <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-8 tracking-tight">
               Mülakat Soruları
             </h1>
