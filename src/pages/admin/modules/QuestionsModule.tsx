@@ -150,6 +150,8 @@ export function QuestionsModule() {
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [filterDiff, setFilterDiff] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [allSubcats, setAllSubcats] = useState<Array<{ categoryId: string, slug: string }>>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<QDoc | null>(null)
   const [form, setForm] = useState(emptyForm())
@@ -376,14 +378,25 @@ export function QuestionsModule() {
   useEffect(() => {
     const unsubQ = subscribeCollection<Question>(questionsCol(), docs => setQuestions(docs as QDoc[]))
     const unsubC = subscribeCollection<any>(categoriesCol(), docs => setCategories(docs as CatDoc[]))
+    getAll<{ categoryId: string, slug: string }>(subcategoriesCol()).then(docs => setAllSubcats(docs as any))
     return () => { unsubQ(); unsubC() }
   }, [])
 
-  const filtered = questions.filter(q =>
-    (!search || q.question.toLowerCase().includes(search.toLowerCase())) &&
-    (!filterCat || q.category === filterCat) &&
-    (!filterDiff || q.difficulty === filterDiff)
-  )
+  const filtered = questions.filter(q => {
+    if (search && !q.question.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterCat && q.category !== filterCat) return false
+    if (filterDiff && q.difficulty !== filterDiff) return false
+
+    if (filterStatus === 'empty') {
+      if (q.subcategory && q.subcategory !== '') return false
+    } else if (filterStatus === 'orphaned') {
+      if (!q.subcategory || q.subcategory === '') return false
+      const exist = allSubcats.some(s => s.categoryId === q.category && s.slug === q.subcategory)
+      if (exist) return false
+    }
+
+    return true
+  })
 
   function openAdd() { setEditing(null); setForm(emptyForm()); setHintsText(''); setSelectedAlan(''); setSelectedAltDal(''); setModalOpen(true) }
   function openEdit(q: QDoc) {
@@ -610,6 +623,11 @@ Kurallar:
         <select value={filterDiff} onChange={e => setFilterDiff(e.target.value)} style={{ ...SELECT_STYLE, width: 140 }}>
           <option value="" style={{ background: C.card, color: C.t1 }}>Tüm Zorluklar</option>
           {DIFFICULTIES.map(d => <option key={d} value={d} style={{ background: C.card, color: C.t1 }}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ ...SELECT_STYLE, width: 220 }}>
+          <option value="" style={{ background: C.card, color: C.t1 }}>Tüm Durumlar</option>
+          <option value="empty" style={{ background: C.card, color: C.t1 }}>Alt Dalı Boş Olanlar</option>
+          <option value="orphaned" style={{ background: C.card, color: C.t1 }}>Geçersiz / Eksik Alt Dalı Olanlar</option>
         </select>
       </div>
 
