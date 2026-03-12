@@ -188,7 +188,7 @@ export function CategoryDetail() {
           >
             {isHierarchical ? (
               /* N-kademeli hiyerarşik filtre */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                 {[0, 1, 2].map(level => {
                   const parentId = level === 0 ? '' : selectedPath[level - 1]?._id
                   if (level > 0 && !selectedPath[level - 1]) return null
@@ -207,7 +207,10 @@ export function CategoryDetail() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25 }}
                     >
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">{levelLabel}</p>
+                      <div className="flex items-center gap-4 mb-3">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 m-0">{levelLabel}</p>
+                        <div className="flex-1 h-px bg-slate-200 dark:bg-white/5"></div>
+                      </div>
                       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                         <button
                           onClick={() => handleSelect(level, null)}
@@ -247,8 +250,11 @@ export function CategoryDetail() {
             ) : (
               /* Düz (flat) filtre — diğer kategoriler */
               <>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Alt Dal</p>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginTop: 12 }}>
+                <div className="flex items-center gap-4 mb-3">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 m-0">Alt Dal</p>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-white/5"></div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                   <button
                     onClick={() => setSelectedPath([])}
                     style={{
