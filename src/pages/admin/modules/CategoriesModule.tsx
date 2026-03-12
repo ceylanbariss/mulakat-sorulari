@@ -1280,7 +1280,7 @@ function CategoryBulkAddModal({ cat, onClose }: { cat: CatDoc; onClose: () => vo
 
   function buildPrompt() {
     return `Aşağıdaki JSON formatında "${cat.label}" kategorisinin alt dalları (konuları) için mülakat soruları oluştur.
-Her bir konu için EN AZ 20 soru hazırla. TOPLAM ${leafSubs.length > 0 ? leafSubs.length * 20 : 20} soru beklendiğini unutma.
+Her bir konu için EN AZ 5 soru hazırla. TOPLAM ${leafSubs.length > 0 ? leafSubs.length * 5 : 5} soru beklendiğini unutma.
 
 İstenen Alt Dallar:
 ${leafSubs.length > 0 ? leafSubs.map(s => `- ${s.name} (slug: ${s.slug})`).join('\n') : '- Genel (slug: genel)'}
