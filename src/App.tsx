@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Toaster } from 'sonner'
@@ -57,6 +58,12 @@ function AnimatedRoutes() {
 function AppLayout() {
   const { theme } = useTheme()
   const location = useLocation()
+
+  // Sayfa değiştiğinde en üste kaydır
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+
   const isTraining = location.pathname.startsWith('/antrenman')
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isAuthRoute = location.pathname === '/giris'
