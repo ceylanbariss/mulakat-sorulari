@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Plus, Search, Pencil, Trash2, X, BookOpen, Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, X, BookOpen, Upload, FileText, CheckCircle2, AlertCircle, FolderTree } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   questionsCol, categoriesCol, subcategoriesCol,
@@ -156,6 +156,160 @@ export function QuestionsModule() {
   const [hintsText, setHintsText] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<QDoc | null>(null)
+
+  // ── Soru Seçim State ──
+  const [selectedQs, setSelectedQs] = useState<Set<string>>(new Set())
+
+  function toggleRow(id: string) {
+    const next = new Set(selectedQs)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedQs(next)
+  }
+
+  function toggleAll() {
+    if (selectedQs.size === filtered.length) setSelectedQs(new Set())
+    else setSelectedQs(new Set(filtered.map(q => q._id)))
+  }
+
+  // ── Tekli Soru Alan Değiştirme State ──
+  const [inlineMoveTarget, setInlineMoveTarget] = useState<QDoc | null>(null)
+  const [inlineMoveCat, setInlineMoveCat] = useState('')
+  const [inlineMoveAlan, setInlineMoveAlan] = useState('')
+  const [inlineMoveAltdal, setInlineMoveAltdal] = useState('')
+  const [inlineMoveRol, setInlineMoveRol] = useState('')
+  const [inlineMoveSubcats, setInlineMoveSubcats] = useState<Array<{ _id: string; name: string; slug: string; parentId?: string }>>([])
+  const [inlineMoveLoading, setInlineMoveLoading] = useState(false)
+  const [inlineMoveSaving, setInlineMoveSaving] = useState(false)
+
+  useEffect(() => {
+    if (inlineMoveTarget) {
+      setInlineMoveCat(inlineMoveTarget.category)
+      setInlineMoveAlan('')
+      setInlineMoveAltdal('')
+      setInlineMoveRol(inlineMoveTarget.subcategory || '')
+    }
+  }, [inlineMoveTarget])
+
+  useEffect(() => {
+    if (!inlineMoveCat) { setInlineMoveSubcats([]); return }
+    setInlineMoveLoading(true)
+    getAll<{ name: string; slug: string; orderIndex?: number; parentId?: string }>(subcategoriesCol(), where('categoryId', '==', inlineMoveCat))
+      .then(docs => {
+        const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
+        setInlineMoveSubcats(sorted as any)
+        
+        // Hiyerarşik pre-selection
+        if (inlineMoveTarget && inlineMoveTarget.category === inlineMoveCat) {
+          const currentSub = inlineMoveTarget.subcategory
+          const node = sorted.find(s => s.slug === currentSub)
+          if (node) {
+            setInlineMoveRol(node.slug)
+            if (node.parentId) {
+               const parent = sorted.find(s => s._id === node.parentId)
+               if (parent) {
+                  if (parent.parentId) {
+                     // 3. seviye
+                     setInlineMoveAlan(parent.parentId)
+                     setInlineMoveAltdal(parent._id)
+                  } else {
+                     // 2. seviye
+                     setInlineMoveAlan(parent._id)
+                     setInlineMoveAltdal(node._id)
+                     setInlineMoveRol(node.slug) 
+                  }
+               }
+            } else {
+               setInlineMoveAlan(node._id)
+            }
+          }
+        }
+      })
+      .finally(() => setInlineMoveLoading(false))
+  }, [inlineMoveCat])
+  
+  async function handleInlineMoveSave() {
+    if (!inlineMoveTarget || !inlineMoveCat) return
+    const hasHierarchy = inlineMoveSubcats.some(s => s.parentId)
+    let finalSlug = ''
+    if (hasHierarchy) {
+      if (!inlineMoveAlan) { toast.error('Lütfen bir alan seçin.'); return }
+      finalSlug = inlineMoveRol;
+      if (!finalSlug) { toast.error('Lütfen en alt dala kadar seçim yapın.'); return }
+    } else {
+      if (!inlineMoveRol) { toast.error('Lütfen bir alt dal seçin.'); return }
+      finalSlug = inlineMoveRol;
+    }
+
+    setInlineMoveSaving(true)
+    try {
+      await updateDocument(questionsCol(), inlineMoveTarget._id, { category: inlineMoveCat, subcategory: finalSlug })
+      toast.success('Soru başarıyla yeni alanına taşındı.')
+      setInlineMoveTarget(null)
+    } catch {
+      toast.error('Güncellenirken hata oluştu.')
+    } finally {
+      setInlineMoveSaving(false)
+    }
+  }
+
+  // ── Toplu Alt Dal Ata state ──
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
+  const [bulkAssignCat, setBulkAssignCat] = useState('')
+  const [bulkAssignSourceSub, setBulkAssignSourceSub] = useState('')
+  const [bulkAssignTargetSub, setBulkAssignTargetSub] = useState('')
+  const [bulkAssignTargetAlan, setBulkAssignTargetAlan] = useState('')
+  const [bulkAssignTargetAltDal, setBulkAssignTargetAltDal] = useState('')
+  const [bulkAssignSubcats, setBulkAssignSubcats] = useState<Array<{ _id: string; name: string; slug: string; parentId?: string }>>([])
+  const [bulkAssignSubcatsLoading, setBulkAssignSubcatsLoading] = useState(false)
+  const [bulkAssignSaving, setBulkAssignSaving] = useState(false)
+
+  useEffect(() => {
+    if (!bulkAssignCat) { setBulkAssignSubcats([]); setBulkAssignTargetSub(''); setBulkAssignTargetAlan(''); setBulkAssignTargetAltDal(''); return }
+    setBulkAssignSubcatsLoading(true)
+    setBulkAssignTargetSub('')
+    setBulkAssignTargetAlan('')
+    setBulkAssignTargetAltDal('')
+    getAll<{ name: string; slug: string; orderIndex?: number; parentId?: string }>(subcategoriesCol(), where('categoryId', '==', bulkAssignCat))
+      .then(docs => {
+        const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
+        setBulkAssignSubcats(sorted as any)
+      })
+      .finally(() => setBulkAssignSubcatsLoading(false))
+  }, [bulkAssignCat])
+
+  const bulkAlanlar = bulkAssignSubcats.filter(s => !s.parentId || s.parentId === '')
+  const bulkAltdallarOfAlan = bulkAssignTargetAlan ? bulkAssignSubcats.filter(s => s.parentId === bulkAssignTargetAlan) : []
+  const bulkRollerOfAltDal = bulkAssignTargetAltDal ? bulkAssignSubcats.filter(s => s.parentId === bulkAssignTargetAltDal) : []
+
+  async function handleBulkAssignSave() {
+    if (!bulkAssignCat || !bulkAssignTargetSub) { toast.error('Kategori ve hedef alt dal zorunludur.'); return }
+    const eligibleQs = questions.filter(q => {
+      if (q.category !== bulkAssignCat) return false
+      if (bulkAssignSourceSub === 'SELECTED') return selectedQs.has(q._id)
+      if (bulkAssignSourceSub === '*') return true
+      if (bulkAssignSourceSub === '' && (!q.subcategory || q.subcategory === '')) return true
+      return q.subcategory === bulkAssignSourceSub
+    })
+    if (eligibleQs.length === 0) {
+      toast.error('Bu kriterlere uyan soru bulunamadı.')
+      return
+    }
+    setBulkAssignSaving(true)
+    try {
+      for (const q of eligibleQs) {
+        await updateDocument(questionsCol(), q._id, { subcategory: bulkAssignTargetSub })
+      }
+      toast.success(`${eligibleQs.length} soruya başarıyla "${bulkAssignTargetSub}" atandı.`)
+      setBulkAssignOpen(false)
+      if (bulkAssignSourceSub === 'SELECTED') setSelectedQs(new Set())
+    } catch {
+      toast.error('Atama işlemi başarısız.')
+    } finally {
+      setBulkAssignSaving(false)
+    }
+  }
+
 
 
   // ── Alt kategori (subcategory) state ──
@@ -408,6 +562,21 @@ Kurallar:
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button
+            onClick={() => {
+              setBulkAssignCat('');
+              setBulkAssignSourceSub(selectedQs.size > 0 ? 'SELECTED' : '');
+              setBulkAssignTargetSub('');
+              setBulkAssignTargetAlan('');
+              setBulkAssignTargetAltDal('');
+              setBulkAssignOpen(true);
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, cursor: 'pointer', background: selectedQs.size > 0 ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${selectedQs.size > 0 ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.1)'}`, color: selectedQs.size > 0 ? C.purple : C.t2, fontSize: 13, fontWeight: 600, transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = selectedQs.size > 0 ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLButtonElement).style.color = selectedQs.size > 0 ? '#a78bfa' : C.t1 }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = selectedQs.size > 0 ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = selectedQs.size > 0 ? C.purple : C.t2 }}
+          >
+            <Pencil size={14} /> Toplu Alt Dal Ata {selectedQs.size > 0 && `(${selectedQs.size})`}
+          </button>
+          <button
             onClick={() => { setImportRaw(''); setImportParsed(null); setImportError(''); setImportProgress(0); setImportOpen(true) }}
             style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: C.t2, fontSize: 13, fontWeight: 600, transition: 'all 0.15s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLButtonElement).style.color = C.t1 }}
@@ -452,8 +621,11 @@ Kurallar:
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
+             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <th style={{ width: 40, padding: '12px 16px', textAlign: 'center' }}>
+                  <input type="checkbox" checked={filtered.length > 0 && selectedQs.size === filtered.length} onChange={toggleAll} style={{ cursor: 'pointer' }} />
+                </th>
                 {['Soru', 'Kategori', 'Zorluk', ''].map((h, i) => (
                   <th key={i} style={{ textAlign: 'left', padding: '12px 16px', color: C.t3, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', width: i === 3 ? 80 : undefined }}>
                     {h}
@@ -464,6 +636,9 @@ Kurallar:
             <tbody>
               {filtered.map((q, i) => (
                 <TableRow key={q._id} isLast={i === filtered.length - 1}>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <input type="checkbox" checked={selectedQs.has(q._id)} onChange={() => toggleRow(q._id)} style={{ cursor: 'pointer' }} />
+                  </td>
                   <td style={{ padding: '12px 16px', maxWidth: 380 }}>
                     <p style={{ color: C.t1, fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.question}</p>
                     {q.subcategory && <p style={{ color: C.t3, fontSize: 11, margin: '2px 0 0' }}>{q.subcategory}</p>}
@@ -476,6 +651,7 @@ Kurallar:
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      <IconBtn onClick={() => setInlineMoveTarget(q)} hoverColor="#a855f7"><FolderTree size={13} /></IconBtn>
                       <IconBtn onClick={() => openEdit(q)} hoverColor={C.cyan}><Pencil size={13} /></IconBtn>
                       <IconBtn onClick={() => setDeleteTarget(q)} hoverColor="#ef4444"><Trash2 size={13} /></IconBtn>
                     </div>
@@ -505,8 +681,8 @@ Kurallar:
             </select>
           </div>
 
-          {/* Yazılım: 3-kademeli Alan + Alt Dal + Rol */}
-          {form.category === 'yazilim' ? (
+          {/* Dinamik Hiyerarşi (Alan + Alt Dal + Rol) veya Düz (Alt Kategori) */}
+          {subcats.some(s => s.parentId) ? (
             <>
               <div>
                 <label style={LABEL_STYLE}>Alan{subcatsLoading ? ' …' : ''}</label>
@@ -822,6 +998,102 @@ Kurallar:
         )}
       </Modal>
 
+      {/* Toplu Alt Dal Ata Modal */}
+      <Modal open={bulkAssignOpen} onClose={() => setBulkAssignOpen(false)} title="Toplu Alt Dal Ata"
+        footer={
+          <>
+            <CancelBtn onClick={() => setBulkAssignOpen(false)} />
+            <PrimaryBtn onClick={handleBulkAssignSave} disabled={bulkAssignSaving}>{bulkAssignSaving ? <Spinner /> : null} Uygula</PrimaryBtn>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Adım 1: Kategori */}
+          <div>
+             <label style={LABEL_STYLE}>1. Hangi Kategorideki Sorular?</label>
+             <select value={bulkAssignCat} onChange={e => { setBulkAssignCat(e.target.value); setBulkAssignSourceSub(''); }} style={SELECT_STYLE}>
+               <option value="" style={{ background: C.sidebar, color: C.t1 }}>Kategori Seç...</option>
+               {categories.map(c => <option key={c._id} value={c.id} style={{ background: C.sidebar, color: C.t1 }}>{c.label}</option>)}
+             </select>
+          </div>
+
+          {bulkAssignCat && (
+            <>
+              {/* Adım 2: Hangi Sorular */}
+              <div>
+                 <label style={LABEL_STYLE}>2. Bu Kategorideki Hangi Sorular?</label>
+                 <select value={bulkAssignSourceSub} onChange={e => setBulkAssignSourceSub(e.target.value)} style={SELECT_STYLE}>
+                   <option value="SELECTED" style={{ background: C.sidebar, color: C.purple }}>Sadece İşaretli Sorular ({selectedQs.size})</option>
+                   <option value="" style={{ background: C.sidebar, color: C.t1 }}>Sadece Alt Dalı "BOŞ" Olanlar (Varsayılan)</option>
+                   <option value="*" style={{ background: C.sidebar, color: C.t1 }}>Kategorideki Tüm Sorular (Üzerine Yaz)</option>
+                   {Array.from(new Set(questions.filter(q => q.category === bulkAssignCat).map(q => q.subcategory).filter(Boolean))).map(sub => (
+                     <option key={sub} value={sub ?? ''} style={{ background: C.sidebar, color: C.t1 }}>Sadece "{sub}" olanlar</option>
+                   ))}
+                 </select>
+              </div>
+
+              {/* Adım 3: Hedef Alt Dal */}
+              <div>
+                 <label style={LABEL_STYLE}>3. Yeni Alt Dal Ne Olsun? {bulkAssignSubcatsLoading ? '...' : ''}</label>
+                 {bulkAssignSubcats.some(s => s.parentId) ? (
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                     <select value={bulkAssignTargetAlan} onChange={e => { setBulkAssignTargetAlan(e.target.value); setBulkAssignTargetAltDal(''); setBulkAssignTargetSub(''); }} style={SELECT_STYLE}>
+                       <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alan Seç...</option>
+                       {bulkAlanlar.map(a => <option key={a._id} value={a._id} style={{ background: C.sidebar, color: C.t1 }}>{a.name}</option>)}
+                     </select>
+                     {bulkAltdallarOfAlan.length > 0 && (
+                       <select value={bulkAssignTargetAltDal} onChange={e => {
+                         const altDalId = e.target.value;
+                         setBulkAssignTargetAltDal(altDalId);
+                         const hasChildren = bulkAssignSubcats.some(s => s.parentId === altDalId);
+                         if (!hasChildren && altDalId) {
+                           const node = bulkAssignSubcats.find(s => s._id === altDalId);
+                           setBulkAssignTargetSub(node?.slug ?? '');
+                         } else {
+                           setBulkAssignTargetSub('');
+                         }
+                       }} style={SELECT_STYLE}>
+                         <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alt Dal Seç...</option>
+                         {bulkAltdallarOfAlan.map(a => <option key={a._id} value={a._id} style={{ background: C.sidebar, color: C.t1 }}>{a.name}</option>)}
+                       </select>
+                     )}
+                     {bulkRollerOfAltDal.length > 0 && (
+                       <select value={bulkAssignTargetSub} onChange={e => setBulkAssignTargetSub(e.target.value)} style={SELECT_STYLE}>
+                         <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alt Dal Spesifik (Rol) Seç...</option>
+                         {bulkRollerOfAltDal.map(a => <option key={a.slug} value={a.slug} style={{ background: C.sidebar, color: C.t1 }}>{a.name}</option>)}
+                       </select>
+                     )}
+                   </div>
+                 ) : (
+                   <select value={bulkAssignTargetSub} onChange={e => setBulkAssignTargetSub(e.target.value)} style={SELECT_STYLE}>
+                     <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alt Kategori Seç...</option>
+                     {bulkAssignSubcats.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                   </select>
+                 )}
+              </div>
+            </>
+          )}
+
+          {bulkAssignCat && bulkAssignTargetSub && (() => {
+            const count = questions.filter(q => {
+              if (q.category !== bulkAssignCat) return false
+              if (bulkAssignSourceSub === 'SELECTED') return selectedQs.has(q._id)
+              if (bulkAssignSourceSub === '*') return true
+              if (bulkAssignSourceSub === '' && (!q.subcategory || q.subcategory === '')) return true
+              return q.subcategory === bulkAssignSourceSub
+            }).length;
+            return (
+              <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                <p style={{ color: C.cyan, fontSize: 13, margin: 0 }}>
+                  <AlertCircle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />
+                  Toplam <strong>{count}</strong> soru güncellenecek.
+                </p>
+              </div>
+            );
+          })()}
+        </div>
+      </Modal>
+
       {/* Delete */}
       <DeleteConfirm
         open={!!deleteTarget}
@@ -829,6 +1101,106 @@ Kurallar:
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
       />
+
+      {/* Inline Move Modal */}
+      <Modal open={!!inlineMoveTarget} onClose={() => setInlineMoveTarget(null)} title="Soru Alanını Değiştir"
+        footer={
+          <>
+            <CancelBtn onClick={() => setInlineMoveTarget(null)} />
+            <PrimaryBtn onClick={handleInlineMoveSave} disabled={inlineMoveSaving}>{inlineMoveSaving ? <Spinner /> : null} Kaydet</PrimaryBtn>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+           <div style={{ padding: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8 }}>
+             <p style={{ margin: 0, fontSize: 13, color: C.t2, lineHeight: 1.5 }}>
+               <strong>Soru:</strong> {inlineMoveTarget?.question}
+             </p>
+           </div>
+           
+           <div>
+             <label style={LABEL_STYLE}>1. Kategori</label>
+             <select value={inlineMoveCat} onChange={e => { setInlineMoveCat(e.target.value); setInlineMoveAlan(''); setInlineMoveAltdal(''); setInlineMoveRol(''); }} style={SELECT_STYLE}>
+               <option value="" style={{ background: C.sidebar, color: C.t1 }}>Kategori Seç...</option>
+               {categories.map(c => <option key={c._id} value={c.id} style={{ background: C.sidebar, color: C.t1 }}>{c.label}</option>)}
+             </select>
+           </div>
+
+           {inlineMoveCat && (() => {
+               const alanlar = inlineMoveSubcats.filter(s => !s.parentId || s.parentId === '')
+               const altdallarOfAlan = inlineMoveAlan ? inlineMoveSubcats.filter(s => s.parentId === inlineMoveAlan) : []
+               const rollerOfAltDal = inlineMoveAltdal ? inlineMoveSubcats.filter(s => s.parentId === inlineMoveAltdal) : []
+               const hasHierarchy = inlineMoveSubcats.some(s => s.parentId)
+
+               if (inlineMoveLoading) return <div style={{ color: C.t3, fontSize: 12 }}>Yükleniyor...</div>
+               if (inlineMoveSubcats.length === 0) return <div style={{ color: C.t3, fontSize: 12 }}>Bu kategoride hiç alt dal yok.</div>
+
+               if (hasHierarchy) {
+                 return (
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                     <div>
+                       <label style={LABEL_STYLE}>2. Alan / Ana Dal</label>
+                       <select value={inlineMoveAlan} onChange={e => { setInlineMoveAlan(e.target.value); setInlineMoveAltdal(''); setInlineMoveRol(''); }} style={SELECT_STYLE}>
+                         <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alan Seç...</option>
+                         {alanlar.map(a => <option key={a._id} value={a._id} style={{ background: C.sidebar, color: C.t1 }}>{a.name}</option>)}
+                       </select>
+                     </div>
+                     {altdallarOfAlan.length > 0 && (
+                       <div>
+                         <label style={LABEL_STYLE}>3. Alt Dal</label>
+                         <select value={inlineMoveAltdal} onChange={e => {
+                           const val = e.target.value
+                           setInlineMoveAltdal(val)
+                           setInlineMoveRol('')
+                           const hasCh = inlineMoveSubcats.some(s => s.parentId === val)
+                           if (!hasCh && val) {
+                             const node = inlineMoveSubcats.find(s => s._id === val)
+                             setInlineMoveRol(node?.slug ?? '')
+                           }
+                         }} style={SELECT_STYLE}>
+                           <option value="" style={{ background: C.sidebar, color: C.t1 }}>Alt Dal Seç...</option>
+                           {altdallarOfAlan.map(a => <option key={a._id} value={a._id} style={{ background: C.sidebar, color: C.t1 }}>{a.name}</option>)}
+                         </select>
+                       </div>
+                     )}
+                     {rollerOfAltDal.length > 0 && (
+                       <div>
+                         <label style={LABEL_STYLE}>4. Rol / Özel Alan</label>
+                         <select value={inlineMoveRol} onChange={e => setInlineMoveRol(e.target.value)} style={SELECT_STYLE}>
+                           <option value="" style={{ background: C.sidebar, color: C.t1 }}>Rol Seç...</option>
+                           {rollerOfAltDal.map(a => <option key={a.slug} value={a.slug} style={{ background: C.sidebar, color: C.t1 }}>{a.name}</option>)}
+                         </select>
+                       </div>
+                     )}
+                     
+                     {inlineMoveCat && inlineMoveRol && (() => {
+                       const targetSubInfo = inlineMoveSubcats.find(s => s.slug === inlineMoveRol)
+                       if(!targetSubInfo) return null
+                       return (
+                         <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                           <p style={{ color: C.cyan, fontSize: 13, margin: 0 }}>
+                             <AlertCircle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />
+                             Soru şu alt dala yerleştirilecek: <strong>{targetSubInfo.name}</strong>
+                           </p>
+                         </div>
+                       )
+                     })()}
+                   </div>
+                 )
+               } else {
+                 return (
+                   <div>
+                     <label style={LABEL_STYLE}>2. Alt Kategori</label>
+                     <select value={inlineMoveRol} onChange={e => setInlineMoveRol(e.target.value)} style={SELECT_STYLE}>
+                       <option value="" style={{ background: C.sidebar, color: C.t1 }}>Seç...</option>
+                       {inlineMoveSubcats.map(s => <option key={s._id} value={s.slug} style={{ background: C.sidebar, color: C.t1 }}>{s.name}</option>)}
+                     </select>
+                   </div>
+                 )
+               }
+           })()}
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -62,7 +62,6 @@ export function HeroSection() {
                   height: '280px',
                 }}
               >
-
                 <img
                   src="/logo.png"
                   alt="Mülakat Soruları Logo"
@@ -72,7 +71,6 @@ export function HeroSection() {
                     objectFit: 'contain',
                     position: 'relative',
                     zIndex: 1,
-                    filter: d ? 'drop-shadow(0 8px 24px rgba(255,255,255,0.3))' : 'drop-shadow(0 8px 24px rgba(255,255,255,0.18))',
                   }}
                 />
               </div>

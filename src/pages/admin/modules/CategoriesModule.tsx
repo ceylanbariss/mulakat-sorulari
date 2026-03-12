@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, X, Tag, Database } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Tag, Database, ChevronDown, ChevronRight, FileText, CheckCircle2, AlertCircle, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   categoriesCol, questionsCol, subcategoriesCol,
@@ -147,6 +147,278 @@ const YAZILIM_HIERARCHY: HierarchyNode[] = [
   ]},
 ]
 
+// Eski (flat) yazılım slug → yeni hiyerarşi slug eşlemesi
+// Kural: mümkün olan en spesifik (leaf/alt-dal) node'a yönlendir
+const YAZILIM_LEGACY_MAP: Record<string, string> = {
+  // ── Yazılım Geliştirme ──
+  'frontend': 'frontend',
+  'backend': 'backend',
+  'mobil': 'mobil',
+  'full-stack': 'full-stack',
+  'oyun-game': 'oyun-game',
+  'yazilim-gelistirme': 'yazilim-gelistirme',
+  // Algoritma & sistem tasarımı → Backend (en çok backend mülakatlarında sorulur)
+  'algoritmalar': 'backend',
+  'algoritma-veri-yapilari': 'backend',
+  'sistem-tasarimi': 'backend',
+  // Mimari + test karışık → Test & QA
+  'yazilim-mimarisi-ve-test': 'test-qa',
+  // ── Test & QA ──
+  'test-qa': 'test-qa',
+  'test': 'qa-engineer',
+  'qa': 'qa-engineer',
+  'test-otomasyon': 'test-automation-engineer',
+  // ── Veri ──
+  'veritabani': 'database-administrator',
+  'veri': 'data-analyst',
+  'data': 'data-analyst',
+  'bi': 'bi-developer',
+  // ── DevOps & Sistem ──
+  'devops': 'devops-engineer',
+  'devops-sistem': 'devops-engineer',
+  'sre': 'site-reliability-engineer',
+  'sistem-admin': 'system-administrator',
+  // ── Siber Güvenlik ──
+  'siber-guvenlik': 'security-engineer',
+  'soc': 'soc-analyst',
+  'pentest': 'penetration-tester',
+  // ── Ağ & Cloud ──
+  'bulut-bilisim-cloud-computing': 'cloud-engineer',
+  'ag-cloud': 'cloud-engineer',
+  'cloud': 'cloud-engineer',
+  'network': 'network-engineer',
+  // ── Analiz ──
+  'is-analistligi-ba': 'is-analisti',
+  'analiz': 'is-analisti',
+  'sistem-analiz': 'sistem-analisti',
+  'product-analiz': 'product-analyst',
+  // ── Proje & Ürün ──
+  'proje-yonetimi-pm': 'it-project-manager',
+  'proje-urun': 'it-project-manager',
+  'scrum': 'scrum-master',
+  'product-owner': 'product-owner',
+  'product-manager': 'product-manager',
+  // ── UX/UI ──
+  'uiux-tasarimi': 'ux-designer',
+  'ui-ux': 'ux-designer',
+  'ux-ui': 'ux-designer',
+  'ui': 'ui-designer',
+  'ux': 'ux-researcher',
+  // ── ERP / Kurumsal ──
+  'kurumsal-erp': 'sap-danismani',
+  'erp': 'sap-danismani',
+  'sap': 'sap-danismani',
+  'abap': 'abap-developer',
+  // ── IT Destek ──
+  'it-destek': 'bilgi-islem-help-desk',
+  // ── Otomasyon ──
+  'otomasyon': 'rpa-developer-uipath',
+  'rpa': 'rpa-developer-uipath',
+}
+
+// ─── Kamu 3-kademeli hiyerarşi ─────────────────────────────────────────────────
+const KAMU_HIERARCHY: HierarchyNode[] = [
+  { name: 'Kamu & İdari Yönetim', slug: 'kamu-idari-yonetim', children: [
+    { name: 'Adalet Bakanlığı', slug: 'adalet-bakanligi', children: [
+      { name: 'Hakim / Savcı Adayı', slug: 'hakim-savci-adayi' },
+      { name: 'İcra Müdürü / Yardımcısı', slug: 'icra-muduru-yardimcisi' },
+      { name: 'İnfaz Koruma Memuru (İKM)', slug: 'infaz-koruma-memuru' },
+      { name: 'Cezaevi Güvenlik Personeli', slug: 'cezaevi-guvenlik-personeli' },
+    ]},
+    { name: 'Maliye & Ekonomi', slug: 'maliye-ekonomi', children: [
+      { name: 'Hazine Uzmanı', slug: 'hazine-uzmani' },
+      { name: 'Gelir Uzmanı', slug: 'gelir-uzmani' },
+      { name: 'Vergi Müfettişi Yardımcısı', slug: 'vergi-mufettisi-yardimcisi' },
+    ]},
+    { name: 'Dışişleri Bakanlığı', slug: 'disisleri-bakanligi', children: [
+      { name: 'Diplomat (Aday Meslek Memuru)', slug: 'diplomat' },
+    ]},
+    { name: 'Genel İdare', slug: 'genel-idare', children: [
+      { name: 'Devlet Memuru', slug: 'devlet-memuru' },
+      { name: 'Müfettiş / Denetçi', slug: 'mufettis-denetci' },
+      { name: 'Uzman / Uzman Yardımcısı', slug: 'uzman-yardimcisi' },
+    ]},
+  ]},
+  { name: 'Güvenlik & Savunma', slug: 'guvenlik-savunma', children: [
+    { name: 'TSK / Askeri', slug: 'tsk-askeri', children: [
+      { name: 'Subay (Teğmen)', slug: 'subay-tegmen' },
+      { name: 'Sözleşmeli Subay', slug: 'sozlesmeli-subay' },
+      { name: 'Astsubay', slug: 'astsubay' },
+      { name: 'Sözleşmeli Astsubay', slug: 'sozlesmeli-astsubay' },
+    ]},
+    { name: 'Emniyet (Polis)', slug: 'emniyet-polis', children: [
+      { name: 'Polis Memuru', slug: 'polis-memuru' },
+      { name: 'Komiser Yardımcısı', slug: 'komiser-yardimcisi' },
+      { name: 'Komiser', slug: 'komiser' },
+    ]},
+    { name: 'Jandarma & Sahil Güvenlik', slug: 'jandarma-sahil-guvenlik', children: [
+      { name: 'Jandarma / SGA Astsubay', slug: 'jandarma-sga-astsubay' },
+      { name: 'JÖH / PGÖH Adayı', slug: 'joh-pgoh-adayi' },
+    ]},
+  ]},
+  { name: 'Eğitim & Akademi', slug: 'egitim-akademi', children: [
+    { name: 'MEB / Öğretmenlik', slug: 'meb-ogretmenlik', children: [
+      { name: 'Sözleşmeli Öğretmen', slug: 'sozlesmeli-ogretmen' },
+      { name: 'Öğretmen (Atamalı)', slug: 'ogretmen-atamali' },
+    ]},
+    { name: 'Üniversite / Akademi', slug: 'universite-akademi', children: [
+      { name: 'Araştırma Görevlisi', slug: 'arastirma-gorevlisi' },
+      { name: 'Öğretim Görevlisi', slug: 'ogretim-gorevlisi' },
+    ]},
+  ]},
+  { name: 'Sağlık & Sosyal Hizmetler', slug: 'saglik-sosyal-hizmetler', children: [
+    { name: 'Sağlık Bakanlığı', slug: 'saglik-bakanligi', children: [
+      { name: 'Sağlık Teknikeri / Teknisyeni', slug: 'saglik-teknikeri-teknisyeni' },
+      { name: 'Hemşire / ATT', slug: 'hemsire-att' },
+      { name: 'Kamu Hizmetleri Uzmanı', slug: 'kamu-hizmetleri-uzmani' },
+    ]},
+    { name: 'Sosyal Hizmetler', slug: 'sosyal-hizmetler', children: [
+      { name: 'Sosyal Hizmet Uzmanı', slug: 'sosyal-hizmet-uzmani' },
+    ]},
+  ]},
+  { name: 'Havacılık & Ulaşım', slug: 'havacilik-ulasim', children: [
+    { name: 'Uçuş Ekibi', slug: 'ucus-ekibi', children: [
+      { name: 'Pilot (Cadet / YP Öğrencisi)', slug: 'pilot-cadet' },
+      { name: 'Pilot (Captain)', slug: 'pilot-captain' },
+    ]},
+    { name: 'Kabin Ekibi', slug: 'kabin-ekibi', children: [
+      { name: 'Kabin Memuru (Junior)', slug: 'kabin-memuru-junior' },
+      { name: 'Kabin Memuru (Senior)', slug: 'kabin-memuru-senior' },
+    ]},
+    { name: 'Yer Hizmetleri', slug: 'yer-hizmetleri', children: [
+      { name: 'Yer Hizmetleri Personeli', slug: 'yer-hizmetleri-personeli' },
+    ]},
+  ]},
+]
+
+const KAMU_LEGACY_MAP: Record<string, string> = {
+  // Eski flat kamu subcategorileri
+  'genel-kultur': 'devlet-memuru',
+  'hukuk-temelleri': 'uzman-yardimcisi',
+  'kurum-kulturu': 'devlet-memuru',
+  'mulakat-teknikleri': 'devlet-memuru',
+}
+
+// ─── Banka 3-kademeli hiyerarşi ──────────────────────────────────────────────
+const BANKA_HIERARCHY: HierarchyNode[] = [
+  { name: 'Bireysel Bankacılık', slug: 'bireysel-bankacilik', children: [
+    { name: 'Müşteri Temsilcisi / Danışmanı', slug: 'musteri-temsilcisi' },
+    { name: 'Kredi Uzmanı', slug: 'kredi-uzmani' },
+    { name: 'Satış Danışmanı', slug: 'satis-danismani' },
+  ]},
+  { name: 'Kurumsal & Ticari Bankacılık', slug: 'kurumsal-ticari', children: [
+    { name: 'Kurumsal Bankacılık Uzmanı', slug: 'kurumsal-bankacilik-uzmani' },
+    { name: 'Ticari Bankacılık Uzmanı', slug: 'ticari-bankacilik-uzmani' },
+    { name: 'KOBİ Bankacılık Uzmanı', slug: 'kobi-bankacilik-uzmani' },
+  ]},
+  { name: 'Risk & Uyum', slug: 'risk-uyum', children: [
+    { name: 'Risk Analisti', slug: 'risk-analisti' },
+    { name: 'Uyum (Compliance) Uzmanı', slug: 'uyum-compliance-uzmani' },
+    { name: 'İç Denetçi / Müfettiş', slug: 'ic-denetci-mufettis' },
+  ]},
+  { name: 'Sermaye Piyasaları & Yatırım', slug: 'sermaye-piyasalari', children: [
+    { name: 'SPK Lisanslı Uzman', slug: 'spk-lisansli-uzman' },
+    { name: 'Yatırım Danışmanı', slug: 'yatirim-danismani' },
+    { name: 'Portföy Yöneticisi', slug: 'portfoy-yoneticisi' },
+  ]},
+  { name: 'Operasyon & Hazine', slug: 'operasyon-hazine', children: [
+    { name: 'Back Office Uzmanı', slug: 'back-office-uzmani' },
+    { name: 'Hazine Uzmanı', slug: 'hazine-uzmani-banka' },
+    { name: 'Operasyon Uzmanı', slug: 'operasyon-uzmani' },
+  ]},
+  { name: 'Dijital & Fintech', slug: 'dijital-fintech', children: [
+    { name: 'Dijital Bankacılık Uzmanı', slug: 'dijital-bankacilik-uzmani' },
+    { name: 'Fintech Ürün Yöneticisi', slug: 'fintech-urun-yoneticisi' },
+  ]},
+]
+const BANKA_LEGACY_MAP: Record<string, string> = {
+  'finans-temelleri': 'risk-analisti',
+  'risk-yonetimi': 'risk-analisti',
+  'muhasebe': 'back-office-uzmani',
+  'bankacilik-urunleri': 'musteri-temsilcisi',
+}
+
+// ─── İK 3-kademeli hiyerarşi ──────────────────────────────────────────────────
+const IK_HIERARCHY: HierarchyNode[] = [
+  { name: 'Mülakat Hazırlığı', slug: 'mulakat-hazirligi', children: [
+    { name: 'Öz Tanıtım & Kariyer Hikayesi', slug: 'oz-tanitim-kariyer' },
+    { name: 'Güçlü / Zayıf Yönler', slug: 'guclu-zayif-yonler' },
+    { name: 'Kariyer Hedefleri', slug: 'kariyer-hedefleri' },
+  ]},
+  { name: 'Davranışsal & Yetkinlik', slug: 'davranissal-yetkinlik', children: [
+    { name: 'STAR Yöntemi', slug: 'star-yontemi' },
+    { name: 'Liderlik Soruları', slug: 'liderlik-sorulari' },
+    { name: 'Takım & İşbirliği', slug: 'takim-isbirligi' },
+    { name: 'Çatışma Yönetimi', slug: 'catisma-yonetimi' },
+  ]},
+  { name: 'Şirket & Kültür Uyumu', slug: 'sirket-kultur-uyumu', children: [
+    { name: 'Şirket Araştırması', slug: 'sirket-arastirmasi' },
+    { name: 'Kültürel Uyum', slug: 'kulturel-uyum' },
+    { name: 'Değerler & Motivasyon', slug: 'degerler-motivasyon' },
+  ]},
+  { name: 'Teklif & Müzakere', slug: 'teklif-muzakere', children: [
+    { name: 'Maaş Müzakeresi', slug: 'maas-muzakeresi' },
+    { name: 'Çalışma Koşulları', slug: 'calisma-kosullari' },
+  ]},
+]
+const IK_LEGACY_MAP: Record<string, string> = {
+  'yetkinlik-bazli-sorular': 'star-yontemi',
+  'davranissal-sorular': 'davranissal-yetkinlik',
+  'kariyer-motivasyonu': 'kariyer-hedefleri',
+  'liderlik-yonetim': 'liderlik-sorulari',
+}
+
+// ─── Yapay Zeka 3-kademeli hiyerarşi ─────────────────────────────────────────
+const YAPAY_ZEKA_HIERARCHY: HierarchyNode[] = [
+  { name: 'Makine Öğrenmesi', slug: 'makine-ogrenmesi', children: [
+    { name: 'ML Engineer', slug: 'ml-engineer' },
+    { name: 'Data Scientist (YZ)', slug: 'data-scientist-yz' },
+    { name: 'ML Araştırmacı', slug: 'ml-arastirmaci' },
+  ]},
+  { name: 'Derin Öğrenme & Görü', slug: 'derin-ogrenme', children: [
+    { name: 'Deep Learning Engineer', slug: 'deep-learning-engineer' },
+    { name: 'Computer Vision Engineer', slug: 'computer-vision-engineer' },
+    { name: 'NLP / NLU Engineer', slug: 'nlp-nlu-engineer' },
+  ]},
+  { name: 'Üretimsel AI (GenAI)', slug: 'uretimsel-ai', children: [
+    { name: 'Prompt Engineer', slug: 'prompt-engineer' },
+    { name: 'LLM Fine-tuning Uzmanı', slug: 'llm-fine-tuning-uzmani' },
+    { name: 'RAG & AI Altyapı Uzmanı', slug: 'rag-ai-altyapi-uzmani' },
+  ]},
+  { name: 'MLOps & Üretim', slug: 'mlops-uretim', children: [
+    { name: 'MLOps Engineer', slug: 'mlops-engineer' },
+    { name: 'AI Platform Engineer', slug: 'ai-platform-engineer' },
+  ]},
+  { name: 'AI Etiği & Güvenlik', slug: 'ai-etigi-guvenlik', children: [
+    { name: 'AI Ethics Uzmanı', slug: 'ai-ethics-uzmani' },
+    { name: 'AI Güvenlik Araştırmacısı', slug: 'ai-guvenlik-arastirmacisi' },
+  ]},
+]
+const YAPAY_ZEKA_LEGACY_MAP: Record<string, string> = {
+  'makine-ogrenmesi': 'ml-engineer',
+  'derin-ogrenme': 'deep-learning-engineer',
+  'nlp': 'nlp-nlu-engineer',
+  'mlops': 'mlops-engineer',
+  'prompt-muhendisligi': 'prompt-engineer',
+  'ai-etigi': 'ai-ethics-uzmani',
+}
+
+// ─── Tüm hiyerarşik kategoriler (seed + migrate) ────────────────────────────────
+const CAT_HIERARCHIES: Record<string, HierarchyNode[]> = {
+  yazilim: YAZILIM_HIERARCHY,
+  kamu: KAMU_HIERARCHY,
+  banka: BANKA_HIERARCHY,
+  ik: IK_HIERARCHY,
+  'yapay-zeka': YAPAY_ZEKA_HIERARCHY,
+}
+const CAT_LEGACY_MAPS: Record<string, Record<string, string>> = {
+  yazilim: YAZILIM_LEGACY_MAP,
+  kamu: KAMU_LEGACY_MAP,
+  banka: BANKA_LEGACY_MAP,
+  ik: IK_LEGACY_MAP,
+  'yapay-zeka': YAPAY_ZEKA_LEGACY_MAP,
+}
+
 // ─── Shared design tokens ──────────────────────────────────────────────────────
 const C = {
   bg: '#0a0f1e', card: '#111827', sidebar: '#0d1117',
@@ -280,6 +552,70 @@ function SubRow({ sub, qCount, onEdit, onDelete }: { sub: SubDoc; qCount: number
   )
 }
 
+// ─── SubTreeNode ───────────────────────────────────────────────────────────────
+
+const DEPTH_COLORS = ['#8b5cf6', '#06b6d4', '#10b981']
+
+function SubTreeNode({ sub, subs, depth, qCounts, onEdit, onDelete }: {
+  sub: SubDoc; subs: SubDoc[]; depth: number
+  qCounts: Record<string, number>
+  onEdit: (s: SubDoc) => void; onDelete: (s: SubDoc) => void
+}) {
+  const children = subs.filter(s => s.parentId === sub._id).sort((a, b) => a.orderIndex - b.orderIndex)
+  const hasChildren = children.length > 0
+  const [expanded, setExpanded] = useState(true)
+  const [hov, setHov] = useState(false)
+  const dotColor = DEPTH_COLORS[Math.min(depth, DEPTH_COLORS.length - 1)]
+
+  return (
+    <div>
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: `${depth === 0 ? 10 : 7}px 10px`,
+          marginLeft: depth * 22,
+          borderRadius: 8,
+          background: hov ? 'rgba(255,255,255,0.04)' : (depth === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+          border: `1px solid ${depth === 0 ? 'rgba(255,255,255,0.07)' : 'transparent'}`,
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      >
+        {hasChildren ? (
+          <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.t3, padding: 1, borderRadius: 4, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+        ) : (
+          <div style={{ width: 14, flexShrink: 0 }} />
+        )}
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0, opacity: depth === 0 ? 1 : 0.65 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ color: depth === 0 ? C.t1 : depth === 1 ? C.t2 : '#94a3b8', fontWeight: depth === 0 ? 700 : depth === 1 ? 600 : 400, fontSize: depth === 0 ? 13 : 12, margin: '0 0 1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {sub.name}
+          </p>
+          <p style={{ color: C.t3, fontSize: 10, margin: 0, fontFamily: 'monospace' }}>{sub.slug}</p>
+        </div>
+        {!hasChildren && (
+          <span style={{ fontSize: 10, color: C.t3, background: 'rgba(255,255,255,0.05)', padding: '2px 7px', borderRadius: 5, flexShrink: 0 }}>
+            {qCounts[sub.slug] ?? 0} soru
+          </span>
+        )}
+        <div style={{ display: 'flex', gap: 2, opacity: hov ? 1 : 0, transition: 'opacity 0.15s' }}>
+          <IconBtn onClick={() => onEdit(sub)} hoverColor={C.cyan}><Pencil size={12} /></IconBtn>
+          <IconBtn onClick={() => onDelete(sub)} hoverColor="#ef4444"><Trash2 size={12} /></IconBtn>
+        </div>
+      </div>
+      {hasChildren && expanded && (
+        <div>
+          {children.map(child => (
+            <SubTreeNode key={child._id} sub={child} subs={subs} depth={depth + 1} qCounts={qCounts} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── SubcategoryPanel ──────────────────────────────────────────────────────────
 
 function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }) {
@@ -325,30 +661,27 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
     finally { setSeeding(false) }
   }
 
-  async function handleSeedYazilimHierarchy() {
+  async function handleSeedHierarchy() {
+    const hierarchy = CAT_HIERARCHIES[cat.id]
+    if (!hierarchy) return
     setSeeding(true)
     try {
-      // 1. Mevcut yazilim subcatlerini temizle
-      const existing = await getAll(subcategoriesCol(), where('categoryId', '==', 'yazilim'))
+      const existing = await getAll(subcategoriesCol(), where('categoryId', '==', cat.id))
       for (const doc of existing) await deleteDocument(subcategoriesCol(), (doc as any)._id)
 
-      // 2. Recursive seed
       let total = 0
       async function seedNode(node: HierarchyNode, parentId: string, order: number) {
-        const doc = await addDocument(subcategoriesCol(), {
-          categoryId: 'yazilim', parentId, name: node.name, slug: node.slug,
+        const nodeId = await addDocument(subcategoriesCol(), {
+          categoryId: cat.id, parentId, name: node.name, slug: node.slug,
           description: '', color: cat.color, orderIndex: order,
-        } as any) as any
+        } as any)
         total++
-        const nodeId = doc?.id ?? doc?._id ?? ''
         for (let i = 0; i < (node.children ?? []).length; i++) {
           await seedNode(node.children![i], nodeId, i)
         }
       }
 
-      for (let i = 0; i < YAZILIM_HIERARCHY.length; i++) {
-        await seedNode(YAZILIM_HIERARCHY[i], '', i)
-      }
+      for (let i = 0; i < hierarchy.length; i++) await seedNode(hierarchy[i], '', i)
       toast.success(`${existing.length} eski kayıt silindi, ${total} yeni node oluşturuldu.`)
     } catch { toast.error('Seed eklenemedi.') }
     finally { setSeeding(false) }
@@ -427,6 +760,11 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
             <p style={{ color: C.t3, fontSize: 12, margin: '4px 0 0' }}>{subs.length} alt dal</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {CAT_HIERARCHIES[cat.id] && (
+              <button onClick={handleSeedHierarchy} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.4)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: 12, fontWeight: 600, opacity: seeding ? 0.6 : 1, transition: 'all 0.15s' }}>
+                <Database size={13} /> {seeding ? 'Seeding...' : 'Seed Et'}
+              </button>
+            )}
             <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.gradient, color: '#fff', fontSize: 12, fontWeight: 600 }}>
               <Plus size={13} /> Alt Dal Ekle
             </button>
@@ -442,12 +780,12 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
           {subs.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, padding: '60px 0' }}>
               <p style={{ color: C.t3, fontSize: 13, textAlign: 'center', margin: 0 }}>Bu kategoride henüz alt dal yok.</p>
-              {cat.id === 'yazilim' && (
-                <button onClick={handleSeedYazilimHierarchy} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.4)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
+              {CAT_HIERARCHIES[cat.id] && (
+                <button onClick={handleSeedHierarchy} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.4)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
                   <Database size={14} /> {seeding ? 'Ekleniyor...' : '3-Kademeli Hiyerarşi Seed Et'}
                 </button>
               )}
-              {cat.id !== 'yazilim' && SEED_SUBCATEGORIES[cat.id] && (
+              {!CAT_HIERARCHIES[cat.id] && SEED_SUBCATEGORIES[cat.id] && (
                 <button onClick={handleSeedDefaults} disabled={seeding} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', cursor: seeding ? 'wait' : 'pointer', background: 'rgba(255,255,255,0.04)', color: C.t1, fontSize: 13, fontWeight: 600, transition: 'all 0.15s', opacity: seeding ? 0.6 : 1 }}>
                   <Database size={14} /> {seeding ? 'Ekleniyor...' : 'Varsayılan Alt Dalları Ekle'}
                 </button>
@@ -455,14 +793,18 @@ function SubcategoryPanel({ cat, onClose }: { cat: CatDoc; onClose: () => void }
             </div>
           ) : (
             <>
-              {cat.id === 'yazilim' && subs.some(s => !s.parentId) && (
-                <div style={{ marginBottom: 8 }}>
-                  <p style={{ color: C.t3, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 8px' }}>Alanlar + Alt Dallar ({subs.length} toplam)</p>
-                </div>
-              )}
-              {subs.map(sub => (
-                <SubRow key={sub._id} sub={sub} qCount={subQCounts[sub.slug] ?? 0} onEdit={() => openEdit(sub)} onDelete={() => setDeleteTarget(sub)} />
-              ))}
+              {subs
+                .filter(s => !s.parentId || s.parentId === '')
+                .sort((a, b) => a.orderIndex - b.orderIndex)
+                .map(sub => (
+                  <SubTreeNode
+                    key={sub._id} sub={sub} subs={subs} depth={0}
+                    qCounts={subQCounts}
+                    onEdit={openEdit}
+                    onDelete={s => setDeleteTarget(s)}
+                  />
+                ))
+              }
             </>
           )}
         </div>
@@ -522,6 +864,7 @@ export function CategoriesModule() {
   const [form, setForm] = useState<Category>(emptyForm())
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CatDoc | null>(null)
+  const [catForQuestionAdd, setCatForQuestionAdd] = useState<CatDoc | null>(null)
   const unsubRef = useRef<(() => void) | null>(null)
   const unsubSubRef = useRef<(() => void) | null>(null)
 
@@ -556,8 +899,33 @@ export function CategoriesModule() {
       const catMap = Object.fromEntries(categories.map(c => [c.id, c]))
       let subCreated = 0
 
-      // Step 1: preset seed — eğer kategori hiç alt dalı yoksa varsayılanları ekle
+      // Tüm hiyerarşik kategorilerin geçerli slug setlerini hesapla
+      function collectHierarchySlugs(nodes: HierarchyNode[]): Set<string> {
+        const set = new Set<string>()
+        function walk(ns: HierarchyNode[]) { ns.forEach(n => { set.add(n.slug); if (n.children) walk(n.children) }) }
+        walk(nodes)
+        return set
+      }
+      const catValidSlugsMap: Record<string, Set<string>> = {}
+      for (const catId of Object.keys(CAT_HIERARCHIES)) {
+        catValidSlugsMap[catId] = collectHierarchySlugs(CAT_HIERARCHIES[catId])
+      }
+
+      // Step 0: Hiyerarşik kategorilerdeki yanlış oluşturulmuş flat subcatları temizle
+      let cleaned = 0
+      for (const [catId, validSlugs] of Object.entries(catValidSlugsMap)) {
+        const catSubs = await getAll<{ slug: string }>(subcategoriesCol(), where('categoryId', '==', catId))
+        for (const sub of catSubs) {
+          if (!validSlugs.has((sub as any).slug)) {
+            await deleteDocument(subcategoriesCol(), (sub as any)._id)
+            cleaned++
+          }
+        }
+      }
+
+      // Step 1: preset seed — eğer kategori hiç alt dalı yoksa varsayılanları ekle (hiyerarşik kategoriler hariç)
       for (const cat of categories) {
+        if (CAT_HIERARCHIES[cat.id]) continue
         const existing = await getAll<{ name: string }>(subcategoriesCol(), where('categoryId', '==', cat.id))
         if (existing.length === 0 && SEED_SUBCATEGORIES[cat.id]) {
           const names = SEED_SUBCATEGORIES[cat.id]
@@ -572,13 +940,13 @@ export function CategoriesModule() {
 
       // Step 2: tüm mevcut alt dalları ve soruları yükle
       let allSubs = await getAll<{ categoryId: string; name: string; slug: string }>(subcategoriesCol())
-      const allQs = await getAll<{ category: string; subcategory?: string }>(questionsCol())
+      const allQs = await getAll<{ category: string; subcategory?: string; question?: string; answer?: string; _id: string }>(questionsCol())
 
-      // Step 3: eşleşmeyen subcategory değerlerini kategori bazında topla
-      // Map<catId, Map<slug, displayName>>
+      // Step 3: eşleşmeyen subcategory değerlerini kategori bazında topla (yazilim hariç)
       const newSubsNeeded = new Map<string, Map<string, string>>()
       for (const q of allQs) {
         if (!q.subcategory?.trim()) continue
+        if (CAT_HIERARCHIES[q.category]) continue  // hiyerarşik kategoriler için yeni subcat oluşturma
         const catSubs = allSubs.filter(s => (s as any).categoryId === q.category)
         const qSlug = toSlug(q.subcategory)
         const qNorm = q.subcategory.toLowerCase()
@@ -593,13 +961,13 @@ export function CategoriesModule() {
         }
       }
 
-      // Step 4: eşleşmeyen subcategory'leri otomatik oluştur
+      // Step 4: eşleşmeyen subcategory'leri otomatik oluştur (yazilim zaten atlandı)
       for (const [catId, slugToName] of newSubsNeeded) {
         const cat = catMap[catId]
         const existingInCat = allSubs.filter(s => (s as any).categoryId === catId)
         let orderIndex = existingInCat.length
         for (const [slug, name] of slugToName) {
-          await addDocument(subcategoriesCol(), {
+           await addDocument(subcategoriesCol(), {
             categoryId: catId, name, slug, description: '',
             color: cat?.color ?? '#3b82f6', orderIndex: orderIndex++,
           } as any)
@@ -608,29 +976,84 @@ export function CategoriesModule() {
       }
 
       // Step 5: yeni oluşturulanlar dahil tüm alt dalları tekrar yükle
-      if (newSubsNeeded.size > 0) {
+      if (newSubsNeeded.size > 0 || cleaned > 0) {
         allSubs = await getAll<{ categoryId: string; name: string; slug: string }>(subcategoriesCol())
       }
 
-      // Step 6: soruları doğru slug'a güncelle
+      // Step 6: soruları doğru slug'a güncelle ve boş olanları otomatik kategorize et
       let updated = 0
       for (const q of allQs) {
-        if (!q.subcategory?.trim()) continue
+        let currentSub = q.subcategory?.trim()
+        
+        // Eğer alt dal boşsa, sorunun metnine göre (keyword eşleşmesi) otomatik atama yapalım
+        if (!currentSub) {
+           const qText = ((q.question || '') + ' ' + (q.answer || '')).toLowerCase()
+           const validSlugs = catValidSlugsMap[q.category]
+           let bestMatch = ''
+           
+           if (validSlugs) {
+              const sortedSlugs = Array.from(validSlugs).sort((a, b) => b.length - a.length)
+              for (const slug of sortedSlugs) {
+                 let keyword = slug.replace(/-developer|-engineer|-uzmani|-arastirmaci|-memuru|-adayi|-danismani|-designer|-tester|-master|-owner|-analyst/g, '').replace(/-/g, ' ').trim()
+                 if (keyword.length > 2 && qText.includes(keyword)) {
+                    bestMatch = slug
+                    break
+                 }
+              }
+           } else {
+              const catSubs = allSubs.filter(s => (s as any).categoryId === q.category)
+              const sortedSubs = [...catSubs].sort((a, b) => b.slug.length - a.slug.length)
+              for (const sub of sortedSubs) {
+                 const keyword = sub.slug.replace(/-/g, ' ').trim()
+                 if (keyword.length > 2 && qText.includes(keyword)) {
+                    bestMatch = sub.slug
+                    break
+                 }
+              }
+           }
+           
+           if (bestMatch) {
+              await updateDocument(questionsCol(), q._id, { subcategory: bestMatch })
+              updated++
+           }
+           continue
+        }
+
+        // Eğer mevcut subcategory varsa
+        const validSlugs = catValidSlugsMap[q.category]
+        if (validSlugs) {
+          // Zaten geçerli bir hiyerarşi slug'u ise dokunma
+          if (validSlugs.has(currentSub)) continue
+          // Legacy map'ten yeni slug'u bul
+          const mappedSlug = CAT_LEGACY_MAPS[q.category]?.[currentSub]
+          if (mappedSlug && validSlugs.has(mappedSlug) && mappedSlug !== currentSub) {
+            await updateDocument(questionsCol(), q._id, { subcategory: mappedSlug })
+            updated++
+          }
+          continue
+        }
+
+        // Diğer kategoriler: fuzzy matching
         const catSubs = allSubs.filter(s => (s as any).categoryId === q.category)
         if (!catSubs.length) continue
-        const qSlug = toSlug(q.subcategory)
-        const qNorm = q.subcategory.toLowerCase()
+        const qSlug = toSlug(currentSub)
+        const qNorm = currentSub.toLowerCase()
         const match =
           catSubs.find(s => s.slug === qSlug) ||
           catSubs.find(s => s.slug.includes(qSlug) || qSlug.includes(s.slug)) ||
           catSubs.find(s => s.name.toLowerCase().includes(qNorm) || qNorm.includes(s.name.toLowerCase()))
-        if (match && match.slug !== q.subcategory) {
+        if (match && match.slug !== currentSub) {
           await updateDocument(questionsCol(), q._id, { subcategory: match.slug })
           updated++
         }
       }
 
-      toast.success(`${subCreated} yeni alt dal oluşturuldu, ${updated} soru güncellendi.`, { id: 'migrate' })
+      const parts = []
+      if (cleaned > 0) parts.push(`${cleaned} hatalı yazılım subcategory silindi`)
+      if (subCreated > 0) parts.push(`${subCreated} yeni alt dal oluşturuldu`)
+      if (updated > 0) parts.push(`${updated} soru güncellendi ve atandı`)
+      if (parts.length === 0) parts.push('Her şey güncel')
+      toast.success(parts.join(', ') + '.', { id: 'migrate' })
     } catch {
       toast.error('Migration sırasında hata oluştu.', { id: 'migrate' })
     } finally {
@@ -715,6 +1138,7 @@ export function CategoriesModule() {
             subcount={subcountMap[cat.id] ?? 0}
             onEdit={() => openEdit(cat)} onDelete={() => setDeleteTarget(cat)}
             onOpenPanel={() => setSelectedCat(cat)}
+            onAddQuestion={() => setCatForQuestionAdd(cat)}
           />
         ))}
       </div>
@@ -786,13 +1210,18 @@ export function CategoriesModule() {
           <SubcategoryPanel key={selectedCat._id} cat={selectedCat} onClose={() => setSelectedCat(null)} />
         )}
       </AnimatePresence>
+
+      {/* Add Question Bulk Modal */}
+      {catForQuestionAdd && (
+        <CategoryBulkAddModal cat={catForQuestionAdd} onClose={() => setCatForQuestionAdd(null)} />
+      )}
     </div>
   )
 }
 
 // ─── CatCard ───────────────────────────────────────────────────────────────────
 
-function CatCard({ cat, count, subcount, onEdit, onDelete, onOpenPanel }: { cat: CatDoc; count: number; subcount: number; onEdit: () => void; onDelete: () => void; onOpenPanel: () => void }) {
+function CatCard({ cat, count, subcount, onEdit, onDelete, onOpenPanel, onAddQuestion }: { cat: CatDoc; count: number; subcount: number; onEdit: () => void; onDelete: () => void; onOpenPanel: () => void; onAddQuestion: () => void }) {
   const [hov, setHov] = useState(false)
   return (
     <div
@@ -839,6 +1268,185 @@ function CatCard({ cat, count, subcount, onEdit, onDelete, onOpenPanel }: { cat:
           </span>
         </div>
       </div>
+
+      <button 
+        onClick={e => { e.stopPropagation(); onAddQuestion(); }} 
+        style={{ marginTop: 6, padding: '10px', borderRadius: 8, border: 'none', background: 'rgba(6, 182, 212, 0.12)', color: C.cyan, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(6, 182, 212, 0.2)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'rgba(6, 182, 212, 0.12)'}
+      >
+        <BookOpen size={15} /> Kategoriye Sorular Ekle
+      </button>
     </div>
+  )
+}
+
+// ─── CategoryBulkAddModal ──────────────────────────────────────────────────────
+
+function CategoryBulkAddModal({ cat, onClose }: { cat: CatDoc; onClose: () => void }) {
+  const [subs, setSubs] = useState<SubDoc[]>([])
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const [importRaw, setImportRaw] = useState('')
+  const [importParsed, setImportParsed] = useState<any[] | null>(null)
+  const [importError, setImportError] = useState('')
+  const [importing, setImporting] = useState(false)
+
+  useEffect(() => {
+    getAll<Subcategory>(subcategoriesCol(), where('categoryId', '==', cat.id))
+      .then(d => setSubs(d as SubDoc[]))
+      .finally(() => setLoading(false))
+  }, [cat.id])
+
+  const leafSubs = subs.filter(s => !subs.some(child => child.parentId === s._id))
+
+  function buildPrompt() {
+    return `Aşağıdaki JSON formatında "${cat.label}" kategorisinin alt dalları (konuları) için mülakat soruları oluştur.
+Her bir konu için EN AZ 20 soru hazırla. TOPLAM ${leafSubs.length > 0 ? leafSubs.length * 20 : 20} soru beklendiğini unutma.
+
+İstenen Alt Dallar:
+${leafSubs.length > 0 ? leafSubs.map(s => `- ${s.name} (slug: ${s.slug})`).join('\n') : '- Genel (slug: genel)'}
+
+Sadece aşağıdaki JSON Array formatını döndür — başka hiçbir açıklama yapma:
+[
+  {
+    "category": "${cat.id}",
+    "subcategory": "[ilgili_alt_dal_slug]",
+    "difficulty": "orta",
+    "question": "Soru metni burada",
+    "answer": "Model cevap burada (2-4 cümle, açıklayıcı)",
+    "hints": ["İpucu 1", "İpucu 2", "İpucu 3"],
+    "options": [
+      { "label": "A", "text": "Seçenek A metni", "correct": false },
+      { "label": "B", "text": "Doğru seçenek metni", "correct": true },
+      { "label": "C", "text": "Seçenek C metni", "correct": false },
+      { "label": "D", "text": "Seçenek D metni", "correct": false }
+    ]
+  }
+] 
+
+Kurallar:
+- Her soruda tam olarak 4 şık (A, B, C, D) ve sadece 1 doğru şık olmalı.
+- "difficulty" olarak sadece "kolay", "orta" veya "zor" değerlerinden birini kullan.
+- "category" alanı daima "${cat.id}" olacak.
+- "subcategory" alanı yukarıda belirtilen slug'lardan biri olacak.`
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(buildPrompt()).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function parseImport(text: string) {
+    setImportRaw(text)
+    if (!text.trim()) { setImportParsed(null); setImportError(''); return }
+    try {
+      const data = JSON.parse(text)
+      if (!Array.isArray(data)) { setImportError('JSON bir dizi (array) olmalı.'); setImportParsed(null); return }
+      
+      const valid = data.filter((q: any) => q.question && q.answer && (q.category === cat.id || !q.category))
+      const skipped = data.length - valid.length
+      setImportError(skipped > 0 ? `${skipped} soru atlanacak (eksik question/answer alanı).` : '')
+      
+      // Eğer AI id olarak category döndürmediyse biz ekleyelim
+      const parsed = valid.map((q: any) => ({
+        ...q,
+        category: cat.id,
+        difficulty: q.difficulty || 'orta',
+        options: Array.isArray(q.options) ? q.options : [],
+        hints: Array.isArray(q.hints) ? q.hints : []
+      }))
+      
+      setImportParsed(parsed)
+    } catch {
+      setImportError('Geçersiz JSON formatı. Bir dizi array olmalı.')
+      setImportParsed(null)
+    }
+  }
+
+  async function handleImport() {
+    if (!importParsed?.length) return
+    setImporting(true)
+    let success = 0, fail = 0
+    for (const q of importParsed) {
+      try {
+        await addDocument(questionsCol(), q as any)
+        success++
+      } catch (err) { 
+        console.error('Import hatası:', err)
+        fail++ 
+      }
+    }
+    setImporting(false)
+    if (fail === 0) toast.success(`${success} soru başarıyla eklendi!`)
+    else toast.error(`${success} başarılı, ${fail} hata ile karşılaştı.`)
+    onClose()
+  }
+
+  return (
+    <Modal open={true} onClose={() => !importing && onClose()} title={`"${cat.label}" için Soru Ekle`}
+      footer={
+        <>
+          <CancelBtn onClick={onClose} />
+          <PrimaryBtn onClick={handleImport} disabled={!importParsed?.length || importing}>
+            {importing ? <Spinner /> : null}
+            {importParsed ? `${importParsed.length} Soruyu Yükle` : 'Yükle'}
+          </PrimaryBtn>
+        </>
+      }
+    >
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', color: C.t3 }}>Yükleniyor...</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 12, padding: '16px 18px' }}>
+            <p style={{ color: C.purple, fontSize: 13, fontWeight: 700, margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ✦ AI ile Soruları Oluştur
+            </p>
+            <p style={{ color: C.t2, fontSize: 12, margin: '0 0 12px', lineHeight: 1.6 }}>
+              Bu kategorideki <strong>{leafSubs.length}</strong> alt dal için prompt hazırlandı. Kopyalayıp AI'a (ChatGPT/Claude) yapıştır.
+            </p>
+            <textarea
+              readOnly
+              value={buildPrompt()}
+              rows={5}
+              style={{ ...INPUT_STYLE, resize: 'none', fontFamily: 'monospace', fontSize: 11, lineHeight: 1.5, color: 'rgba(148,163,184,0.7)', cursor: 'text' }}
+            />
+            <button
+              onClick={handleCopy}
+              style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, border: `1px solid ${copied ? 'rgba(52,211,153,0.4)' : 'rgba(139,92,246,0.4)'}`, background: copied ? 'rgba(16,185,129,0.12)' : 'rgba(139,92,246,0.12)', color: copied ? '#34d399' : C.purple, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              {copied ? <><CheckCircle2 size={13} /> Kopyalandı!</> : <><FileText size={13} /> Promptu Kopyala</>}
+            </button>
+          </div>
+
+          <div>
+             <label style={LABEL_STYLE}>JSON'u Buraya Yapıştır</label>
+             <textarea
+               value={importRaw}
+               onChange={e => parseImport(e.target.value)}
+               placeholder='[{"category": "banka", "subcategory": "...", ...}]'
+               rows={8}
+               style={{ ...INPUT_STYLE, resize: 'vertical', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }}
+             />
+          </div>
+
+          {importError && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+              <AlertCircle size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+              <p style={{ color: '#fbbf24', fontSize: 12, margin: 0, lineHeight: 1.5 }}>{importError}</p>
+            </div>
+          )}
+          {importParsed && importParsed.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+              <CheckCircle2 size={14} style={{ color: '#34d399', flexShrink: 0 }} />
+              <p style={{ color: '#34d399', fontSize: 12, fontWeight: 700, margin: 0 }}>{importParsed.length} soru veritabanına eklenmeye hazır</p>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
   )
 }
