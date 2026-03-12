@@ -1,5 +1,5 @@
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { ChevronRight, CreditCard, ListChecks, PenLine, ArrowRight } from 'lucide-react'
+import { ChevronRight, CreditCard, ListChecks, PenLine, ArrowRight, FileText, Layers } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { PageWrapper } from '../components/layout/PageWrapper'
@@ -23,6 +23,7 @@ const MODES = [
     iconColor: '#ea580c',
     glow: 'rgba(251,146,60,0.28)',
     badge: 'Hızlı Tekrar',
+    leftBorder: '#F97316',
   },
   {
     id: 'quiz',
@@ -37,6 +38,7 @@ const MODES = [
     iconColor: '#6366f1',
     glow: 'rgba(99,102,241,0.28)',
     badge: 'Çoktan Seçmeli',
+    leftBorder: '#818CF8',
   },
   {
     id: 'written',
@@ -51,6 +53,7 @@ const MODES = [
     iconColor: '#059669',
     glow: 'rgba(16,185,129,0.28)',
     badge: 'Derinlemesine',
+    leftBorder: '#34D399',
   },
 ]
 
@@ -58,6 +61,12 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
+}
+
+function difficultyBorderColor(difficulty: string): string {
+  if (difficulty === 'kolay') return '#34D399'
+  if (difficulty === 'orta') return '#F59E0B'
+  return '#EF4444'
 }
 
 export function CategoryDetail() {
@@ -142,6 +151,34 @@ export function CategoryDetail() {
     )
   }
 
+  // Segmented control button style helpers
+  const segmentBtn = (active: boolean, accentColor: string, small = false) => ({
+    flexShrink: 0 as const,
+    padding: small ? '6px 14px' : '7px 16px',
+    borderRadius: 999,
+    fontSize: small ? 12 : 13,
+    fontWeight: active ? 700 : 500,
+    cursor: 'pointer' as const,
+    border: 'none' as const,
+    outline: 'none' as const,
+    transition: 'all 0.2s',
+    whiteSpace: 'nowrap' as const,
+    background: active ? (d ? 'rgba(255,255,255,0.14)' : '#ffffff') : 'transparent',
+    color: active ? accentColor : d ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.7)',
+    boxShadow: active ? (d ? '0 1px 8px rgba(0,0,0,0.4)' : '0 1px 6px rgba(0,0,0,0.13)') : 'none',
+  })
+
+  // Segmented control container style
+  const segmentContainer = {
+    display: 'flex' as const,
+    gap: 2,
+    overflowX: 'auto' as const,
+    scrollbarWidth: 'none' as const,
+    padding: '4px',
+    borderRadius: 999,
+    background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+  }
+
   return (
     <div className="min-h-screen pb-16" style={{ paddingTop: '120px' }}>
       <PageWrapper>
@@ -159,22 +196,94 @@ export function CategoryDetail() {
           <span className="text-slate-900 dark:text-white font-medium">{category.label}</span>
         </motion.nav>
 
-        {/* Başlık */}
+        {/* Başlık — Hero Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center gap-8 mb-20"
+          className="mb-20"
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: '180px',
+            borderRadius: '20px',
+            padding: '32px',
+            background: `linear-gradient(135deg, ${category.color}22 0%, transparent 60%)`,
+            borderTop: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            borderRight: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            borderBottom: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            borderLeft: `3px solid ${category.color}`,
+            display: 'flex',
+            alignItems: 'center',
+          }}
         >
-          <div
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-sm flex-shrink-0"
-            style={{ backgroundColor: category.bgColor }}
-          >
+          {/* Watermark emoji */}
+          <div style={{
+            position: 'absolute',
+            right: '16px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '180px',
+            opacity: 0.06,
+            userSelect: 'none',
+            lineHeight: 1,
+            pointerEvents: 'none',
+          }}>
             {category.emoji}
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{category.label}</h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{questions.length} soru</p>
+
+          {/* İçerik */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full" style={{ position: 'relative', zIndex: 1 }}>
+            {/* İkon */}
+            <div
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl flex-shrink-0"
+              style={{
+                backgroundColor: category.bgColor,
+                border: `1px solid ${category.color}44`,
+                boxShadow: `0 0 32px ${category.color}55`,
+              }}
+            >
+              {category.emoji}
+            </div>
+
+            {/* Metin */}
+            <div className="flex flex-col gap-2 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
+                {category.label}
+              </h1>
+              {category.description && (
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {category.description}
+                </p>
+              )}
+              {/* Badge satırı */}
+              <div className="flex items-center gap-3 flex-wrap mt-1">
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                  borderRadius: 999, padding: '4px 12px',
+                  fontSize: 13, fontWeight: 600,
+                  color: d ? 'rgba(226,232,240,0.9)' : '#334155',
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: category.color, flexShrink: 0 }} />
+                  <FileText size={12} style={{ color: category.color }} />
+                  {questions.length} Soru
+                </div>
+                {subcats.length > 0 && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    borderRadius: 999, padding: '4px 12px',
+                    fontSize: 13, fontWeight: 600,
+                    color: d ? 'rgba(226,232,240,0.9)' : '#334155',
+                  }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: category.color, flexShrink: 0 }} />
+                    <Layers size={12} style={{ color: category.color }} />
+                    {isHierarchical ? topLevel.length : subcats.length} Alan
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </motion.div>
 
@@ -197,8 +306,8 @@ export function CategoryDetail() {
                   const levelLabel = ['Alan', 'Alt Alan', 'Rol'][level]
                   const currentSelection = selectedPath[level]
                   const isActive = (item: { _id: string }) => currentSelection?._id === item._id
-                  const fontSize = level === 0 ? 13 : 12
-                  const padding = level === 0 ? '7px 16px' : '6px 14px'
+                  const accentColor = category?.color ?? '#3b82f6'
+                  const small = level > 0
 
                   return (
                     <motion.div
@@ -211,15 +320,13 @@ export function CategoryDetail() {
                         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 m-0">{levelLabel}</p>
                         <div className="flex-1 h-px bg-slate-200 dark:bg-white/5"></div>
                       </div>
-                      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                      <div
+                        className="[&::-webkit-scrollbar]:hidden"
+                        style={segmentContainer}
+                      >
                         <button
                           onClick={() => handleSelect(level, null)}
-                          style={{
-                            flexShrink: 0, padding, borderRadius: 999, fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                            border: !currentSelection ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                            background: !currentSelection ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                            color: !currentSelection ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
-                          }}
+                          style={segmentBtn(!currentSelection, accentColor, small)}
                         >
                           Tümü
                         </button>
@@ -229,14 +336,7 @@ export function CategoryDetail() {
                             <button
                               key={item._id}
                               onClick={() => handleSelect(level, active ? null : { _id: item._id, slug: item.slug, name: item.name })}
-                              style={{
-                                flexShrink: 0, padding, borderRadius: 999, fontSize, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                                border: active ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                                background: active ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                                color: active ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
-                                outline: active ? `2px solid ${category?.color ?? '#3b82f6'}30` : 'none',
-                                outlineOffset: 1,
-                              }}
+                              style={segmentBtn(active, accentColor, small)}
                             >
                               {item.name}
                             </button>
@@ -254,15 +354,13 @@ export function CategoryDetail() {
                   <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 m-0">Alt Dal</p>
                   <div className="flex-1 h-px bg-slate-200 dark:bg-white/5"></div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                <div
+                  className="[&::-webkit-scrollbar]:hidden"
+                  style={segmentContainer}
+                >
                   <button
                     onClick={() => setSelectedPath([])}
-                    style={{
-                      flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                      border: selectedPath.length === 0 ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                      background: selectedPath.length === 0 ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                      color: selectedPath.length === 0 ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
-                    }}
+                    style={segmentBtn(selectedPath.length === 0, category?.color ?? '#3b82f6')}
                   >
                     Tümü
                   </button>
@@ -272,14 +370,7 @@ export function CategoryDetail() {
                       <button
                         key={sub.slug}
                         onClick={() => toggleSub(sub.slug)}
-                        style={{
-                          flexShrink: 0, padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                          border: active ? `1px solid ${category?.color ?? '#3b82f6'}60` : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                          background: active ? `${category?.color ?? '#3b82f6'}18` : d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)',
-                          color: active ? category?.color ?? '#3b82f6' : d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)',
-                          outline: active ? `2px solid ${category?.color ?? '#3b82f6'}30` : 'none',
-                          outlineOffset: 1,
-                        }}
+                        style={segmentBtn(active, category?.color ?? '#3b82f6')}
                       >
                         {sub.name}
                       </button>
@@ -314,7 +405,10 @@ export function CategoryDetail() {
                     borderRadius: '20px',
                     padding: '24px',
                     background: d ? mode.gradientDark : mode.gradientLight,
-                    border: `1px solid ${d ? mode.borderDark : mode.borderLight}`,
+                    borderTop: `1px solid ${d ? mode.borderDark : mode.borderLight}`,
+                    borderRight: `1px solid ${d ? mode.borderDark : mode.borderLight}`,
+                    borderBottom: `1px solid ${d ? mode.borderDark : mode.borderLight}`,
+                    borderLeft: `4px solid ${mode.leftBorder}`,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '16px',
@@ -358,34 +452,34 @@ export function CategoryDetail() {
         >
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6 mt-4">Soru Önizlemesi</h2>
           <motion.div variants={container} initial="hidden" animate="show" className="flex flex-col gap-4">
-            {questions.slice(0, 5).map((q, i) => (
+            {questions.slice(0, 5).map((q) => (
               <motion.div
                 key={q.id}
                 variants={fadeUp}
                 whileHover={{ y: -2, transition: { duration: 0.15 } }}
                 style={{
                   background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)',
-                  border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
+                  borderTop: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
+                  borderRight: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
+                  borderBottom: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
+                  borderLeft: `3px solid ${difficultyBorderColor(q.difficulty)}`,
                   borderRadius: '20px',
                   padding: '16px 24px',
                   display: 'flex',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   gap: '16px',
                   backdropFilter: 'blur(8px)',
                   boxShadow: d ? 'none' : '0 2px 16px rgba(0,0,0,0.05)',
                 }}
               >
-                <span style={{ fontSize: '20px', fontWeight: 900, color: d ? 'rgba(100,116,139,0.35)' : 'rgba(203,213,225,1)', minWidth: '2rem', userSelect: 'none', lineHeight: 1.5 }} className="hidden sm:block">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '14px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', lineHeight: 1.65, marginBottom: '12px' }}>{q.question}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <Badge variant={q.difficulty as 'kolay' | 'orta' | 'zor'}>
-                      {q.difficulty === 'kolay' ? 'Kolay' : q.difficulty === 'orta' ? 'Orta' : 'Zor'}
-                    </Badge>
-                    {q.subcategory && <Badge>{q.subcategory}</Badge>}
-                  </div>
+                <p style={{ flex: 1, fontSize: '14px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', lineHeight: 1.65, margin: 0 }}>
+                  {q.question}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                  <Badge variant={q.difficulty as 'kolay' | 'orta' | 'zor'}>
+                    {q.difficulty === 'kolay' ? 'Kolay' : q.difficulty === 'orta' ? 'Orta' : 'Zor'}
+                  </Badge>
+                  {q.subcategory && <Badge>{q.subcategory}</Badge>}
                 </div>
               </motion.div>
             ))}

@@ -49,85 +49,122 @@ export function Questions() {
             variants={container}
             initial="hidden"
             animate="show"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}
-            className="sm:grid-cols-2 grid-cols-1"
+            className="grid grid-cols-1 sm:grid-cols-2"
+            style={{ gap: '20px' }}
           >
             {categories.map((cat, i) => {
               const Icon = ICONS[cat.id as keyof typeof ICONS]
               const isLastOdd = categories.length % 2 !== 0 && i === categories.length - 1
+
+              const baseColor = d ? '#0f172a' : '#f8fafc'
+              const textPrimary = d ? 'rgba(241,245,249,0.95)' : '#0f172a'
+              const textSecondary = d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.85)'
 
               return (
                 <motion.div
                   key={cat.id}
                   variants={cardVariant}
                   onClick={() => navigate(`/sorular/${cat.id}`)}
-                  whileHover={{ y: -3 }}
+                  whileHover={{ y: -3, transition: { duration: 0.3 } }}
+                  className="group"
                   style={{
-                    borderRadius: '16px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '20px',
                     padding: '28px',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                    backdropFilter: 'blur(16px)',
-                    border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                    background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)',
-                    transition: 'all 0.25s',
-                    ...(isLastOdd ? { gridColumn: 'span 1' } : {}),
+                    justifyContent: 'space-between',
+                    minHeight: '180px',
+                    background: `linear-gradient(135deg, ${cat.color}33 0%, ${baseColor} 70%)`,
+                    border: `1px solid ${cat.color}30`,
+                    transition: 'box-shadow 0.3s, border-color 0.3s',
+                    ...(isLastOdd ? { gridColumn: 'span 2' } : {}),
                   }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 16px 48px rgba(0,0,0,0.15)'
-                      ; (e.currentTarget as HTMLDivElement).style.background = d ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,1)'
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.boxShadow = `0 20px 40px ${cat.color}25`
+                    el.style.borderColor = `${cat.color}80`
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.08)'
-                      ; (e.currentTarget as HTMLDivElement).style.background = d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)'
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.boxShadow = 'none'
+                    el.style.borderColor = `${cat.color}30`
                   }}
                 >
-                  {/* İkon */}
+                  {/* Sağ radial glow */}
                   <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '12px',
-                    background: `${cat.color}18`,
-                    border: `1px solid ${cat.color}30`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
+                    position: 'absolute', inset: 0,
+                    background: `radial-gradient(ellipse at 80% 50%, ${cat.color}40 0%, transparent 60%)`,
+                    pointerEvents: 'none',
+                  }} />
+
+                  {/* Büyük ikon watermark */}
+                  <div style={{
+                    position: 'absolute', right: '-20px', bottom: '-10px',
+                    opacity: d ? 0.1 : 0.07,
+                    pointerEvents: 'none', lineHeight: 1,
                   }}>
                     {Icon
-                      ? <Icon size={26} style={{ color: cat.color }} strokeWidth={1.75} />
-                      : <span style={{ fontSize: 26 }}>{cat.emoji}</span>
+                      ? <Icon size={160} style={{ color: cat.color }} strokeWidth={0.75} />
+                      : <span style={{ fontSize: '160px' }}>{cat.emoji}</span>
                     }
                   </div>
 
-                  {/* Başlık */}
-                  <h2
-                    style={{ fontSize: '20px', fontWeight: 700, marginTop: '16px', marginBottom: '8px', letterSpacing: '-0.01em' }}
-                    className="text-slate-900 dark:text-white"
-                  >
-                    {cat.label}
-                  </h2>
+                  {/* İçerik */}
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
+                    {/* Üst: küçük ikon + başlık */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '40px', height: '40px',
+                        borderRadius: '10px',
+                        background: `${cat.color}20`,
+                        border: `1px solid ${cat.color}40`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {Icon
+                          ? <Icon size={20} style={{ color: cat.color }} strokeWidth={1.75} />
+                          : <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+                        }
+                      </div>
+                      <h2 style={{ fontSize: '22px', fontWeight: 700, color: textPrimary, letterSpacing: '-0.01em', margin: 0 }}>
+                        {cat.label}
+                      </h2>
+                    </div>
 
-                  {/* Açıklama */}
-                  <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, flex: 1 }}>
-                    {cat.description}
-                  </p>
+                    {/* Açıklama */}
+                    <p style={{
+                      fontSize: '14px', color: textSecondary, lineHeight: 1.6, flex: 1,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {cat.description}
+                    </p>
 
-                  {/* Alt bar */}
-                  <div
-                    style={{ marginTop: '20px', paddingTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    className="border-t border-slate-100 dark:border-slate-700/60"
-                  >
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8' }}>
-                      {cat.count} Soru
-                    </span>
-                    <span
-                      style={{ fontSize: '14px', fontWeight: 600, color: cat.color, display: 'inline-flex', alignItems: 'center', gap: '4px', transition: 'gap 0.2s' }}
-                    >
-                      Başla <ArrowRight size={14} />
-                    </span>
+                    {/* Alt: soru sayısı badge + Başla */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                        borderRadius: 999, padding: '4px 12px',
+                        fontSize: 13, fontWeight: 600,
+                        color: d ? 'rgba(226,232,240,0.9)' : '#334155',
+                      }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
+                        {cat.count} Soru
+                      </div>
+                      <span style={{
+                        fontSize: '14px', fontWeight: 700, color: cat.color,
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      }}>
+                        Başla
+                        <ArrowRight
+                          size={14}
+                          className="transition-transform duration-200 group-hover:translate-x-1"
+                        />
+                      </span>
+                    </div>
                   </div>
                 </motion.div>
               )
