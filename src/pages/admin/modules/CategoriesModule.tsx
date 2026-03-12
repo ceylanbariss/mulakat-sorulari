@@ -528,29 +528,7 @@ function IconBtn({ onClick, hoverColor, children }: { onClick: () => void; hover
   )
 }
 
-// ─── SubRow ────────────────────────────────────────────────────────────────────
 
-function SubRow({ sub, qCount, onEdit, onDelete }: { sub: SubDoc; qCount: number; onEdit: () => void; onDelete: () => void }) {
-  const [hov, setHov] = useState(false)
-  return (
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: hov ? 'rgba(255,255,255,0.04)' : 'transparent', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.15s' }}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ color: C.t1, fontWeight: 600, fontSize: 13, margin: '0 0 3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.name}</p>
-        <p style={{ color: C.t3, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{sub.slug}</p>
-      </div>
-      <span style={{ fontSize: 11, color: C.t3, background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: 6, flexShrink: 0 }}>
-        {qCount} soru
-      </span>
-      <div style={{ display: 'flex', gap: 2, opacity: hov ? 1 : 0, transition: 'opacity 0.15s' }}>
-        <IconBtn onClick={onEdit} hoverColor={C.cyan}><Pencil size={13} /></IconBtn>
-        <IconBtn onClick={onDelete} hoverColor="#ef4444"><Trash2 size={13} /></IconBtn>
-      </div>
-    </div>
-  )
-}
 
 // ─── SubTreeNode ───────────────────────────────────────────────────────────────
 
