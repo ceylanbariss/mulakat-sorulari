@@ -120,7 +120,15 @@ export function CategoryDetail() {
 
   const { categories, loading: catsLoading } = useCategories()
   const filterSlugs = getFilterSlugs()
-  const { questions, loading: qsLoading } = useQuestions(kategori, filterSlugs)
+  const { questions, allCategoryQuestions, loading: qsLoading } = useQuestions(kategori, filterSlugs)
+
+  // Alt dal (ve çocukları) altındaki toplam soru sayısını hesapla
+  function getSubCount(nodeId: string, nodeSlug: string) {
+    if (!allCategoryQuestions) return 0
+    const descendants = getAllDescendantSlugs(nodeId)
+    const validSlugs = new Set([nodeSlug, ...descendants])
+    return allCategoryQuestions.filter(q => q.subcategory && validSlugs.has(q.subcategory)).length
+  }
 
   if (catsLoading || qsLoading) return null // Veya loading spinner
 
@@ -184,7 +192,7 @@ export function CategoryDetail() {
                 {[0, 1, 2].map(level => {
                   const parentId = level === 0 ? '' : selectedPath[level - 1]?._id
                   if (level > 0 && !selectedPath[level - 1]) return null
-                  const items = getChildren(parentId ?? '')
+                  const items = getChildren(parentId ?? '').sort((a, b) => getSubCount(b._id, b.slug) - getSubCount(a._id, a.slug))
                   if (!items.length) return null
                   const levelLabel = ['Alan', 'Alt Alan', 'Rol'][level]
                   const currentSelection = selectedPath[level]
@@ -252,7 +260,7 @@ export function CategoryDetail() {
                   >
                     Tümü
                   </button>
-                  {subcats.map(sub => {
+                  {[...subcats].sort((a, b) => getSubCount(b._id, b.slug) - getSubCount(a._id, a.slug)).map(sub => {
                     const active = selectedPath.some(p => p.slug === sub.slug)
                     return (
                       <button

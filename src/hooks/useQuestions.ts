@@ -6,6 +6,7 @@ export type QuestionDoc = Question & { _id: string }
 
 export function useQuestions(category?: string, subcategories?: string[]) {
   const [questions, setQuestions] = useState<QuestionDoc[]>([])
+  const [allCategoryQuestions, setAllCategoryQuestions] = useState<QuestionDoc[]>([])
   const [loading, setLoading] = useState(true)
 
   const subKey = subcategories?.join(',') ?? ''
@@ -20,14 +21,17 @@ export function useQuestions(category?: string, subcategories?: string[]) {
         if (all.length === 0) {
           all = getAllQuestions().map(q => ({ ...q, _id: q.id }))
         }
+        let catQuestions = all
         if (category) {
-          all = all.filter(q => q.category === category)
+          catQuestions = all.filter(q => q.category === category)
         }
+        let filteredQuestions = catQuestions
         if (subcategories && subcategories.length > 0) {
-          all = all.filter(q => subcategories.includes(q.subcategory ?? ''))
+          filteredQuestions = catQuestions.filter(q => subcategories.includes(q.subcategory ?? ''))
         }
         if (isMounted) {
-          setQuestions(all)
+          setQuestions(filteredQuestions)
+          setAllCategoryQuestions(catQuestions)
           setLoading(false)
         }
       }
@@ -39,5 +43,5 @@ export function useQuestions(category?: string, subcategories?: string[]) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, subKey])
 
-  return { questions, loading }
+  return { questions, allCategoryQuestions, loading }
 }
