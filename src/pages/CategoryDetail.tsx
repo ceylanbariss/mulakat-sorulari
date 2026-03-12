@@ -150,7 +150,7 @@ export function CategoryDetail() {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-10 flex-wrap"
+          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-16 flex-wrap"
         >
           <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight size={14} />
@@ -164,7 +164,7 @@ export function CategoryDetail() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center gap-4 sm:gap-5 mb-12"
+          className="flex items-center gap-8 mb-20"
         >
           <div
             className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-sm flex-shrink-0"
@@ -184,11 +184,11 @@ export function CategoryDetail() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.4 }}
-            className="mb-14"
+            className="mb-24"
           >
             {isHierarchical ? (
               /* N-kademeli hiyerarşik filtre */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 56 }}>
                 {[0, 1, 2].map(level => {
                   const parentId = level === 0 ? '' : selectedPath[level - 1]?._id
                   if (level > 0 && !selectedPath[level - 1]) return null
@@ -207,7 +207,7 @@ export function CategoryDetail() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25 }}
                     >
-                      <div className="flex items-center gap-4 mb-3">
+                      <div className="flex items-center gap-6 mb-6">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 m-0">{levelLabel}</p>
                         <div className="flex-1 h-px bg-slate-200 dark:bg-white/5"></div>
                       </div>
@@ -250,7 +250,7 @@ export function CategoryDetail() {
             ) : (
               /* Düz (flat) filtre — diğer kategoriler */
               <>
-                <div className="flex items-center gap-4 mb-3">
+                <div className="flex items-center gap-6 mb-6">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 m-0">Alt Dal</p>
                   <div className="flex-1 h-px bg-slate-200 dark:bg-white/5"></div>
                 </div>
