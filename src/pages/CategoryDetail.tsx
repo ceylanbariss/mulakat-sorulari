@@ -150,7 +150,7 @@ export function CategoryDetail() {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-6 flex-wrap"
+          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 mb-10 flex-wrap"
         >
           <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight size={14} />
@@ -164,7 +164,7 @@ export function CategoryDetail() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center gap-4 sm:gap-5 mb-6"
+          className="flex items-center gap-4 sm:gap-5 mb-12"
         >
           <div
             className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-sm flex-shrink-0"
@@ -184,7 +184,7 @@ export function CategoryDetail() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.4 }}
-            className="mb-8"
+            className="mb-14"
           >
             {isHierarchical ? (
               /* N-kademeli hiyerarşik filtre */
