@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, RotateCcw, MousePointer2 } from 'lucide-react'
+import { ArrowLeft, RotateCcw, MousePointer2, Save, PauseCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { type Question } from '../../data/questions'
@@ -69,6 +69,67 @@ export function FlashCardMode({ questions, kategori }: Props) {
   const [results, setResults] = useState<Result[]>([])
   const [done, setDone] = useState(false)
   const [direction, setDirection] = useState<'left' | 'right' | null>(null)
+  const [earlyFinish, setEarlyFinish] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<'save' | 'pause' | null>(null)
+  const [resumeData, setResumeData] = useState<{ deckIds: string[]; index: number; results: Result[] } | null>(null)
+
+  useEffect(() => {
+    const u = useAuthStore.getState().user
+    if (!u) return
+    const key = `mulakat_session_${u.uid}_${kategori}_flashcard`
+    try {
+      const raw = localStorage.getItem(key)
+      if (raw) {
+        const saved = JSON.parse(raw)
+        if (saved?.deckIds?.length && saved.index > 0) setResumeData(saved)
+      }
+    } catch { /* ignore */ }
+  }, [kategori])
+
+  const handleResume = () => {
+    if (!resumeData) return
+    const idMap = new Map(questions.map(q => [q.id, q]))
+    const restored = resumeData.deckIds.map(id => idMap.get(id)).filter((q): q is Question => q !== undefined)
+    if (restored.length) { setDeck(restored); setIndex(resumeData.index); setResults(resumeData.results) }
+    setResumeData(null)
+  }
+
+  const handleNewSession = () => {
+    const u = useAuthStore.getState().user
+    if (u) localStorage.removeItem(`mulakat_session_${u.uid}_${kategori}_flashcard`)
+    setResumeData(null)
+  }
+
+  const handleFinishAndSave = () => {
+    setConfirmAction(null)
+    if (results.length === 0) return
+    const u = useAuthStore.getState().user
+    if (u) {
+      const correctCount = results.filter(r => r === 'correct').length
+      const partialCount = results.filter(r => r === 'partial').length
+      const wrongCount = results.filter(r => r === 'wrong').length
+      addDocument(trainingSessionsCol(), {
+        userId: u.uid, mode: 'flashcard', category: kategori,
+        totalQuestions: results.length, correctCount, partialCount, wrongCount,
+        score: Math.round((correctCount / results.length) * 100),
+      }).catch(() => {})
+      localStorage.removeItem(`mulakat_session_${u.uid}_${kategori}_flashcard`)
+    }
+    setEarlyFinish(true)
+    setDone(true)
+  }
+
+  const handlePauseLater = () => {
+    setConfirmAction(null)
+    const u = useAuthStore.getState().user
+    if (u) {
+      localStorage.setItem(
+        `mulakat_session_${u.uid}_${kategori}_flashcard`,
+        JSON.stringify({ deckIds: deck.map(q => q.id), index, results, savedAt: Date.now() })
+      )
+    }
+    navigate(`/sorular/${kategori}`)
+  }
 
   const current = deck[index]
   const progress = (index / deck.length) * 100
@@ -155,9 +216,11 @@ export function FlashCardMode({ questions, kategori }: Props) {
               {pct >= 70 ? '🎉' : pct >= 40 ? '💪' : '📚'}
             </motion.div>
             <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', marginBottom: '8px' }}>
-              Oturum Tamamlandı!
+              {earlyFinish ? 'Erken Tamamlandı!' : 'Oturum Tamamlandı!'}
             </h1>
-            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>{deck.length} soruyu tamamladın</p>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>
+              {earlyFinish ? `${results.length}/${deck.length} soruyu tamamladın` : `${deck.length} soruyu tamamladın`}
+            </p>
             <div style={{ marginTop: '20px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '999px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)' }}>
               <span style={{ fontSize: '32px', fontWeight: 700, background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>%{pct}</span>
               <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>başarı</span>
@@ -387,8 +450,93 @@ export function FlashCardMode({ questions, kategori }: Props) {
               <div key={i} className={cn('w-2 h-2 rounded-full', RESULT_CONFIG[r].dot)} />
             ))}
           </div>
+
+          {/* Erken çıkış butonları */}
+          {results.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '28px', justifyContent: 'center' }}>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setConfirmAction('save')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s' }}
+              >
+                <Save size={12} /> Bitir & Kaydet
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setConfirmAction('pause')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s' }}
+              >
+                <PauseCircle size={12} /> Sonra Devam Et
+              </motion.button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Onayla dialog */}
+      {confirmAction && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '24px' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px', padding: '32px', maxWidth: '360px', width: '100%', textAlign: 'center' }}
+          >
+            <p style={{ fontSize: '20px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
+              {confirmAction === 'save' ? '💾 Bitir & Kaydet' : '⏸ Sonra Devam Et'}
+            </p>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '28px', lineHeight: 1.6 }}>
+              {confirmAction === 'save'
+                ? `${results.length}/${deck.length} soru tamamlandı. İlerleme kaydedilecek ve oturum sona erecek.`
+                : 'İlerleme yerel olarak kaydedilecek. Geri döndüğünde kaldığın yerden devam edebilirsin.'}
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setConfirmAction(null)}
+                style={{ flex: 1, height: '44px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+              >
+                İptal
+              </button>
+              <button
+                onClick={confirmAction === 'save' ? handleFinishAndSave : handlePauseLater}
+                style={{ flex: 1, height: '44px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+              >
+                Onayla
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Devam et dialog */}
+      {resumeData && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '24px' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ background: '#0f172a', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '20px', padding: '32px', maxWidth: '360px', width: '100%', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏸</div>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>Yarım Kalan Oturum</p>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '28px', lineHeight: 1.6 }}>
+              {resumeData.index}/{resumeData.deckIds.length} soruyu tamamlamıştın. Kaldığın yerden devam etmek ister misin?
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleNewSession}
+                style={{ flex: 1, height: '44px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+              >
+                Yeni Başla
+              </button>
+              <button
+                onClick={handleResume}
+                style={{ flex: 1, height: '44px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+              >
+                Devam Et
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

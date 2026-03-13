@@ -4,6 +4,7 @@ import { BarChart2, Clock, CheckCircle, Flame, ArrowRight, TrendingUp, TrendingD
 import { useAppStore } from '../store/useAppStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { useTrainingStats } from '../hooks/useTrainingStats'
+import { PersonalCoach } from '../components/stats/PersonalCoach'
 
 const CATEGORY_LABELS: Record<string, string> = {
   yazilim: 'Yazılım', kamu: 'Kamu', banka: 'Banka', ik: 'İnsan Kaynakları',
@@ -392,6 +393,8 @@ export function Statistics() {
 
           </div>
         </div>
+
+        <PersonalCoach stats={stats} d={d} />
 
       </div>
     </div>
