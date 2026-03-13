@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, Code2, Landmark, Banknote, Users } from 'lucide-react'
+import { ArrowRight, Code2, Landmark, Banknote, Users } from 'lucide-react'
 import { PageWrapper } from '../layout/PageWrapper'
 import { useCategories } from '../../hooks/useCategories'
 import { useAppStore } from '../../store/useAppStore'
@@ -12,13 +12,6 @@ const ICONS = {
   ik: Users,
 } as const
 
-const GLOW_COLORS: Record<string, string> = {
-  yazilim: 'rgba(59,130,246,0.25)',
-  kamu: 'rgba(16,185,129,0.25)',
-  banka: 'rgba(245,158,11,0.25)',
-  ik: 'rgba(139,92,246,0.25)',
-}
-
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.1 } },
@@ -28,16 +21,13 @@ const cardVariant = {
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const } },
 }
 
-// Bento layout: [0] col-span-3, [1] col-span-2, [2] col-span-2, [3] col-span-3
-const SPANS = [3, 2, 2, 3]
-
 export function CategoryGrid() {
   const navigate = useNavigate()
   const { categories, loading } = useCategories()
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
 
-  if (loading) return null // Veya loading spinner
+  if (loading) return null
 
   return (
     <section className="pt-28 pb-32 relative overflow-hidden">
@@ -64,85 +54,127 @@ export function CategoryGrid() {
           </p>
         </motion.div>
 
-        {/* Bento grid — 2 cols on mobile, 5 cols bento on desktop */}
+        {/* Kartlar — 2 sütunlu grid */}
         <motion.div
           variants={container}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-60px' }}
-          className="grid grid-cols-2 md:grid-cols-5"
-          style={{ gap: '14px' }}
+          className="grid grid-cols-1 sm:grid-cols-2"
+          style={{ gap: '20px' }}
         >
           {categories.map((cat, i) => {
             const Icon = ICONS[cat.id as keyof typeof ICONS]
-            const glow = GLOW_COLORS[cat.id] || 'rgba(59,130,246,0.25)'
-            const span = SPANS[i % SPANS.length]
-            const spanClass = span === 3 ? 'col-span-1 md:col-span-3' : 'col-span-1 md:col-span-2'
+            const isLastOdd = categories.length % 2 !== 0 && i === categories.length - 1
+            const baseColor = d ? '#0f172a' : '#f8fafc'
+            const textPrimary = d ? 'rgba(241,245,249,0.95)' : '#0f172a'
+            const textSecondary = d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.85)'
 
             return (
               <motion.div
                 key={cat.id}
                 variants={cardVariant}
                 onClick={() => navigate(`/sorular/${cat.id}`)}
-                whileHover={{ y: -6, transition: { duration: 0.22 } }}
-                className={spanClass}
+                whileHover={{ y: -3, transition: { duration: 0.3 } }}
+                className="group"
                 style={{
+                  position: 'relative',
+                  overflow: 'hidden',
                   borderRadius: '20px',
-                  padding: '20px',
+                  padding: '28px',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '16px',
-                  overflow: 'hidden',
-                  position: 'relative',
+                  justifyContent: 'space-between',
                   minHeight: '180px',
-                  background: d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.75)',
-                  border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
-                  backdropFilter: 'blur(12px)',
-                  transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.3s',
+                  background: `linear-gradient(135deg, ${cat.color}33 0%, ${baseColor} 70%)`,
+                  border: `1px solid ${cat.color}30`,
+                  transition: 'box-shadow 0.3s, border-color 0.3s',
+                  ...(isLastOdd ? { gridColumn: 'span 2' } : {}),
                 }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 0 1px rgba(255,255,255,0.12), 0 20px 60px -10px ${glow}`
-                    ; (e.currentTarget as HTMLDivElement).querySelector<HTMLElement>('.bento-top-line')!.style.opacity = '1'
-                    ; (e.currentTarget as HTMLDivElement).querySelector<HTMLElement>('.bento-arrow')!.style.opacity = '1'
-                    ; (e.currentTarget as HTMLDivElement).querySelector<HTMLElement>('.bento-arrow')!.style.transform = 'translateY(0)'
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.boxShadow = `0 20px 40px ${cat.color}25`
+                  el.style.borderColor = `${cat.color}80`
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
-                    ; (e.currentTarget as HTMLDivElement).querySelector<HTMLElement>('.bento-top-line')!.style.opacity = '0'
-                    ; (e.currentTarget as HTMLDivElement).querySelector<HTMLElement>('.bento-arrow')!.style.opacity = '0'
-                    ; (e.currentTarget as HTMLDivElement).querySelector<HTMLElement>('.bento-arrow')!.style.transform = 'translateY(-4px)'
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.boxShadow = 'none'
+                  el.style.borderColor = `${cat.color}30`
                 }}
               >
-                {/* Top gradient line */}
-                <div className="bento-top-line" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: `linear-gradient(90deg, transparent, ${cat.color}60, transparent)`, opacity: 0, transition: 'opacity 0.3s' }} />
+                {/* Sağ radial glow */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: `radial-gradient(ellipse at 80% 50%, ${cat.color}40 0%, transparent 60%)`,
+                  pointerEvents: 'none',
+                }} />
 
-                {/* Icon + arrow */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cat.color}18`, border: `1px solid ${cat.color}30`, flexShrink: 0 }}>
-                    {Icon ? <Icon size={20} style={{ color: cat.color }} strokeWidth={1.75} /> : <span style={{ fontSize: 20 }}>{cat.emoji}</span>}
-                  </div>
-                  <div className="bento-arrow" style={{ width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', opacity: 0, transform: 'translateY(-4px)', transition: 'opacity 0.2s, transform 0.2s' }}>
-                    <ArrowUpRight size={14} style={{ color: d ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)' }} />
-                  </div>
+                {/* Büyük ikon watermark */}
+                <div style={{
+                  position: 'absolute', right: '-20px', bottom: '-10px',
+                  opacity: d ? 0.1 : 0.07,
+                  pointerEvents: 'none', lineHeight: 1,
+                }}>
+                  {Icon
+                    ? <Icon size={160} style={{ color: cat.color }} strokeWidth={0.75} />
+                    : <span style={{ fontSize: '160px' }}>{cat.emoji}</span>
+                  }
                 </div>
 
-                {/* Content */}
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontWeight: 800, color: d ? 'white' : '#0f172a', fontSize: '16px', marginBottom: '6px', letterSpacing: '-0.02em' }}>{cat.label}</h3>
-                  <p style={{ fontSize: '13px', color: d ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.7)', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+                {/* İçerik */}
+                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
+                  {/* Üst: küçük ikon + başlık */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px', height: '40px',
+                      borderRadius: '10px',
+                      background: `${cat.color}20`,
+                      border: `1px solid ${cat.color}40`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      {Icon
+                        ? <Icon size={20} style={{ color: cat.color }} strokeWidth={1.75} />
+                        : <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+                      }
+                    </div>
+                    <h3 style={{ fontSize: '22px', fontWeight: 700, color: textPrimary, letterSpacing: '-0.01em', margin: 0 }}>
+                      {cat.label}
+                    </h3>
+                  </div>
+
+                  {/* Açıklama */}
+                  <p style={{
+                    fontSize: '14px', color: textSecondary, lineHeight: 1.6, flex: 1,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+                  }}>
                     {cat.description}
                   </p>
-                </div>
 
-                {/* Footer */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: d ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: d ? 'rgba(100,116,139,0.8)' : 'rgba(100,116,139,0.9)', letterSpacing: '0.03em' }}>
-                    {cat.count} Soru
-                  </span>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: cat.color, letterSpacing: '0.05em' }}>
-                    Başla →
-                  </span>
+                  {/* Alt: soru sayısı badge + Başla */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                      borderRadius: 999, padding: '4px 12px',
+                      fontSize: 13, fontWeight: 600,
+                      color: d ? 'rgba(226,232,240,0.9)' : '#334155',
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
+                      {cat.count} Soru
+                    </div>
+                    <span style={{
+                      fontSize: '14px', fontWeight: 700, color: cat.color,
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    }}>
+                      Başla
+                      <ArrowRight
+                        size={14}
+                        className="transition-transform duration-200 group-hover:translate-x-1"
+                      />
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             )
