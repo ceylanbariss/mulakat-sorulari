@@ -139,12 +139,12 @@ export function HeroSection() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 + i * 0.1, duration: 0.5 }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '28px 16px', borderRadius: '20px', background: d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)', backdropFilter: 'blur(16px)', minWidth: 0, overflow: 'hidden' }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'center', textAlign: 'center', padding: '28px 16px', borderRadius: '20px', background: d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)', backdropFilter: 'blur(16px)', minWidth: 0 }}
                 >
-                  <p style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', lineHeight: 1, letterSpacing: '-0.03em', textAlign: 'center', width: '100%' }}>
+                  <p style={{ fontSize: 'clamp(1.5rem, 5.5vw, 3.5rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', lineHeight: 1, letterSpacing: '-0.03em', textAlign: 'center' }}>
                     {value}
                   </p>
-                  <p style={{ fontSize: '13px', color: d ? 'rgba(100,116,139,0.9)' : 'rgba(71,85,105,0.7)', marginTop: '10px', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' as const, textAlign: 'center', width: '100%' }}>
+                  <p style={{ fontSize: '11px', color: d ? 'rgba(100,116,139,0.9)' : 'rgba(71,85,105,0.7)', marginTop: '8px', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' as const, textAlign: 'center' }}>
                     {label}
                   </p>
                 </motion.div>
