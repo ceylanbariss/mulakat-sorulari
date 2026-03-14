@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Admin sayfalarını indeksleme
+Disallow: /admin/
+Disallow: /giris
+
+Sitemap: https://www.mulakatsorulari.com.tr/sitemap.xml
