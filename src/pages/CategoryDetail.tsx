@@ -475,11 +475,22 @@ export function CategoryDetail() {
                 <p style={{ flex: 1, fontSize: '14px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', lineHeight: 1.65, margin: 0 }}>
                   {q.question}
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                  <Badge variant={q.difficulty as 'kolay' | 'orta' | 'zor'}>
-                    {q.difficulty === 'kolay' ? 'Kolay' : q.difficulty === 'orta' ? 'Orta' : 'Zor'}
-                  </Badge>
-                  {q.subcategory && <Badge>{q.subcategory}</Badge>}
+                <div style={{ flexShrink: 0 }}>
+                  {q.difficulty === 'kolay' && (
+                    <span className="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/20 px-3 py-1 text-xs font-semibold text-green-400">
+                      ✓ Kolay
+                    </span>
+                  )}
+                  {q.difficulty === 'orta' && (
+                    <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-400">
+                      ◆ Orta
+                    </span>
+                  )}
+                  {q.difficulty === 'zor' && (
+                    <span className="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-400">
+                      ✦ Zor
+                    </span>
+                  )}
                 </div>
               </motion.div>
             ))}
