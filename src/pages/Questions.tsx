@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Code2, Landmark, Banknote, Users, ArrowRight } from 'lucide-react'
@@ -21,6 +22,15 @@ export function Questions() {
   const { categories, loading } = useCategories()
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
+
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  )
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   if (loading) return null
 
@@ -60,6 +70,17 @@ export function Questions() {
               const textPrimary = d ? 'rgba(241,245,249,0.95)' : '#0f172a'
               const textSecondary = d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.85)'
 
+              // Mobil responsive değerler
+              const cardPadding = isMobile ? '16px' : '28px'
+              const iconBoxSize = isMobile ? '32px' : '40px'
+              const iconBoxRadius = isMobile ? '8px' : '10px'
+              const iconSize = isMobile ? 16 : 20
+              const titleSize = isMobile ? '18px' : '22px'
+              const watermarkSize = isMobile ? 96 : 160
+              const watermarkRight = isMobile ? '8px' : '-20px'
+              const watermarkBottom = isMobile ? '8px' : '-10px'
+              const watermarkOpacity = isMobile ? 0.06 : (d ? 0.1 : 0.07)
+
               return (
                 <motion.div
                   key={cat.id}
@@ -71,16 +92,16 @@ export function Questions() {
                     position: 'relative',
                     overflow: 'hidden',
                     borderRadius: '20px',
-                    padding: '28px',
+                    padding: cardPadding,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    minHeight: '180px',
+                    minHeight: isMobile ? 'auto' : '180px',
                     background: `linear-gradient(135deg, ${cat.color}33 0%, ${baseColor} 70%)`,
                     border: `1px solid ${cat.color}30`,
                     transition: 'box-shadow 0.3s, border-color 0.3s',
-                    ...(isLastOdd ? { gridColumn: 'span 2' } : {}),
+                    ...(isLastOdd && !isMobile ? { gridColumn: 'span 2' } : {}),
                   }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLDivElement
@@ -93,7 +114,7 @@ export function Questions() {
                     el.style.borderColor = `${cat.color}30`
                   }}
                 >
-                  {/* Clip container — iOS/Safari'de overflow:hidden + transform sorununu önler */}
+                  {/* Clip container — glow ve watermark'ı kard içinde tutar */}
                   <div style={{
                     position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: '20px',
                     pointerEvents: 'none',
@@ -106,13 +127,13 @@ export function Questions() {
 
                     {/* Büyük ikon watermark */}
                     <div style={{
-                      position: 'absolute', right: '-20px', bottom: '-10px',
-                      opacity: d ? 0.1 : 0.07,
+                      position: 'absolute', right: watermarkRight, bottom: watermarkBottom,
+                      opacity: watermarkOpacity,
                       lineHeight: 1,
                     }}>
                       {Icon
-                        ? <Icon size={160} style={{ color: cat.color }} strokeWidth={0.75} />
-                        : <span style={{ fontSize: '160px' }}>{cat.emoji}</span>
+                        ? <Icon size={watermarkSize} style={{ color: cat.color }} strokeWidth={0.75} />
+                        : <span style={{ fontSize: `${watermarkSize}px` }}>{cat.emoji}</span>
                       }
                     </div>
                   </div>
@@ -122,19 +143,19 @@ export function Questions() {
                     {/* Üst: küçük ikon + başlık */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{
-                        width: '40px', height: '40px',
-                        borderRadius: '10px',
+                        width: iconBoxSize, height: iconBoxSize,
+                        borderRadius: iconBoxRadius,
                         background: `${cat.color}20`,
                         border: `1px solid ${cat.color}40`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0,
                       }}>
                         {Icon
-                          ? <Icon size={20} style={{ color: cat.color }} strokeWidth={1.75} />
-                          : <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+                          ? <Icon size={iconSize} style={{ color: cat.color }} strokeWidth={1.75} />
+                          : <span style={{ fontSize: iconSize }}>{cat.emoji}</span>
                         }
                       </div>
-                      <h2 style={{ fontSize: '22px', fontWeight: 700, color: textPrimary, letterSpacing: '-0.01em', margin: 0 }}>
+                      <h2 style={{ fontSize: titleSize, fontWeight: 700, color: textPrimary, letterSpacing: '-0.01em', margin: 0 }}>
                         {cat.label}
                       </h2>
                     </div>
@@ -142,17 +163,17 @@ export function Questions() {
                     {/* Açıklama */}
                     <p style={{
                       fontSize: '14px', color: textSecondary, lineHeight: 1.6, flex: 1,
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
                     }}>
                       {cat.description}
                     </p>
 
                     {/* Alt: soru sayısı badge + Başla */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', flexWrap: 'wrap', gap: '6px' }}>
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                         background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
-                        borderRadius: 999, padding: '4px 12px',
+                        borderRadius: 999, padding: isMobile ? '3px 10px' : '4px 12px',
                         fontSize: 13, fontWeight: 600,
                         color: d ? 'rgba(226,232,240,0.9)' : '#334155',
                       }}>
