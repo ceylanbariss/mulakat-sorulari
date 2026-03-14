@@ -477,17 +477,17 @@ export function CategoryDetail() {
                 </p>
                 <div style={{ flexShrink: 0 }}>
                   {q.difficulty === 'kolay' && (
-                    <span className="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/20 px-3 py-1 text-xs font-semibold text-green-400">
+                    <span className="inline-flex items-center justify-center rounded-full border border-green-500/30 bg-green-500/20 px-4 py-1.5 text-xs font-semibold text-green-400 whitespace-nowrap" style={{ minWidth: '72px' }}>
                       ✓ Kolay
                     </span>
                   )}
                   {q.difficulty === 'orta' && (
-                    <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-400">
+                    <span className="inline-flex items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/20 px-4 py-1.5 text-xs font-semibold text-amber-400 whitespace-nowrap" style={{ minWidth: '72px' }}>
                       ◆ Orta
                     </span>
                   )}
                   {q.difficulty === 'zor' && (
-                    <span className="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-400">
+                    <span className="inline-flex items-center justify-center rounded-full border border-red-500/30 bg-red-500/20 px-4 py-1.5 text-xs font-semibold text-red-400 whitespace-nowrap" style={{ minWidth: '72px' }}>
                       ✦ Zor
                     </span>
                   )}
