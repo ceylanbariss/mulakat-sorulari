@@ -103,23 +103,28 @@ export function CategoryGrid() {
                   el.style.borderColor = `${cat.color}30`
                 }}
               >
-                {/* Sağ radial glow */}
+                {/* Clip container — iOS/Safari'de overflow:hidden + transform sorununu önler */}
                 <div style={{
-                  position: 'absolute', inset: 0,
-                  background: `radial-gradient(ellipse at 80% 50%, ${cat.color}40 0%, transparent 60%)`,
+                  position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: '20px',
                   pointerEvents: 'none',
-                }} />
-
-                {/* Büyük ikon watermark */}
-                <div style={{
-                  position: 'absolute', right: '-20px', bottom: '-10px',
-                  opacity: d ? 0.1 : 0.07,
-                  pointerEvents: 'none', lineHeight: 1,
                 }}>
-                  {Icon
-                    ? <Icon size={160} style={{ color: cat.color }} strokeWidth={0.75} />
-                    : <span style={{ fontSize: '160px' }}>{cat.emoji}</span>
-                  }
+                  {/* Sağ radial glow */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: `radial-gradient(ellipse at 80% 50%, ${cat.color}40 0%, transparent 60%)`,
+                  }} />
+
+                  {/* Büyük ikon watermark */}
+                  <div style={{
+                    position: 'absolute', right: '-20px', bottom: '-10px',
+                    opacity: d ? 0.1 : 0.07,
+                    lineHeight: 1,
+                  }}>
+                    {Icon
+                      ? <Icon size={160} style={{ color: cat.color }} strokeWidth={0.75} />
+                      : <span style={{ fontSize: '160px' }}>{cat.emoji}</span>
+                    }
+                  </div>
                 </div>
 
                 {/* İçerik */}
