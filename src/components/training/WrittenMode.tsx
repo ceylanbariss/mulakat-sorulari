@@ -243,6 +243,13 @@ export function WrittenMode({ questions, kategori }: Props) {
             >
               <ArrowLeft size={16} /> Kategoriye Dön
             </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/istatistikler')}
+              style={{ height: '52px', borderRadius: '12px', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontWeight: 600, fontSize: '14px', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              📊 İstatistiklerime Git
+            </motion.button>
           </div>
         </motion.div>
       </div>
