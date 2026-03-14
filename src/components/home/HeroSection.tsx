@@ -38,6 +38,8 @@ export function HeroSection() {
         alignItems: 'center',
         overflow: 'hidden',
         paddingTop: '64px',
+        width: '100%',
+        maxWidth: '100vw',
       }}
     >
 
@@ -59,6 +61,7 @@ export function HeroSection() {
                 style={{
                   position: 'relative',
                   width: '280px',
+                  maxWidth: '100%',
                   height: '280px',
                 }}
               >
@@ -128,7 +131,7 @@ export function HeroSection() {
             {/* Stats */}
             <motion.div
               variants={item}
-              style={{ marginTop: '72px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}
+              style={{ marginTop: '72px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', minWidth: 0, width: '100%' }}
             >
               {STATS.map(({ value, label }, i) => (
                 <motion.div
@@ -136,7 +139,7 @@ export function HeroSection() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 + i * 0.1, duration: 0.5 }}
-                  style={{ textAlign: 'center', padding: '28px 16px', borderRadius: '20px', background: d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)', backdropFilter: 'blur(16px)' }}
+                  style={{ textAlign: 'center', padding: '28px 16px', borderRadius: '20px', background: d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)', backdropFilter: 'blur(16px)', minWidth: 0, overflow: 'hidden' }}
                 >
                   <p style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900, color: d ? 'white' : '#0f172a', lineHeight: 1, letterSpacing: '-0.03em' }}>
                     {value}
