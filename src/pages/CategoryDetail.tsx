@@ -3,7 +3,6 @@ import { ChevronRight, CreditCard, ListChecks, PenLine, ArrowRight, FileText, La
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { PageWrapper } from '../components/layout/PageWrapper'
-import { Badge } from '../components/ui/Badge'
 import { useCategories } from '../hooks/useCategories'
 import { useQuestions } from '../hooks/useQuestions'
 import { useAppStore } from '../store/useAppStore'
