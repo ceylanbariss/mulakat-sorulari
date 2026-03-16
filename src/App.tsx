@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Toaster } from 'sonner'
@@ -120,6 +121,7 @@ export default function App() {
       <AuthProvider>
         <AppLayout />
       </AuthProvider>
+      <Analytics />
     </BrowserRouter>
   )
 }
