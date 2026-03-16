@@ -5,4 +5,4 @@ Allow: /
 Disallow: /admin/
 Disallow: /giris
 
-Sitemap: https://www.mulakatsorulari.com.tr/sitemap.xml
+Sitemap: https://mulakatsorulari.com.tr/sitemap.xml
