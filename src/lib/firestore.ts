@@ -100,6 +100,7 @@ export interface MulakatSessionData {
   questionCount: number
   summary: string
   messages: Array<{ role: string; content: string }>
+  terminated?: boolean
 }
 
 export const mulakatGecmisiCol = () => collection(db, 'mulakatGecmisi')

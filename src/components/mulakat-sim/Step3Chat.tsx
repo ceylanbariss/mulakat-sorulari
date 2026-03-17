@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Send, StopCircle } from 'lucide-react'
+import { Send, StopCircle, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMulakatStore } from '../../store/useMulakatStore'
 import { MAX_QUESTIONS, INTERVIEW_TYPE_LABELS } from '../../config/mulakatConfig'
@@ -34,6 +34,7 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
 
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isTerminated, setIsTerminated] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -82,14 +83,30 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
         throw new Error(data.error ?? 'Sunucu hatası')
       }
 
-      const data: { question: string; isLastQuestion: boolean; isFollowUp: boolean } = await res.json()
+      const data: { question: string; isLastQuestion: boolean; isFollowUp: boolean; terminated?: boolean } = await res.json()
 
       addMessage({ role: 'interviewer', content: data.question })
-      if (!data.isFollowUp) incrementQuestion()
 
-      if (data.isLastQuestion) {
-        setFinished(true)
+      if (data.terminated) {
+        setIsTerminated(true)
+        // Sessizce kaydet
+        try {
+          await saveMulakatSession({
+            userId,
+            interviewType: interviewType ?? 'ik',
+            jobDescription: jobDescription.slice(0, 500),
+            cvFileName,
+            questionCount,
+            summary: 'Uygunsuz içerik nedeniyle sonlandırıldı.',
+            messages: [...messages, { role: 'interviewer', content: data.question }].map((m) => ({ role: m.role, content: m.content })),
+            terminated: true,
+          })
+        } catch { /* sessiz hata */ }
+        return
       }
+
+      if (!data.isFollowUp) incrementQuestion()
+      if (data.isLastQuestion) setFinished(true)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Bir hata oluştu'
       toast.error(msg)
@@ -242,7 +259,7 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
       </div>
 
       {/* Cevap Girişi */}
-      {!isFinished && (
+      {!isFinished && !isTerminated && (
         <div style={{
           background: cardBg,
           border: cardBorder,
@@ -299,7 +316,23 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
         </div>
       )}
 
-      {isFinished && (
+      {isTerminated && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+          padding: '20px', borderRadius: '14px', textAlign: 'center',
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+        }}>
+          <ShieldAlert size={28} color="#f87171" />
+          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f87171' }}>
+            Mülakat Sonlandırıldı
+          </span>
+          <span style={{ fontSize: '13px', color: d ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.7)' }}>
+            Uygunsuz içerik nedeniyle mülakat sona erdirildi.
+          </span>
+        </div>
+      )}
+
+      {isFinished && !isTerminated && (
         <div style={{ textAlign: 'center', padding: '16px', fontSize: '14px', color: d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)' }}>
           Mülakat tamamlandı. Sonucu kaydetmek ister misiniz?
         </div>

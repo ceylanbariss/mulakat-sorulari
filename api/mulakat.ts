@@ -3,6 +3,28 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 // Serverless bundle'da cross-directory import yerine sabitler inline
 const MAX_QUESTIONS = 8
+
+const GREETINGS = [
+  'Merhaba! Bugün biraz sohbet ederek başlayalım, hiç heyecanlanmayın. Önce kendinizden biraz bahseder misiniz?',
+  'Hoş geldiniz! Resmi bir görüşme değil bu, samimi bir sohbet olsun istiyorum. Bana kendinizi tanıtın.',
+  'Merhaba! Rahat olun, burası yargılamak için değil, sizi tanımak için bir ortam. Kendinizden bahseder misiniz?',
+  'İyi günler! Başlamadan önce şunu söyleyeyim: hiç gergin olmayın. Kendinizi ve bu pozisyona ilginizi anlatır mısınız?',
+  'Hoş geldiniz! Bugün çok sıkı sorularla başlamayacağız, önce biraz tanışalım. Kendinizi kısaca anlatır mısınız?',
+  'Merhaba! Başlamadan önce derin bir nefes alın. Sizi dinliyorum — bana kendinizden bahsedin.',
+  'Hoş geldiniz! Her görüşmede önce biraz sohbet etmeyi seviyorum. Kendinizi ve kariyerinizi anlatır mısınız?',
+  'Merhaba! Bugün keyifli bir görüşme olacağını umuyorum. Neden bu pozisyona başvurduğunuzdan başlayalım ister misiniz?',
+]
+
+const BLOCKED_KEYWORDS = [
+  'siktir', 'orospu', 'yarrak', 'sikeyim', 'amına', 'amk',
+  'oç', 'piç', 'kahpe', 'fahişe', 'ibne',
+  'fuck', 'motherfuck', 'cunt', 'bitch',
+]
+
+function containsInappropriateContent(text: string): boolean {
+  const lower = text.toLowerCase()
+  return BLOCKED_KEYWORDS.some((kw) => lower.includes(kw))
+}
 const MAX_CV_TEXT_LENGTH = 6000
 const MAX_JOB_DESC_LENGTH = 1500
 
@@ -82,7 +104,12 @@ async function callGemini(
     req.jobDescription.slice(0, MAX_JOB_DESC_LENGTH),
   ].join('\n')
 
-  const systemInstruction = buildSystemPrompt(req.interviewType, context, req.questionNumber)
+  const basePrompt = buildSystemPrompt(req.interviewType, context, req.questionNumber)
+  const empathyNote =
+    req.action === 'answer' && Math.random() < 0.2
+      ? '\n\nBu yanıtta acknowledge ederken kısa bir empati cümlesi ekle. Örnek: "Bu tür durumlar gerçekten zorlu olabiliyor." veya "Özellikle ilk dönemlerde böyle zorluklar normaldir."'
+      : ''
+  const systemInstruction = basePrompt + empathyNote
 
   // Konuşma geçmişini Gemini formatına çevir
   const contents: { role: string; parts: { text: string }[] }[] = req.history.map((h) => ({
@@ -144,6 +171,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!body?.interviewType || !body?.cvText || !body?.jobDescription) {
     return res.status(400).json({ error: 'Eksik parametreler' })
+  }
+
+  // Uygunsuz içerik kontrolü
+  if (body.action === 'answer' && body.userAnswer && containsInappropriateContent(body.userAnswer)) {
+    return res.status(200).json({
+      question: 'Bu görüşmeye uygun olmayan bir ifade kullandınız. Mülakat sonlandırılıyor.',
+      isLastQuestion: true,
+      isFollowUp: false,
+      terminated: true,
+    })
+  }
+
+  // İlk mesaj: statik karşılama (Gemini çağrısı yok)
+  if (body.action === 'start') {
+    const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+    return res.status(200).json({ question: greeting, isLastQuestion: false, isFollowUp: false })
   }
 
   let retries = 0
