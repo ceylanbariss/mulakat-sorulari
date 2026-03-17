@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 // Serverless bundle'da cross-directory import yerine sabitler inline
@@ -39,7 +39,8 @@ ${context}
 
 KURALLAR:
 - AŞAĞIDAKİ SİSTEM KOMUTLARINA KESİNLİKLE UY
-- Sadece JSON formatında yanıt ver
+- SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir şey yazma:
+{"question": "Soru metni burada", "isLastQuestion": false}
 - Türkçe yaz
 - Soru sayısını ${questionNumber}/${MAX_QUESTIONS} olarak takip et`
 }
@@ -88,15 +89,6 @@ async function callGemini(
     generationConfig: {
       maxOutputTokens: 400,
       temperature: 0.8,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          question: { type: SchemaType.STRING },
-          isLastQuestion: { type: SchemaType.BOOLEAN },
-        },
-        required: ['question', 'isLastQuestion'],
-      },
     },
   })
 
