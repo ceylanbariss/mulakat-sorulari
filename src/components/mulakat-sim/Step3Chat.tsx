@@ -82,10 +82,10 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
         throw new Error(data.error ?? 'Sunucu hatası')
       }
 
-      const data: { question: string; isLastQuestion: boolean } = await res.json()
+      const data: { question: string; isLastQuestion: boolean; isFollowUp: boolean } = await res.json()
 
       addMessage({ role: 'interviewer', content: data.question })
-      incrementQuestion()
+      if (!data.isFollowUp) incrementQuestion()
 
       if (data.isLastQuestion) {
         setFinished(true)

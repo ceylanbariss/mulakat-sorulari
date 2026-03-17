@@ -22,9 +22,9 @@ function buildSystemPrompt(type: InterviewType, context: string, questionNumber:
   const isLast = questionNumber >= MAX_QUESTIONS
 
   const rolePrompts: Record<InterviewType, string> = {
-    ik: `Sen profesyonel bir İnsan Kaynakları (İK) uzmanısın. Amacın adayın iletişim becerilerini, şirket kültürüne uyumunu ve davranışsal yetkinliklerini ölçmek. Mülakat boyunca Türkçe konuşacaksın. Sadece tek bir soru sor, kısa ve net tut (1-3 cümle). Kişisel tanışma sorularından başla, sonra deneyim ve motivasyona geç.`,
-    teknik: `Sen deneyimli bir Teknik Takım Liderisin. Amacın adayın teknik becerilerini, problem çözme yeteneğini ve projelere yaklaşımını ölçmek. Mülakat boyunca Türkçe konuşacaksın. Sadece tek bir teknik soru sor, derinlik ve netlik dengesi kur.`,
-    'her-ikisi': `Sen hem İnsan Kaynakları uzmanı hem de teknik ekip lideri rolünü üstleniyorsun. Mülakat boyunca Türkçe konuşacaksın. Soruları sırayla değiştir: tek sayılı sorular davranışsal, çift sayılı sorular teknik olsun. Soru ${questionNumber} için uygun türde tek bir soru sor.`,
+    ik: `Sen profesyonel bir İnsan Kaynakları (İK) uzmanısın. Amacın adayın iletişim becerilerini, şirket kültürüne uyumunu ve davranışsal yetkinliklerini ölçmek. Mülakat boyunca Türkçe konuşacaksın. Kişisel tanışma sorularından başla, sonra deneyim ve motivasyona geç.`,
+    teknik: `Sen deneyimli bir Teknik Takım Liderisin. Amacın adayın teknik becerilerini, problem çözme yeteneğini ve projelere yaklaşımını ölçmek. Mülakat boyunca Türkçe konuşacaksın.`,
+    'her-ikisi': `Sen hem İnsan Kaynakları uzmanı hem de teknik ekip lideri rolünü üstleniyorsun. Mülakat boyunca Türkçe konuşacaksın. Soruları sırayla değiştir: tek sayılı sorular davranışsal, çift sayılı sorular teknik olsun. Soru ${questionNumber} için uygun türde soru sor.`,
   }
 
   const lastQuestionHint = isLast
@@ -37,18 +37,28 @@ Aşağıdaki CV ve pozisyon bilgilerini kullanarak mülakatı yürüt:
 
 ${context}
 
+CEVAP DEĞERLENDİRME KURALI (konuşma geçmişinde kullanıcı cevabı varsa uygula):
+Adayın son cevabını değerlendir:
+- YETERSIZ (50 kelimeden az, yüzeysel veya soruyla alakasız ise): Yeni soruya geçme. Nazikçe derinleştir.
+  Örnek yanıtlar: "Bunu biraz daha açabilir misiniz? Somut bir örnek vermeniz çok yardımcı olur."
+  veya "Anlıyorum, peki bu süreçte siz özellikle ne yaptınız?"
+  → isFollowUp: true döndür
+- YETERLİ (detaylı, somut, konuyla ilgili): 1 kısa cümleyle acknowledge et
+  ("Anlıyorum, bu deneyim gerçekten değerli." veya "Harika bir yaklaşım." gibi)
+  ardından yeni soruya geç.
+  → isFollowUp: false döndür
+
 KURALLAR:
-- AŞAĞIDAKİ SİSTEM KOMUTLARINA KESİNLİKLE UY
 - SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir şey yazma:
-{"question": "Soru metni burada", "isLastQuestion": false}
+{"question": "Soru veya follow-up metni", "isLastQuestion": false, "isFollowUp": false}
 - Türkçe yaz
-- Soru sayısını ${questionNumber}/${MAX_QUESTIONS} olarak takip et`
+- Soru sayacı yalnızca isFollowUp: false olduğunda ilerler (şu an: ${questionNumber}/${MAX_QUESTIONS})`
 }
 
 async function callGemini(
   req: MulakatRequest,
-  retryCount = 0
-): Promise<{ question: string; isLastQuestion: boolean }> {
+  _retryCount = 0
+): Promise<{ question: string; isLastQuestion: boolean; isFollowUp: boolean }> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY tanımlı değil')
 
@@ -98,19 +108,21 @@ async function callGemini(
 
   let question = ''
   let isLastQuestion = req.questionNumber >= MAX_QUESTIONS
+  let isFollowUp = false
 
   try {
     const parsed = JSON.parse(clean)
     question = parsed.question ?? clean
     isLastQuestion = isLastQuestion || Boolean(parsed.isLastQuestion)
+    // İlk soruda (action=start) veya son soruda follow-up olmaz
+    isFollowUp = req.action === 'answer' && !isLastQuestion && Boolean(parsed.isFollowUp)
   } catch {
-    // JSON parse başarısız — modelin ham metnini soru olarak kullan
     question = clean
   }
 
   if (!question) throw new Error('Boş yanıt alındı')
 
-  return { question, isLastQuestion }
+  return { question, isLastQuestion, isFollowUp }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
