@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { MAX_QUESTIONS, MAX_CV_TEXT_LENGTH, MAX_JOB_DESC_LENGTH } from '../src/config/mulakatConfig'
+import { MAX_QUESTIONS, MAX_CV_TEXT_LENGTH, MAX_JOB_DESC_LENGTH } from '../src/config/mulakatConfig.js'
 
 type InterviewType = 'ik' | 'teknik' | 'her-ikisi'
 
@@ -86,10 +86,10 @@ async function callGemini(
       temperature: 0.8,
       responseMimeType: 'application/json',
       responseSchema: {
-        type: 'object' as const,
+        type: SchemaType.OBJECT,
         properties: {
-          question: { type: 'string' as const },
-          isLastQuestion: { type: 'boolean' as const },
+          question: { type: SchemaType.STRING },
+          isLastQuestion: { type: SchemaType.BOOLEAN },
         },
         required: ['question', 'isLastQuestion'],
       },
