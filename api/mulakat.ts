@@ -134,8 +134,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await new Promise((r) => setTimeout(r, 1500 * retries))
         continue
       }
-      console.error('Gemini API hatası:', error?.message ?? err)
-      return res.status(500).json({ error: 'AI servisi geçici olarak kullanılamıyor. Lütfen tekrar deneyin.' })
+      const detail = error?.message ?? String(err)
+      console.error('Gemini API hatası:', detail)
+      return res.status(500).json({ error: 'AI servisi geçici olarak kullanılamıyor. Lütfen tekrar deneyin.', _debug: detail })
     }
   }
 }
