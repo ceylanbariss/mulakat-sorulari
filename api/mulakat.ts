@@ -87,20 +87,30 @@ async function callGemini(
   const result = await model.generateContent({
     contents,
     generationConfig: {
-      maxOutputTokens: 400,
+      maxOutputTokens: 800,
       temperature: 0.8,
     },
   })
 
   const text = result.response.text()
-  // Markdown code fences temizle (referans repo'daki gibi)
+  // Markdown code fences temizle
   const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-  const parsed = JSON.parse(clean)
 
-  return {
-    question: parsed.question ?? '',
-    isLastQuestion: req.questionNumber >= MAX_QUESTIONS || Boolean(parsed.isLastQuestion),
+  let question = ''
+  let isLastQuestion = req.questionNumber >= MAX_QUESTIONS
+
+  try {
+    const parsed = JSON.parse(clean)
+    question = parsed.question ?? clean
+    isLastQuestion = isLastQuestion || Boolean(parsed.isLastQuestion)
+  } catch {
+    // JSON parse başarısız — modelin ham metnini soru olarak kullan
+    question = clean
   }
+
+  if (!question) throw new Error('Boş yanıt alındı')
+
+  return { question, isLastQuestion }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
