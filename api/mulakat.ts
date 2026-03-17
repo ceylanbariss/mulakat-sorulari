@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { MAX_QUESTIONS, MAX_CV_TEXT_LENGTH, MAX_JOB_DESC_LENGTH } from '../src/config/mulakatConfig.js'
+
+// Serverless bundle'da cross-directory import yerine sabitler inline
+const MAX_QUESTIONS = 8
+const MAX_CV_TEXT_LENGTH = 6000
+const MAX_JOB_DESC_LENGTH = 1500
 
 type InterviewType = 'ik' | 'teknik' | 'her-ikisi'
 
