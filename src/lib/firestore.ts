@@ -90,6 +90,34 @@ export function subscribeCollection<T>(
   })
 }
 
+// ─── Mülakat Simülasyonu ──────────────────────────────────────────────────────
+
+export interface MulakatSessionData {
+  userId: string
+  interviewType: string
+  jobDescription: string
+  cvFileName: string
+  questionCount: number
+  summary: string
+  messages: Array<{ role: string; content: string }>
+}
+
+export const mulakatGecmisiCol = () => collection(db, 'mulakatGecmisi')
+
+export async function saveMulakatSession(data: MulakatSessionData): Promise<string> {
+  return addDocument(mulakatGecmisiCol(), data as unknown as DocumentData)
+}
+
+export async function getMulakatGecmisi(
+  userId: string
+): Promise<(MulakatSessionData & { _id: string })[]> {
+  return getAll<MulakatSessionData>(
+    mulakatGecmisiCol(),
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc')
+  )
+}
+
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────
 
 export { orderBy, serverTimestamp, where }

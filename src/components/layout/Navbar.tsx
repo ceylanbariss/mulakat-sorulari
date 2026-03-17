@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, BarChart2, Info, Menu, X, LogOut } from 'lucide-react'
+import { BookOpen, BarChart2, Info, Brain, Menu, X, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ThemeToggle } from '../ui/ThemeToggle'
@@ -10,6 +10,7 @@ import { logout } from '../../lib/auth'
 const navLinks = [
   { to: '/sorular', label: 'Sorular', icon: BookOpen },
   { to: '/istatistikler', label: 'İstatistikler', icon: BarChart2 },
+  { to: '/mulakat-sim', label: 'AI Mülakat', icon: Brain },
   { to: '/hakkimizda', label: 'Hakkımızda', icon: Info },
 ]
 
