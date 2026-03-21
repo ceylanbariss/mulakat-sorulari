@@ -22,6 +22,7 @@ import { CategoriesModule } from './pages/admin/modules/CategoriesModule'
 import { AnnouncementsModule } from './pages/admin/modules/AnnouncementsModule'
 import { UsersModule } from './pages/admin/modules/UsersModule'
 import { useTheme } from './hooks/useTheme'
+import { MulakatSimPage } from './pages/mulakat-sim'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -50,6 +51,7 @@ function AnimatedRoutes() {
           <Route path="/istatistikler" element={<Statistics />} />
           <Route path="/hakkimizda" element={<About />} />
           <Route path="/giris" element={<Auth />} />
+          <Route path="/mulakat-sim" element={<MulakatSimPage />} />
         </Routes>
       </motion.div>
     </AnimatePresence>

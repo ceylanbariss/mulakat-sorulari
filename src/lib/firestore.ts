@@ -90,6 +90,46 @@ export function subscribeCollection<T>(
   })
 }
 
+// ─── Mülakat Simülasyonu ──────────────────────────────────────────────────────
+
+export interface MulakatSessionData {
+  userId: string
+  interviewType: string
+  jobDescription: string
+  cvFileName: string
+  questionCount: number
+  summary: string
+  messages: Array<{ role: string; content: string }>
+  terminated?: boolean
+  analysis?: Record<string, unknown>
+  name?: string
+}
+
+export const mulakatGecmisiCol = () => collection(db, 'mulakatGecmisi')
+
+export async function saveMulakatSession(data: MulakatSessionData): Promise<string> {
+  return addDocument(mulakatGecmisiCol(), data as unknown as DocumentData)
+}
+
+export async function getMulakatGecmisi(
+  userId: string
+): Promise<(MulakatSessionData & { _id: string; createdAt?: unknown })[]> {
+  // orderBy kaldırıldı — composite index gerektirmesin, client'ta sıralıyoruz
+  const items = await getAll<MulakatSessionData>(
+    mulakatGecmisiCol(),
+    where('userId', '==', userId),
+  )
+  return (items as (MulakatSessionData & { _id: string; createdAt?: unknown })[]).sort((a, b) => {
+    const ta = (a.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
+    const tb = (b.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
+    return tb - ta
+  })
+}
+
+export async function updateMulakatSessionName(id: string, name: string): Promise<void> {
+  await updateDoc(doc(mulakatGecmisiCol(), id), { name })
+}
+
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────
 
 export { orderBy, serverTimestamp, where }
