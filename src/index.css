@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@keyframes spotlight {
+  0% { opacity: 0; transform: translate(-72%, -62%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -40%) scale(1); }
+}
+.animate-spotlight {
+  animation: spotlight 2s ease 0.75s forwards;
+}
+
+
 /* ── Theme tokens ── */
 :root {
   --bg: #F8FAFC;
@@ -32,6 +41,8 @@ body {
   text-rendering: optimizeLegibility;
   min-height: 100vh;
   overflow-x: hidden;
+  /* Spline runtime'ın body.style.backgroundColor = 'white' yazmasını engelle */
+  background-color: var(--bg) !important;
 }
 
 /* ── Touch improvements ── */

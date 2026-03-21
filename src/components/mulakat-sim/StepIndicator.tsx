@@ -11,23 +11,23 @@ const steps = [
 
 export function StepIndicator({ currentStep, d }: Props) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0', marginBottom: '40px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0', marginBottom: '20px' }}>
       {steps.map((step, i) => {
         const isCompleted = step.num < currentStep
         const isActive = step.num === currentStep
 
         return (
           <div key={step.num} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
               <div
                 style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '14px',
+                  fontSize: '12px',
                   fontWeight: 700,
                   transition: 'all 0.3s',
                   background: isCompleted
@@ -62,11 +62,11 @@ export function StepIndicator({ currentStep, d }: Props) {
             {i < steps.length - 1 && (
               <div
                 style={{
-                  width: '64px',
+                  width: '48px',
                   height: '2px',
-                  marginBottom: '20px',
-                  marginLeft: '8px',
-                  marginRight: '8px',
+                  marginBottom: '14px',
+                  marginLeft: '6px',
+                  marginRight: '6px',
                   background: isCompleted
                     ? '#10b981'
                     : d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',

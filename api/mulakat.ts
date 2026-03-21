@@ -40,6 +40,14 @@ interface MulakatRequest {
   questionNumber: number
 }
 
+function detectTaskType(q: string): 'normal' | 'code' | 'sql' | 'algorithm' {
+  if (!q.includes('[KOD_GÖREVİ]')) return 'normal'
+  const l = q.toLowerCase()
+  if (l.includes('sql') || l.includes('select') || l.includes('sorgu') || l.includes('tablo')) return 'sql'
+  if (l.includes('algoritma') || l.includes('fonksiyon') || l.includes('function') || l.includes('dizi') || l.includes('array')) return 'algorithm'
+  return 'code'
+}
+
 function buildSystemPrompt(type: InterviewType, context: string, questionNumber: number): string {
   const isLast = questionNumber >= MAX_QUESTIONS
 
@@ -49,11 +57,35 @@ function buildSystemPrompt(type: InterviewType, context: string, questionNumber:
     'her-ikisi': `Sen hem İK hem de Teknik Takım Lideri rolündesin. Soru ${questionNumber} tek sayılıysa davranışsal (motivasyon, ekip, liderlik), çift sayılıysa teknik (kod, mimari, problem çözme) sor.`,
   }
 
+  const codeTaskRules =
+    type === 'ik'
+      ? ''
+      : type === 'teknik'
+      ? `
+
+═══ PRATİK GÖREV KURALLARI ═══
+
+CV'deki programlama dilleri/teknolojileri (SQL, Python, Java, JavaScript vb.) tespit et.
+Soru 3-4'te mutlaka 1 pratik görev ver, soru 6-7'de seviyeye göre 1 tane daha:
+- Junior seviye (0-2 yıl deneyim): basit CRUD sorgusu veya temel algoritma
+- Mid seviye (2-5 yıl): JOIN'li sorgu veya orta kompleks algoritma
+- Senior seviye (5+ yıl): optimizasyon sorusu veya sistem tasarımı kodu
+Pratik görev sorusunun başına KESINLIKLE "[KOD_GÖREVİ]" etiketi koy.
+Örnek: "[KOD_GÖREVİ] Aşağıdaki users tablosundan aktif kullanıcıları getiren SQL'i yaz."
+taskType: SQL/SELECT/sorgu/tablo içeriyorsa "sql"; algoritma/fonksiyon/dizi/function içeriyorsa "algorithm"; diğer kod görevi ise "code".`
+      : `
+
+═══ PRATİK GÖREV KURALLARI ═══
+
+Soru 5 veya 6'da 1 pratik görev ver (CV'deki teknoloji seviyesine göre).
+Pratik görev sorusunun başına KESINLIKLE "[KOD_GÖREVİ]" etiketi koy.
+taskType: SQL/SELECT/sorgu/tablo içeriyorsa "sql"; algoritma/fonksiyon/dizi/function içeriyorsa "algorithm"; diğer ise "code".`
+
   const closingHint = isLast
     ? '\n\nBu SON sorudur. Kapanış yap: adaya eklemek istediği bir şey olup olmadığını sor.'
     : ''
 
-  return `${roleDescription[type]}${closingHint}
+  return `${roleDescription[type]}${codeTaskRules}${closingHint}
 
 Aşağıdaki aday bilgilerini kullanarak mülakatı yürüt:
 ${context}
@@ -84,13 +116,14 @@ ${context}
 6. SORU SAYACI: isFollowUp: false olduğunda sayaç ilerler (şu an: ${questionNumber}/${MAX_QUESTIONS}).
 
 ÇIKTI FORMATI — SADECE bu JSON'u döndür, başka hiçbir şey yazma:
-{"question": "Yanıt metni burada", "isLastQuestion": false, "isFollowUp": false}`
+{"question": "Yanıt metni burada", "isLastQuestion": false, "isFollowUp": false, "taskType": "normal"}
+taskType: "[KOD_GÖREVİ]" etiketi yoksa "normal", varsa içeriğe göre "sql" / "algorithm" / "code"`
 }
 
 async function callGemini(
   req: MulakatRequest,
   _retryCount = 0
-): Promise<{ question: string; isLastQuestion: boolean; isFollowUp: boolean }> {
+): Promise<{ question: string; isLastQuestion: boolean; isFollowUp: boolean; taskType: 'normal' | 'code' | 'sql' | 'algorithm' }> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY tanımlı değil')
 
@@ -146,20 +179,38 @@ async function callGemini(
   let question = ''
   let isLastQuestion = req.questionNumber >= MAX_QUESTIONS
   let isFollowUp = false
+  let taskType: 'normal' | 'code' | 'sql' | 'algorithm' = 'normal'
+
+  // AI bazen JSON'dan önce düz metin yazıyor; önce tam parse, yoksa JSON bloğunu bul
+  const jsonMatch = clean.match(/\{[\s\S]*\}/)
+  const toParse = jsonMatch ? jsonMatch[0] : clean
 
   try {
-    const parsed = JSON.parse(clean)
-    question = parsed.question ?? clean
-    isLastQuestion = isLastQuestion || Boolean(parsed.isLastQuestion)
+    const parsed = JSON.parse(toParse)
+    question = parsed.question ?? ''
+    // isLastQuestion yalnızca server-side sayaca göre belirlenir; AI'nın erken bitirme kararı yoksayılır
+    isLastQuestion = req.questionNumber >= MAX_QUESTIONS
     // İlk soruda (action=start) veya son soruda follow-up olmaz
     isFollowUp = req.action === 'answer' && !isLastQuestion && Boolean(parsed.isFollowUp)
+    const validTaskTypes = ['normal', 'sql', 'algorithm', 'code']
+    taskType = validTaskTypes.includes(parsed.taskType) ? parsed.taskType : detectTaskType(question)
   } catch {
-    question = clean
+    // JSON bulunamadı; JSON öncesi düz metin varsa onu al, yoksa tamamını kullan
+    question = jsonMatch ? clean.slice(0, clean.indexOf('{')).trim() : clean
+    taskType = detectTaskType(question)
   }
+
+  // Modelin soru metnine sızdırdığı meta satırları temizle
+  question = question
+    .replace(/→\s*isFollowUp\s*:\s*(true|false)/gi, '')
+    .replace(/→\s*isLastQuestion\s*:\s*(true|false)/gi, '')
+    .replace(/isFollowUp\s*:\s*(true|false)/gi, '')
+    .replace(/isLastQuestion\s*:\s*(true|false)/gi, '')
+    .trim()
 
   if (!question) throw new Error('Boş yanıt alındı')
 
-  return { question, isLastQuestion, isFollowUp }
+  return { question, isLastQuestion, isFollowUp, taskType }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -180,13 +231,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       isLastQuestion: true,
       isFollowUp: false,
       terminated: true,
+      taskType: 'normal',
     })
   }
 
   // İlk mesaj: statik karşılama (Gemini çağrısı yok)
   if (body.action === 'start') {
     const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
-    return res.status(200).json({ question: greeting, isLastQuestion: false, isFollowUp: false })
+    return res.status(200).json({ question: greeting, isLastQuestion: false, isFollowUp: false, taskType: 'normal' })
   }
 
   let retries = 0

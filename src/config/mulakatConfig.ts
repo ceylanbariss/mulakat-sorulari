@@ -17,7 +17,7 @@ export const INTERVIEW_TYPE_DESCRIPTIONS: Record<string, string> = {
 
 export const MAX_CV_TEXT_LENGTH = 6000
 export const MAX_JOB_DESC_LENGTH = 1500
-export const MAX_FILE_SIZE_MB = 5
+export const MAX_FILE_SIZE_MB = 10
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 export const MIN_JOB_DESC_LENGTH = 50
 export const MIN_CV_TEXT_LENGTH = 100

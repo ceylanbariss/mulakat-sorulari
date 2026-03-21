@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Upload, FileText, X, AlertCircle } from 'lucide-react'
+import { Upload, X, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import mammoth from 'mammoth'
 import { useMulakatStore } from '../../store/useMulakatStore'
 import {
   MAX_FILE_SIZE_BYTES,
@@ -10,10 +11,20 @@ import {
 
 // pdfjs-dist v5 ESM import
 import * as pdfjsLib from 'pdfjs-dist'
-// Worker URL — Vite'ın ?url suffix'i ile kopyalanır
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+
+const FILE_TYPE_ICON: Record<string, string> = {
+  pdf: '📄',
+  docx: '📝',
+  doc: '📝',
+  txt: '📃',
+}
+
+function getFileExt(name: string) {
+  return name.split('.').pop()?.toLowerCase() ?? ''
+}
 
 interface Props {
   d: boolean
@@ -26,43 +37,78 @@ export function Step1Upload({ d, onNext }: Props) {
   const [extracting, setExtracting] = useState(false)
   const [fileError, setFileError] = useState('')
   const [isDragging, setIsDragging] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
 
   const cardBg = d ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)'
 
-  const canProceed = cvText.length >= MIN_CV_TEXT_LENGTH && jobDescription.length >= MIN_JOB_DESC_LENGTH
+  // Dosya veya yapıştırma metninden biri yeterliyse ileri aktif
+  const effectiveCvText = cvText || pasteText
+  const canProceed = effectiveCvText.length >= MIN_CV_TEXT_LENGTH && jobDescription.length >= MIN_JOB_DESC_LENGTH
 
   async function extractText(file: File) {
-    if (file.type !== 'application/pdf') {
-      setFileError('Lütfen PDF formatında dosya yükleyin.')
+    const ext = getFileExt(file.name)
+    const allowed = ['pdf', 'doc', 'docx', 'txt']
+
+    if (!allowed.includes(ext)) {
+      setFileError('Bu dosya formatı desteklenmiyor. PDF, Word veya TXT yükleyin.')
       return
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setFileError(`Dosya boyutu ${MAX_FILE_SIZE_MB}MB'ı geçemez.`)
+      setFileError(`Dosya ${MAX_FILE_SIZE_MB}MB'dan büyük. Daha küçük bir dosya deneyin.`)
       return
     }
+
     setFileError('')
     setExtracting(true)
+    // Dosya yüklenince yapıştırma alanını temizle
+    setPasteText('')
+
     try {
-      const arrayBuffer = await file.arrayBuffer()
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-      const parts: string[] = []
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i)
-        const content = await page.getTextContent()
-        const pageText = content.items
-          .map((item) => ('str' in item ? item.str : ''))
-          .join(' ')
-        parts.push(pageText)
+      let text = ''
+
+      if (ext === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        const parts: string[] = []
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          parts.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' '))
+        }
+        text = parts.join('\n\n').trim()
+        if (text.length < 20) {
+          setFileError('PDF okunamadı. Dosya taranmış görsel içeriyorsa Word veya TXT formatında yükleyin.')
+          setCvText('', '')
+          return
+        }
+      } else if (ext === 'docx' || ext === 'doc') {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const result = await mammoth.extractRawText({ arrayBuffer })
+          text = result.value.trim()
+          if (text.length < 20) {
+            setFileError('Word dosyası okunamadı. PDF veya TXT formatında deneyin.')
+            setCvText('', '')
+            return
+          }
+        } catch {
+          setFileError('Word dosyası okunamadı. PDF veya TXT formatında deneyin.')
+          setCvText('', '')
+          return
+        }
+      } else if (ext === 'txt') {
+        text = (await file.text()).trim()
+        if (text.length < 20) {
+          setFileError('Dosyadan metin çıkarılamadı. Dosyanın metin içerdiğinden emin olun veya CV metninizi aşağıya yapıştırın.')
+          setCvText('', '')
+          return
+        }
       }
-      const text = parts.join('\n\n').trim()
-      if (text.length < 20) {
-        setFileError('CV metni okunamadı. Lütfen metin tabanlı (taranmamış) bir PDF kullanın.')
-        setCvText('', '')
-      } else {
-        setCvText(text, file.name)
-      }
+
+      setCvText(text, file.name)
     } catch {
-      setFileError('PDF okunurken bir hata oluştu. Farklı bir dosya deneyin.')
+      setFileError('Dosya okunurken bir hata oluştu. Farklı bir dosya deneyin.')
     } finally {
       setExtracting(false)
     }
@@ -75,11 +121,20 @@ export function Step1Upload({ d, onNext }: Props) {
     if (file) extractText(file)
   }
 
+  function handlePasteChange(val: string) {
+    setPasteText(val)
+    // Yapıştırılınca yüklü dosyayı temizle
+    if (val && cvText) setCvText('', '')
+  }
+
+  const ext = getFileExt(cvFileName)
+  const fileIcon = FILE_TYPE_ICON[ext] ?? '📄'
+
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
       {/* CV Yükleme Alanı */}
-      <div style={{ marginBottom: '28px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', marginBottom: '10px' }}>
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', marginBottom: '8px' }}>
           CV Dosyanız <span style={{ color: '#ef4444' }}>*</span>
         </label>
         <div
@@ -95,11 +150,12 @@ export function Step1Upload({ d, onNext }: Props) {
               : fileError
               ? '2px dashed #ef4444'
               : d ? '2px dashed rgba(255,255,255,0.15)' : '2px dashed rgba(0,0,0,0.15)',
-            borderRadius: '16px',
-            padding: '32px',
+            borderRadius: '14px',
+            padding: '20px',
             textAlign: 'center',
             cursor: extracting ? 'wait' : 'pointer',
             transition: 'all 0.2s',
+            opacity: pasteText ? 0.5 : 1,
             background: isDragging
               ? d ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.04)'
               : cvText
@@ -110,21 +166,21 @@ export function Step1Upload({ d, onNext }: Props) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf"
+            accept=".pdf,.doc,.docx,.txt"
             style={{ display: 'none' }}
             onChange={(e) => e.target.files?.[0] && extractText(e.target.files[0])}
           />
 
           {extracting ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', animation: 'spin 0.8s linear infinite' }} />
-              <p style={{ fontSize: '14px', color: d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)' }}>CV okunuyor…</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', animation: 'spin 0.8s linear infinite' }} />
+              <p style={{ fontSize: '13px', color: d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)' }}>CV okunuyor…</p>
             </div>
           ) : cvText ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <FileText size={32} style={{ color: '#10b981' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '24px', lineHeight: 1 }}>{fileIcon}</span>
               <div>
-                <p style={{ fontSize: '14px', fontWeight: 700, color: '#10b981', marginBottom: '4px' }}>{cvFileName}</p>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#10b981', marginBottom: '2px' }}>{cvFileName}</p>
                 <p style={{ fontSize: '12px', color: d ? 'rgba(148,163,184,0.6)' : 'rgba(71,85,105,0.6)' }}>{cvText.length.toLocaleString('tr-TR')} karakter okundu</p>
               </div>
               <button
@@ -135,16 +191,16 @@ export function Step1Upload({ d, onNext }: Props) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: d ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Upload size={24} style={{ color: '#6366f1' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: d ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Upload size={18} style={{ color: '#6366f1' }} />
               </div>
               <div>
-                <p style={{ fontSize: '15px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.85)' : '#0f172a', marginBottom: '4px' }}>
-                  PDF CV'nizi sürükleyin veya seçin
+                <p style={{ fontSize: '13px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.85)' : '#0f172a', marginBottom: '2px' }}>
+                  CV'nizi sürükleyin veya seçin
                 </p>
-                <p style={{ fontSize: '13px', color: d ? 'rgba(100,116,139,0.65)' : 'rgba(100,116,139,0.75)' }}>
-                  Yalnızca PDF • Maks. {MAX_FILE_SIZE_MB}MB
+                <p style={{ fontSize: '12px', color: d ? 'rgba(100,116,139,0.65)' : 'rgba(100,116,139,0.75)' }}>
+                  PDF, Word veya TXT • Maks. {MAX_FILE_SIZE_MB}MB
                 </p>
               </div>
             </div>
@@ -158,24 +214,73 @@ export function Step1Upload({ d, onNext }: Props) {
         )}
       </div>
 
+      {/* Manuel yapıştırma (collapse) */}
+      <div style={{ marginBottom: '16px' }}>
+        <button
+          onClick={() => setPasteOpen((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            fontSize: '12px', fontWeight: 600,
+            color: d ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.75)',
+            background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+          }}
+        >
+          {pasteOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          CV metnini yapıştırmak istiyorum
+        </button>
+
+        {pasteOpen && (
+          <div style={{ marginTop: '8px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: d ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.75)', marginBottom: '6px' }}>
+              CV Metninizi Yapıştırın
+            </label>
+            <textarea
+              value={pasteText}
+              onChange={(e) => handlePasteChange(e.target.value)}
+              placeholder="CV içeriğinizi buraya kopyalayıp yapıştırın…"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                minHeight: '120px', resize: 'vertical',
+                padding: '10px 14px', borderRadius: '12px',
+                border: pasteText
+                  ? '1px solid #10b981'
+                  : d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                background: cardBg,
+                color: d ? 'rgba(226,232,240,0.9)' : '#0f172a',
+                fontSize: '13px', lineHeight: 1.65, fontFamily: 'inherit',
+                outline: 'none',
+                opacity: cvText ? 0.5 : 1,
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#6366f1' }}
+              onBlur={(e) => { e.target.style.borderColor = pasteText ? '#10b981' : d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+            />
+            {pasteText && (
+              <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>
+                ✓ {pasteText.length.toLocaleString('tr-TR')} karakter
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* İş İlanı Textarea */}
-      <div style={{ marginBottom: '32px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', marginBottom: '10px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: d ? 'rgba(226,232,240,0.9)' : '#0f172a', marginBottom: '8px' }}>
           Pozisyon Tanımı <span style={{ color: '#ef4444' }}>*</span>
         </label>
         <textarea
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value.slice(0, 2000))}
           placeholder="Başvurduğunuz pozisyonu, şirketi ve iş gereksinimlerini buraya yapıştırın veya yazın…"
-          rows={6}
+          rows={3}
           style={{
             width: '100%',
-            padding: '14px 16px',
-            borderRadius: '14px',
+            padding: '10px 14px',
+            borderRadius: '12px',
             border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
             background: cardBg,
             color: d ? 'rgba(226,232,240,0.9)' : '#0f172a',
-            fontSize: '14px',
+            fontSize: '13px',
             lineHeight: 1.65,
             resize: 'vertical',
             outline: 'none',
@@ -195,16 +300,22 @@ export function Step1Upload({ d, onNext }: Props) {
       {/* İleri Butonu */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button
-          onClick={onNext}
+          onClick={() => {
+            // Yapıştırma metni kullanılıyorsa store'a aktar
+            if (!cvText && pasteText.length >= MIN_CV_TEXT_LENGTH) {
+              setCvText(pasteText, 'Manuel giriş')
+            }
+            onNext()
+          }}
           disabled={!canProceed}
           className={canProceed ? 'btn-gradient-bg' : ''}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '14px 32px',
-            borderRadius: '14px',
-            fontSize: '15px',
+            padding: '11px 28px',
+            borderRadius: '12px',
+            fontSize: '14px',
             fontWeight: 700,
             border: 'none',
             cursor: canProceed ? 'pointer' : 'not-allowed',
