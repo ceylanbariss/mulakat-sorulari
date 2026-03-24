@@ -12,6 +12,7 @@ import {
   resetPassword as firebaseResetPassword,
   translateAuthError,
 } from '../../lib/auth'
+import { useAppStore } from '../../store/useAppStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,13 +72,16 @@ function getStrengthText(score: number) {
   return 'Güçlü'
 }
 
-function PasswordStrengthIndicator({ password }: { password: string }) {
+function PasswordStrengthIndicator({ password, dark }: { password: string; dark?: boolean }) {
   const { score, feedback } = calcStrength(password)
   if (!password) return null
   return (
     <div className="mt-2 space-y-2">
       <div className="flex items-center gap-2">
-        <div className="flex-1 bg-white/10 rounded-full h-1.5 overflow-hidden">
+        <div
+          className="flex-1 rounded-full h-1.5 overflow-hidden"
+          style={{ background: dark !== false ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+        >
           <div
             className={cn('h-full rounded-full bg-current transition-all duration-300', getStrengthColor(score))}
             style={{ width: `${(score / 5) * 100}%` }}
@@ -107,14 +111,15 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon: React.ReactNode
   error?: string
   rightElement?: React.ReactNode
+  dark?: boolean
 }
 
-function InputField({ icon, error, rightElement, className: _cls, ...rest }: InputFieldProps) {
+function InputField({ icon, error, rightElement, dark = true, className: _cls, ...rest }: InputFieldProps) {
   const [focused, setFocused] = useState(false)
 
   const borderColor = error
     ? (focused ? 'rgba(239,68,68,0.8)' : 'rgba(239,68,68,0.55)')
-    : (focused ? 'rgba(99,102,241,0.65)' : 'rgba(255,255,255,0.14)')
+    : (focused ? 'rgba(99,102,241,0.65)' : (dark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.15)'))
   const boxShadow = focused
     ? (error ? '0 0 0 3px rgba(239,68,68,0.15)' : '0 0 0 3px rgba(99,102,241,0.18)')
     : 'none'
@@ -139,8 +144,8 @@ function InputField({ icon, error, rightElement, className: _cls, ...rest }: Inp
             paddingRight: rightElement ? 44 : 16,
             borderRadius: 12,
             border: `1px solid ${borderColor}`,
-            background: 'rgba(255,255,255,0.08)',
-            color: 'rgba(226,232,240,0.95)',
+            background: dark ? 'rgba(255,255,255,0.08)' : '#f8fafc',
+            color: dark ? 'rgba(226,232,240,0.95)' : '#0f172a',
             fontSize: 16,
             outline: 'none',
             boxSizing: 'border-box',
@@ -166,13 +171,13 @@ function InputField({ icon, error, rightElement, className: _cls, ...rest }: Inp
 
 // ─── OTP Input ────────────────────────────────────────────────────────────────
 
-function OtpInput({ value, error, onChange, onBlur }: {
-  value: string; error?: string; onChange: (v: string) => void; onBlur: () => void
+function OtpInput({ value, error, onChange, onBlur, dark = true }: {
+  value: string; error?: string; onChange: (v: string) => void; onBlur: () => void; dark?: boolean
 }) {
   const [focused, setFocused] = useState(false)
   const borderColor = error
     ? (focused ? 'rgba(239,68,68,0.8)' : 'rgba(239,68,68,0.55)')
-    : (focused ? 'rgba(99,102,241,0.65)' : 'rgba(255,255,255,0.14)')
+    : (focused ? 'rgba(99,102,241,0.65)' : (dark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.15)'))
   const boxShadow = focused
     ? (error ? '0 0 0 3px rgba(239,68,68,0.15)' : '0 0 0 3px rgba(99,102,241,0.18)')
     : 'none'
@@ -192,8 +197,8 @@ function OtpInput({ value, error, onChange, onBlur }: {
           padding: '14px 16px',
           borderRadius: 12,
           textAlign: 'center',
-          background: 'rgba(255,255,255,0.08)',
-          color: '#f1f5f9',
+          background: dark ? 'rgba(255,255,255,0.08)' : '#f8fafc',
+          color: dark ? '#f1f5f9' : '#0f172a',
           border: `1px solid ${borderColor}`,
           fontSize: 24,
           fontFamily: 'monospace',
@@ -229,6 +234,8 @@ function GoogleIcon() {
 // ─── AuthForm ─────────────────────────────────────────────────────────────────
 
 export function AuthForm({ onSuccess, onClose, initialMode = 'login', className }: AuthFormProps) {
+  const theme = useAppStore(s => s.theme)
+  const d = theme === 'dark'
   const [authMode, setAuthMode] = useState<AuthMode>(initialMode)
   const [step, setStep] = useState<RegistrationStep>('details')
   const [showPw, setShowPw] = useState(false)
@@ -367,11 +374,12 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/15 mb-4">
             <KeyRound className="h-5 w-5 text-indigo-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-100 mb-1">Şifre Kurtarma</h3>
+          <h3 className="text-lg font-semibold mb-1" style={{ color: d ? '#f1f5f9' : '#0f172a' }}>Şifre Kurtarma</h3>
           <p className="text-sm text-slate-500">E-posta adresinizi girin, sıfırlama bağlantısı gönderelim.</p>
         </div>
 
         <InputField
+          dark={d}
           icon={<Mail className="h-4 w-4" />}
           type="email"
           placeholder="E-posta Adresi"
@@ -412,13 +420,14 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/15 mb-4">
             <Mail className="h-5 w-5 text-indigo-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-100 mb-1">E-postanı Doğrula</h3>
+          <h3 className="text-lg font-semibold mb-1" style={{ color: d ? '#f1f5f9' : '#0f172a' }}>E-postanı Doğrula</h3>
           <p className="text-sm text-slate-500">
-            <span className="text-slate-300 font-medium">{form.email}</span> adresine 6 haneli kod gönderdik.
+            <span style={{ color: d ? '#cbd5e1' : '#334155', fontWeight: 500 }}>{form.email}</span> adresine 6 haneli kod gönderdik.
           </p>
         </div>
 
         <OtpInput
+          dark={d}
           value={form.verificationCode}
           error={errors.verificationCode}
           onChange={v => onChange('verificationCode', v)}
@@ -458,7 +467,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
           </svg>
         </div>
         <div>
-          <h3 className="text-xl font-bold text-slate-100 mb-1">Hoş Geldin!</h3>
+          <h3 className="text-xl font-bold mb-1" style={{ color: d ? '#f1f5f9' : '#0f172a' }}>Hoş Geldin!</h3>
           <p className="text-sm text-slate-500">Hesabın başarıyla oluşturuldu.</p>
         </div>
         <button
@@ -477,6 +486,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       <div className="space-y-5" style={{ gap: 20 }}>
         {authMode === 'signup' && (
           <InputField
+            dark={d}
             icon={<User className="h-4 w-4" />}
             type="text"
             placeholder="Ad Soyad"
@@ -489,6 +499,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
 
         <div style={{ paddingBottom: 12 }}>
           <InputField
+            dark={d}
             icon={<Mail className="h-4 w-4" />}
             type="email"
             placeholder="E-posta Adresi"
@@ -501,6 +512,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
 
         <div>
           <InputField
+            dark={d}
             icon={<Lock className="h-4 w-4" />}
             type={showPw ? 'text' : 'password'}
             placeholder="Şifre"
@@ -510,11 +522,12 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
             error={errors.password}
             rightElement={<EyeBtn show={showPw} onToggle={() => setShowPw(v => !v)} />}
           />
-          {authMode === 'signup' && <PasswordStrengthIndicator password={form.password} />}
+          {authMode === 'signup' && <PasswordStrengthIndicator dark={d} password={form.password} />}
         </div>
 
         {authMode === 'signup' && (<>
           <InputField
+            dark={d}
             icon={<Shield className="h-4 w-4" />}
             type={showCPw ? 'text' : 'password'}
             placeholder="Şifre Tekrar"
@@ -525,6 +538,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
             rightElement={<EyeBtn show={showCPw} onToggle={() => setShowCPw(v => !v)} />}
           />
           <InputField
+            dark={d}
             icon={<Phone className="h-4 w-4" />}
             type="tel"
             placeholder="Telefon Numarası (İsteğe Bağlı)"
@@ -542,7 +556,8 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
                 type="checkbox"
                 checked={form.rememberMe}
                 onChange={e => onChange('rememberMe', e.target.checked)}
-                className="w-5 h-5 rounded border-white/20 bg-white/10 accent-indigo-500 cursor-pointer"
+                className="w-5 h-5 rounded accent-indigo-500 cursor-pointer"
+                style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', accentColor: '#6366f1' }}
               />
               <span className="text-base text-slate-500">Beni hatırla</span>
             </label>
@@ -559,7 +574,8 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
                 type="checkbox"
                 checked={form.agreeToTerms}
                 onChange={e => onChange('agreeToTerms', e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded border-white/20 bg-white/10 accent-indigo-500 cursor-pointer flex-shrink-0"
+                className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
+                style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
               />
               <span className="text-sm text-slate-500">
                 <a href="#" className="text-slate-400 underline hover:text-slate-300 transition-colors">Kullanım Koşulları</a>
@@ -621,8 +637,8 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       {showSocial && (
         <div className="text-center mb-8">
           <h2
-            className="font-bold tracking-tight text-slate-100"
-            style={{ fontSize: 30, lineHeight: 1.2 }}
+            className="font-bold tracking-tight"
+            style={{ fontSize: 30, lineHeight: 1.2, color: d ? '#f1f5f9' : '#0f172a' }}
           >
             {authMode === 'login' ? 'Tekrar Hoş Geldin' : 'Hesabını Oluştur'}
           </h2>
@@ -636,7 +652,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       {showSocial && (
         <div
           className="flex mb-4"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ borderBottom: `1px solid ${d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}` }}
         >
           {(['login', 'signup'] as AuthMode[]).map(m => (
             <button
@@ -648,7 +664,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: authMode === m ? '#f1f5f9' : '#475569',
+                color: authMode === m ? (d ? '#f1f5f9' : '#0f172a') : '#64748b',
                 letterSpacing: '0.01em',
               }}
             >
@@ -676,22 +692,22 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
             style={{
               minHeight: 56,
               padding: '16px 20px',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#cbd5e1',
+              background: d ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)',
+              border: `1px solid ${d ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
+              color: d ? '#cbd5e1' : '#475569',
               fontSize: 16,
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.11)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+            onMouseEnter={e => (e.currentTarget.style.background = d ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.07)')}
+            onMouseLeave={e => (e.currentTarget.style.background = d ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)')}
           >
             <GoogleIcon />
             Google ile devam et
           </button>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
-            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#334155' }}>veya e-posta ile</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+            <div className="flex-1 h-px" style={{ background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#94a3b8' }}>veya e-posta ile</span>
+            <div className="flex-1 h-px" style={{ background: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
           </div>
         </>
       )}
