@@ -92,8 +92,8 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative overflow-hidden">
-      {/* Global Aurora Background — sadece dark modda ve Auth sayfası hariç */}
-      {!isAuthRoute && theme === 'dark' && <AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" />}
+      {/* Global Aurora Background — Auth sayfası hariç (kendi AnoAI'ı var) */}
+      {!isAuthRoute && <AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" />}
       <div className="relative z-10 flex flex-col flex-1">
         {!isTraining && <Navbar />}
         <main className="flex-1">
