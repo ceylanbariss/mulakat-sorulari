@@ -27,6 +27,7 @@ export function CategoryGrid() {
   const { categories, loading } = useCategories()
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
+  const totalQuestions = categories.reduce((sum, cat) => sum + (cat.count ?? 0), 0)
 
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 640 : false
@@ -60,7 +61,7 @@ export function CategoryGrid() {
             Hangi alanda hazırlanıyorsun?
           </h2>
           <p style={{ color: d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.75)', fontSize: '17px', lineHeight: 1.7, maxWidth: '420px', margin: '0 auto' }}>
-            4 farklı kategoride, 80 uzman soruyla mülakata hazırlan.
+            {categories.length} farklı kategoride, {totalQuestions}+ uzman soruyla mülakata hazırlan.
           </p>
         </motion.div>
 

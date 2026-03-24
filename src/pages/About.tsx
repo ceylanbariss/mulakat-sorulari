@@ -2,39 +2,7 @@ import { ChevronDown, Target, Zap, Users, Mail, ArrowUp } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
-
-const FAQ = [
-  { q: 'Uygulama ücretsiz mi?', a: 'Evet, temel özellikler tamamen ücretsizdir.' },
-  { q: 'Sorular ne kadar güncel?', a: 'Soru havuzumuz uzman ekibimiz tarafından düzenli olarak güncellenmektedir.' },
-  { q: 'Hesap açmadan kullanabilir miyim?', a: 'Evet, antrenman modlarını üye olmadan da kullanabilirsiniz. Ancak ilerlemenizi kaydetmek için giriş yapmanız gerekir.' },
-  { q: 'Hangi kategoriler mevcut?', a: 'Yazılım, Kamu, Banka ve İK kategorilerinde 375+ soru bulunmaktadır.' },
-  { q: 'Mobil uyumlu mu?', a: 'Evet, uygulama tüm ekran boyutlarına uyumlu responsive tasarıma sahiptir.' },
-  { q: 'Soruları favorilere ekleyebilir miyim?', a: 'Evet, giriş yaptıktan sonra soruları favorilerinize ekleyebilirsiniz.' },
-]
-
-const FEATURES = [
-  {
-    icon: Target,
-    title: 'Hedef Odaklı',
-    desc: 'Gerçek mülakat sorularıyla pratik yaparak hedefinize ulaşın.',
-    gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-    shadow: 'rgba(59,130,246,0.25)',
-  },
-  {
-    icon: Zap,
-    title: 'Hızlı Antrenman',
-    desc: '3 farklı modda anında antrenman yapmaya başlayın.',
-    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-    shadow: 'rgba(139,92,246,0.25)',
-  },
-  {
-    icon: Users,
-    title: 'Uzman İçerik',
-    desc: 'Alanında uzman kişiler tarafından hazırlanan 375+ soru.',
-    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    shadow: 'rgba(16,185,129,0.25)',
-  },
-]
+import { useCategories } from '../hooks/useCategories'
 
 const STEPS = [
   {
@@ -137,6 +105,45 @@ export function About() {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
+  const { categories } = useCategories()
+
+  const totalQuestions = categories.reduce((sum, cat) => sum + (cat.count ?? 0), 0)
+  const categoryNamesStr = categories.length > 1
+    ? categories.slice(0, -1).map(c => c.label).join(', ') + ' ve ' + categories[categories.length - 1].label
+    : categories.length === 1 ? categories[0].label : 'Yazılım, Kamu, Banka ve İK'
+
+  const FAQ = [
+    { q: 'Uygulama ücretsiz mi?', a: 'Evet, temel özellikler tamamen ücretsizdir.' },
+    { q: 'Sorular ne kadar güncel?', a: 'Soru havuzumuz uzman ekibimiz tarafından düzenli olarak güncellenmektedir.' },
+    { q: 'Hesap açmadan kullanabilir miyim?', a: 'Evet, antrenman modlarını üye olmadan da kullanabilirsiniz. Ancak ilerlemenizi kaydetmek için giriş yapmanız gerekir.' },
+    { q: 'Hangi kategoriler mevcut?', a: `${categoryNamesStr} kategorilerinde ${totalQuestions > 0 ? `${totalQuestions}+` : 'binlerce'} soru bulunmaktadır.` },
+    { q: 'Mobil uyumlu mu?', a: 'Evet, uygulama tüm ekran boyutlarına uyumlu responsive tasarıma sahiptir.' },
+    { q: 'Soruları favorilere ekleyebilir miyim?', a: 'Evet, giriş yaptıktan sonra soruları favorilerinize ekleyebilirsiniz.' },
+  ]
+
+  const FEATURES = [
+    {
+      icon: Target,
+      title: 'Hedef Odaklı',
+      desc: 'Gerçek mülakat sorularıyla pratik yaparak hedefinize ulaşın.',
+      gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+      shadow: 'rgba(59,130,246,0.25)',
+    },
+    {
+      icon: Zap,
+      title: 'Hızlı Antrenman',
+      desc: '3 farklı modda anında antrenman yapmaya başlayın.',
+      gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+      shadow: 'rgba(139,92,246,0.25)',
+    },
+    {
+      icon: Users,
+      title: 'Uzman İçerik',
+      desc: `Alanında uzman kişiler tarafından hazırlanan ${totalQuestions > 0 ? `${totalQuestions}+` : 'binlerce'} soru.`,
+      gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      shadow: 'rgba(16,185,129,0.25)',
+    },
+  ]
 
   return (
     <div className="min-h-screen pb-20 relative overflow-hidden">

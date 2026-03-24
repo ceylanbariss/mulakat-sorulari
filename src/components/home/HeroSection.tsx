@@ -95,7 +95,7 @@ export function HeroSection() {
               style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: d ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.85)', maxWidth: '560px', marginLeft: 'auto', marginRight: 'auto', marginBottom: '44px', lineHeight: 1.8 }}
             >
               Flash Card, Quiz ve Yazılı Cevap modlarıyla{' '}
-              <strong style={{ color: d ? 'rgba(226,232,240,0.95)' : '#1e293b', fontWeight: 700 }}>4 farklı kategoride</strong>{' '}
+              <strong style={{ color: d ? 'rgba(226,232,240,0.95)' : '#1e293b', fontWeight: 700 }}>{catsLoading ? '…' : categoryCount} farklı kategoride</strong>{' '}
               antrenman yap. Eksiklerini bul, güçlü yönlerini keşfet.
             </motion.p>
 
