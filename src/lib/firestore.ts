@@ -12,6 +12,7 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  increment,
   type DocumentData,
   type QueryConstraint,
   type Unsubscribe,
@@ -128,6 +129,110 @@ export async function getMulakatGecmisi(
 
 export async function updateMulakatSessionName(id: string, name: string): Promise<void> {
   await updateDoc(doc(mulakatGecmisiCol(), id), { name })
+}
+
+// ─── Haberler ─────────────────────────────────────────────────────────────────
+
+export interface HaberMedya {
+  tip: 'gorsel' | 'gif' | 'video-link' | 'video-dosya'
+  url: string
+  thumbnail?: string
+}
+
+export interface HaberData {
+  slug: string
+  tip: 'makale' | 'post'
+  kategori: 'mulakat-ipucu' | 'sektor-haberi' | 'platform-guncelleme' | 'basari-hikayesi'
+  baslik: string
+  ozet: string
+  icerik: string
+  medya: HaberMedya[]
+  yazar: string
+  yazarId: string
+  durum: 'taslak' | 'yayinda' | 'zamanlanmis'
+  yayinTarihi: unknown
+  olusturmaTarihi: unknown
+  guncellenmeTarihi: unknown
+  oneCikar: boolean
+  okumaSuresi: number
+  goruntulenme: number
+}
+
+export type HaberDoc = HaberData & { _id: string }
+
+export const haberlerCol = () => collection(db, 'haberler')
+
+export async function getHaberler(
+  kategori?: string,
+  limitN = 10,
+  offset = 0,
+  siralama: 'yeni' | 'populer' = 'yeni'
+): Promise<HaberDoc[]> {
+  const constraints: QueryConstraint[] = [where('durum', '==', 'yayinda')]
+  if (kategori) constraints.push(where('kategori', '==', kategori))
+  const items = await getAll<HaberData>(haberlerCol(), ...constraints)
+  const sorted = items.sort((a, b) => {
+    if (siralama === 'populer') return (b.goruntulenme ?? 0) - (a.goruntulenme ?? 0)
+    const ta = (a.olusturmaTarihi as { toMillis?: () => number })?.toMillis?.() ?? 0
+    const tb = (b.olusturmaTarihi as { toMillis?: () => number })?.toMillis?.() ?? 0
+    return tb - ta
+  })
+  return sorted.slice(offset, offset + limitN) as HaberDoc[]
+}
+
+export async function getHaberBySlug(slug: string): Promise<HaberDoc | null> {
+  const items = await getAll<HaberData>(haberlerCol(), where('slug', '==', slug))
+  if (!items.length) return null
+  return items[0] as HaberDoc
+}
+
+export async function saveHaber(data: Partial<HaberData>, id?: string): Promise<string> {
+  if (id) {
+    await updateDocument<HaberData>(haberlerCol(), id, data as Partial<HaberData> & DocumentData)
+    return id
+  }
+  return addDocument<HaberData & DocumentData>(haberlerCol(), data as HaberData & DocumentData)
+}
+
+export async function deleteHaber(id: string): Promise<void> {
+  await deleteDocument(haberlerCol(), id)
+}
+
+export interface YorumData {
+  userId: string
+  kullaniciAdi: string
+  metin: string
+  olusturmaTarihi: unknown
+}
+
+export type YorumDoc = YorumData & { _id: string }
+
+export async function addYorum(
+  haberId: string,
+  yorum: Omit<YorumData, 'olusturmaTarihi'>
+): Promise<string> {
+  const yorumlarCol = collection(db, 'haberler', haberId, 'yorumlar')
+  const ref = await addDoc(yorumlarCol, { ...yorum, olusturmaTarihi: serverTimestamp() })
+  return ref.id
+}
+
+export async function getYorumlar(haberId: string): Promise<YorumDoc[]> {
+  const yorumlarCol = collection(db, 'haberler', haberId, 'yorumlar')
+  const items = await getAll<YorumData>(yorumlarCol)
+  return (items as YorumDoc[]).sort((a, b) => {
+    const ta = (a.olusturmaTarihi as { toMillis?: () => number })?.toMillis?.() ?? 0
+    const tb = (b.olusturmaTarihi as { toMillis?: () => number })?.toMillis?.() ?? 0
+    return ta - tb
+  })
+}
+
+export async function deleteYorum(haberId: string, yorumId: string): Promise<void> {
+  const yorumlarCol = collection(db, 'haberler', haberId, 'yorumlar')
+  await deleteDocument(yorumlarCol, yorumId)
+}
+
+export async function incrementGoruntulenme(id: string): Promise<void> {
+  await updateDoc(doc(haberlerCol(), id), { goruntulenme: increment(1) })
 }
 
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────

@@ -23,6 +23,10 @@ import { AnnouncementsModule } from './pages/admin/modules/AnnouncementsModule'
 import { UsersModule } from './pages/admin/modules/UsersModule'
 import { useTheme } from './hooks/useTheme'
 import { MulakatSimPage } from './pages/mulakat-sim'
+import { Haberler } from './pages/Haberler'
+import { HaberDetay } from './pages/HaberDetay'
+import { AdminHaberler } from './pages/admin/AdminHaberler'
+import { AdminHaberEkle } from './pages/admin/AdminHaberEkle'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -52,6 +56,8 @@ function AnimatedRoutes() {
           <Route path="/hakkimizda" element={<About />} />
           <Route path="/giris" element={<Auth />} />
           <Route path="/mulakat-sim" element={<MulakatSimPage />} />
+          <Route path="/haberler" element={<Haberler />} />
+          <Route path="/haberler/:slug" element={<HaberDetay />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -82,6 +88,9 @@ function AppLayout() {
               <Route path="kategoriler" element={<CategoriesModule />} />
               <Route path="duyurular" element={<AnnouncementsModule />} />
               <Route path="kullanicilar" element={<UsersModule />} />
+              <Route path="haberler" element={<AdminHaberler />} />
+              <Route path="haberler/yeni" element={<AdminHaberEkle />} />
+              <Route path="haberler/duzenle/:id" element={<AdminHaberEkle />} />
             </Route>
           </Routes>
         </AdminGuard>

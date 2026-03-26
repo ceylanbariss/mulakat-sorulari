@@ -4,6 +4,7 @@ import {
   Tag,
   Megaphone,
   Users,
+  Newspaper,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -24,4 +25,5 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: 'categories',     label: 'Kategoriler',   icon: Tag,             path: 'kategoriler' },
   { id: 'announcements',  label: 'Duyurular',     icon: Megaphone,       path: 'duyurular' },
   { id: 'users',          label: 'Kullanıcılar',  icon: Users,           path: 'kullanicilar' },
+  { id: 'haberler',       label: 'Haberler',      icon: Newspaper,       path: 'haberler' },
 ]
