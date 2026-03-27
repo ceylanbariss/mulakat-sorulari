@@ -235,6 +235,27 @@ export async function incrementGoruntulenme(id: string): Promise<void> {
   await updateDoc(doc(haberlerCol(), id), { goruntulenme: increment(1) })
 }
 
+// ─── CV Geçmişi ───────────────────────────────────────────────────────────────
+
+import type { CvSessionData } from '../types/cv'
+
+export const cvGecmisiCol = () => collection(db, 'cvGecmisi')
+
+export async function saveCvSession(data: CvSessionData): Promise<string> {
+  return addDocument(cvGecmisiCol(), data as unknown as DocumentData)
+}
+
+export async function getCvGecmisi(
+  userId: string
+): Promise<(CvSessionData & { _id: string; createdAt?: unknown })[]> {
+  const items = await getAll<CvSessionData>(cvGecmisiCol(), where('userId', '==', userId))
+  return (items as (CvSessionData & { _id: string; createdAt?: unknown })[]).sort((a, b) => {
+    const ta = (a.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
+    const tb = (b.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
+    return tb - ta
+  })
+}
+
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────
 
 export { orderBy, serverTimestamp, where }

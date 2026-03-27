@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -28,6 +28,9 @@ import { HaberDetay } from './pages/HaberDetay'
 import { AdminHaberler } from './pages/admin/AdminHaberler'
 import { AdminHaberEkle } from './pages/admin/AdminHaberEkle'
 
+// @react-pdf/renderer lazy load — eager import'ta browser crash'e yol açıyor
+const CvOlustur = lazy(() => import('./pages/cv-olustur').then(m => ({ default: m.CvOlustur })))
+
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
   enter: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const } },
@@ -56,6 +59,7 @@ function AnimatedRoutes() {
           <Route path="/hakkimizda" element={<About />} />
           <Route path="/giris" element={<Auth />} />
           <Route path="/mulakat-sim" element={<MulakatSimPage />} />
+          <Route path="/cv-olustur" element={<Suspense fallback={<div style={{ minHeight: '100vh' }} />}><CvOlustur /></Suspense>} />
           <Route path="/haberler" element={<Haberler />} />
           <Route path="/haberler/:slug" element={<HaberDetay />} />
         </Routes>
