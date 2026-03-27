@@ -78,10 +78,14 @@ export interface AtsAnalysis {
 
 // ─── API ───────────────────────────────────────────────────────────────────────
 
+export type CvTemplateId = 'modern' | 'klasik' | 'profesyonel' | 'zarif' | 'guclu'
+export type PhotoShape = 'square' | 'rounded' | 'circle'
+
 export interface CvOptimizeRequest {
   cvText: string
   jobDescription?: string
   language: 'tr' | 'en'
+  voice?: 'first' | 'third'
 }
 
 export interface CvOptimizeResponse {

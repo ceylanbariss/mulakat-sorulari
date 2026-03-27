@@ -5,10 +5,17 @@ import type { CvOptimizeRequest, CvOptimizeResponse, CvData } from '../src/types
 const MAX_CV_TEXT = 8000
 const MAX_JD_TEXT = 2000
 
-function buildSystemPrompt(hasJD: boolean, language: 'tr' | 'en'): string {
+function buildSystemPrompt(hasJD: boolean, language: 'tr' | 'en', voice: 'first' | 'third' = 'first'): string {
   const langRule = language === 'tr'
     ? 'Çıktıdaki TÜM metin alanları Türkçe olmalı (CV Türkçe ise).'
     : 'All text fields in the output must be in English (since the CV is in English).'
+  const voiceRule = language === 'tr'
+    ? (voice === 'first'
+      ? 'Deneyim bullet\'larını 1. tekil şahısla yaz (örn: "Yönettim", "Geliştirdim", "Sağladım").'
+      : 'Deneyim bullet\'larını 3. tekil şahısla yaz (örn: "Yönetti", "Geliştirdi", "Sağladı").')
+    : (voice === 'first'
+      ? 'Write experience bullets in first person (e.g., "Managed", "Developed", "Led").'
+      : 'Write experience bullets in third person (e.g., "Managed", "Developed", "Led").')
 
   const atsShape = hasJD ? `"atsAnalysis": {
     "genelSkor": number (0-100),
@@ -83,8 +90,9 @@ KURALLAR:
 3. "ozet" alanını ATS uyumlu, anahtar kelime zengin şekilde yeniden yaz (3-4 cümle).
 4. Beceriler listesini CV'den çıkar; ${hasJD ? 'iş ilanındaki eşleşenleri öne al.' : 'kategorize et.'}
 5. ${langRule}
-6. Tarih formatı tutarlı olsun (örn: "Ocak 2021" veya "2021-01").
-7. Her dizi öğesi için "id" alanı üret (örn: "exp-1", "edu-1", "lang-1").${hasJD ? '\n8. ATS skorlarını gerçekçi hesapla; iş ilanı gereksinimleriyle CV içeriğini karşılaştır.' : ''}`
+6. ${voiceRule}
+7. Tarih formatı tutarlı olsun (örn: "Ocak 2021" veya "2021-01").
+8. Her dizi öğesi için "id" alanı üret (örn: "exp-1", "edu-1", "lang-1").${hasJD ? '\n9. ATS skorlarını gerçekçi hesapla; iş ilanı gereksinimleriyle CV içeriğini karşılaştır.' : ''}`
 }
 
 function normalizeCvData(raw: CvData): CvData {
@@ -129,7 +137,7 @@ async function callGemini(body: CvOptimizeRequest): Promise<CvOptimizeResponse> 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash-lite',
-    systemInstruction: buildSystemPrompt(!!body.jobDescription, body.language),
+    systemInstruction: buildSystemPrompt(!!body.jobDescription, body.language, body.voice),
   })
 
   const userContent = [

@@ -1,7 +1,5 @@
 import { create } from 'zustand'
-import type { CvData, AtsAnalysis } from '../types/cv'
-
-export type CvStep = 1 | 2 | 3
+import type { CvData, AtsAnalysis, CvTemplateId, PhotoShape } from '../types/cv'
 
 export const EMPTY_CV: CvData = {
   kisiselBilgiler: { ad: '', unvan: '', email: '', telefon: '', konum: '', linkedin: '', github: '', website: '', ozet: '' },
@@ -13,7 +11,7 @@ export const EMPTY_CV: CvData = {
 }
 
 interface CvState {
-  step: CvStep
+  // CV content
   cvText: string
   cvFileName: string
   jobDescription: string
@@ -24,6 +22,15 @@ interface CvState {
   savedSessionId: string | null
   isSaving: boolean
 
+  // Design settings
+  template: CvTemplateId
+  accentColor: string
+  voice: 'first' | 'third'
+  textAlign: 'left' | 'center' | 'right' | 'justify'
+  photoDataUrl: string | null
+  photoShape: PhotoShape
+
+  // Actions
   setCvText: (text: string, fileName: string) => void
   setJobDescription: (text: string) => void
   setCvData: (data: CvData) => void
@@ -32,12 +39,15 @@ interface CvState {
   setProcessing: (v: boolean, error?: string) => void
   setSaved: (id: string | null) => void
   setSaving: (v: boolean) => void
-  goToStep: (step: CvStep) => void
+  setTemplate: (t: CvTemplateId) => void
+  setAccentColor: (c: string) => void
+  setVoice: (v: 'first' | 'third') => void
+  setTextAlign: (a: 'left' | 'center' | 'right' | 'justify') => void
+  setPhoto: (dataUrl: string | null, shape: PhotoShape) => void
   resetSession: () => void
 }
 
 const initialState = {
-  step: 1 as CvStep,
   cvText: '',
   cvFileName: '',
   jobDescription: '',
@@ -47,6 +57,12 @@ const initialState = {
   atsAnalysis: null,
   savedSessionId: null,
   isSaving: false,
+  template: 'modern' as CvTemplateId,
+  accentColor: '#6366f1',
+  voice: 'first' as const,
+  textAlign: 'left' as const,
+  photoDataUrl: null,
+  photoShape: 'circle' as PhotoShape,
 }
 
 export const useCvStore = create<CvState>((set) => ({
@@ -60,6 +76,10 @@ export const useCvStore = create<CvState>((set) => ({
   setProcessing: (v, error = '') => set({ isProcessing: v, processingError: error }),
   setSaved: (id) => set({ savedSessionId: id }),
   setSaving: (v) => set({ isSaving: v }),
-  goToStep: (step) => set({ step }),
-  resetSession: () => set(initialState),
+  setTemplate: (t) => set({ template: t }),
+  setAccentColor: (c) => set({ accentColor: c }),
+  setVoice: (v) => set({ voice: v }),
+  setTextAlign: (a) => set({ textAlign: a }),
+  setPhoto: (dataUrl, shape) => set({ photoDataUrl: dataUrl, photoShape: shape }),
+  resetSession: () => set({ ...initialState }),
 }))
