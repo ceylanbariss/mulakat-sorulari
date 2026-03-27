@@ -88,33 +88,41 @@ KURALLAR:
 }
 
 function normalizeCvData(raw: CvData): CvData {
+  const kb = raw.kisiselBilgiler
   return {
     ...raw,
     kisiselBilgiler: {
-      ad: '', unvan: '', email: '', telefon: '', konum: '',
-      linkedin: '', github: '', website: '', ozet: '',
-      ...raw.kisiselBilgiler,
+      ad: kb?.ad ?? '',
+      unvan: kb?.unvan ?? '',
+      email: kb?.email ?? '',
+      telefon: kb?.telefon ?? '',
+      konum: kb?.konum ?? '',
+      linkedin: kb?.linkedin ?? '',
+      github: kb?.github ?? '',
+      website: kb?.website ?? '',
+      ozet: kb?.ozet ?? '',
     },
     deneyim: (raw.deneyim ?? []).map((e, i) => ({
-      halen: false, aciklama: [],
       ...e,
       id: e.id || `exp-${i}`,
+      halen: e.halen ?? false,
+      aciklama: e.aciklama ?? [],
     })),
     egitim: (raw.egitim ?? []).map((e, i) => ({
-      gpa: '',
       ...e,
       id: e.id || `edu-${i}`,
+      gpa: e.gpa ?? '',
     })),
     beceriler: {
       teknik: raw.beceriler?.teknik ?? [],
       diger: raw.beceriler?.diger ?? [],
     },
     diller: (raw.diller ?? []).map((l, i) => ({ ...l, id: l.id || `lang-${i}` })),
-    sertifikalar: (raw.sertifikalar ?? []).map((c, i) => ({ url: '', ...c, id: c.id || `cert-${i}` })),
+    sertifikalar: (raw.sertifikalar ?? []).map((c, i) => ({ ...c, id: c.id || `cert-${i}`, url: c.url ?? '' })),
   }
 }
 
-async function callGemini(body: CvOptimizeRequest, retry = 0): Promise<CvOptimizeResponse> {
+async function callGemini(body: CvOptimizeRequest): Promise<CvOptimizeResponse> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY tanımlı değil')
 
@@ -149,6 +157,8 @@ async function callGemini(body: CvOptimizeRequest, retry = 0): Promise<CvOptimiz
   }
 }
 
+export const maxDuration = 60
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -169,8 +179,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await new Promise(r => setTimeout(r, 1500 * retries))
         continue
       }
-      console.error('CV optimize hatası:', e?.message ?? err)
-      return res.status(500).json({ error: 'AI servisi geçici olarak kullanılamıyor.' })
+      const msg = e?.message ?? String(err)
+      console.error('CV optimize hatası:', msg)
+      return res.status(500).json({ error: msg })
     }
   }
 }
