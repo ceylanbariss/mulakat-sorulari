@@ -1757,7 +1757,7 @@ KURALLAR:
                         <div style={{ width: '32%', background: themeColor, padding: '6px 4px' }}>
                           <div style={{ height: 4, width: '85%', borderRadius: 2, background: 'rgba(255,255,255,0.85)', marginBottom: 1.5 }} />
                           <div style={{ height: 2, width: '65%', borderRadius: 1, background: 'rgba(255,255,255,0.5)', marginBottom: 3 }} />
-                          {['BECERİLER','DİL','İLETİŞİM'].map((s, i) => (
+                          {['BECERİLER','DİL','İLETİŞİM'].map((_s, i) => (
                             <div key={i} style={{ marginBottom: 3 }}>
                               <div style={{ height: 1.5, width: '70%', borderRadius: 1, background: 'rgba(255,255,255,0.7)', marginBottom: 1 }} />
                               {[85,65,75].map((w, j) => <div key={j} style={{ height: 1, width: `${w}%`, borderRadius: 1, background: 'rgba(255,255,255,0.35)', marginBottom: 1 }} />)}
