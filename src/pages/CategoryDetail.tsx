@@ -279,7 +279,7 @@ export function CategoryDetail() {
             {/* Metin */}
             <div className="flex flex-col gap-2 min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
-                {category.label}
+                {category.label} Mülakat Soruları
               </h1>
               {category.description && (
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">

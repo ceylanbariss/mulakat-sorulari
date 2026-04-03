@@ -52,7 +52,7 @@ export function Footer() {
 
           {/* Orta: Sayfalar */}
           <div>
-            <h3 style={HEADING}>Sayfalar</h3>
+            <div style={HEADING}>Sayfalar</div>
             <nav style={{ display: 'flex', flexDirection: 'column' }}>
               {links.map(({ label, to }) => (
                 <Link
@@ -70,7 +70,7 @@ export function Footer() {
 
           {/* Sağ: İletişim + Sosyal */}
           <div>
-            <h3 style={HEADING}>İletişim</h3>
+            <div style={HEADING}>İletişim</div>
             <a
               href="mailto:iletisim@mulakatsorulari.com"
               style={{ fontSize: '14px', color: 'rgba(148,163,184,0.7)', textDecoration: 'none', display: 'block', marginBottom: '24px', transition: 'color 0.2s' }}

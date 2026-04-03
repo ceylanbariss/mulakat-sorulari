@@ -117,7 +117,7 @@ export function HaberKarti({ haber, yorumSayisi = 0 }: HaberKartiProps) {
       {/* İçerik: makale vs post */}
       {haber.tip === 'makale' ? (
         <div>
-          <h3 style={{ color: textColor, fontWeight: 700, fontSize: 17, margin: '0 0 8px', lineHeight: 1.4 }}>{haber.baslik}</h3>
+          <h2 style={{ color: textColor, fontWeight: 700, fontSize: 17, margin: '0 0 8px', lineHeight: 1.4 }}>{haber.baslik}</h2>
           {haber.ozet && <p style={{ color: subText, fontSize: 14, margin: '0 0 12px', lineHeight: 1.6 }}>{haber.ozet}</p>}
           {kapakGorsel && (
             <img
