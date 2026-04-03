@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Code2, Landmark, Banknote, Users, ArrowRight } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { useCategories } from '../hooks/useCategories'
 import { useAppStore } from '../store/useAppStore'
@@ -36,6 +37,14 @@ export function Questions() {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ paddingTop: '120px', paddingBottom: '160px' }}>
+      <Helmet>
+        <title>Mülakat Soruları | Kategori Seç ve Çalışmaya Başla</title>
+        <meta name="description" content="JavaScript, React, CSS ve Genel Yazılım kategorilerinde 3000+ mülakat sorusu. Flash Card, Quiz ve Yazılı Cevap modlarıyla pratik yap." />
+        <meta property="og:title" content="Mülakat Soruları | Kategori Seç ve Çalışmaya Başla" />
+        <meta property="og:description" content="JavaScript, React, CSS ve Genel Yazılım kategorilerinde 3000+ mülakat sorusu." />
+        <meta property="og:url" content="https://mulakatsorulari.com.tr/sorular" />
+        <link rel="canonical" href="https://mulakatsorulari.com.tr/sorular" />
+      </Helmet>
       <div className="relative z-10">
         <PageWrapper>
           {/* Başlık */}

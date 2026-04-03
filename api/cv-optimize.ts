@@ -1,195 +1,96 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import type { CvOptimizeRequest, CvOptimizeResponse, CvData } from '../src/types/cv'
-
-const MAX_CV_TEXT = 8000
-const MAX_JD_TEXT = 2000
-
-function buildSystemPrompt(hasJD: boolean, language: 'tr' | 'en', voice: 'first' | 'third' = 'first'): string {
-  const langRule = language === 'tr'
-    ? 'Çıktıdaki TÜM metin alanları Türkçe olmalı (CV Türkçe ise).'
-    : 'All text fields in the output must be in English (since the CV is in English).'
-  const voiceRule = language === 'tr'
-    ? (voice === 'first'
-      ? 'Deneyim bullet\'larını 1. tekil şahısla yaz (örn: "Yönettim", "Geliştirdim", "Sağladım").'
-      : 'Deneyim bullet\'larını 3. tekil şahısla yaz (örn: "Yönetti", "Geliştirdi", "Sağladı").')
-    : (voice === 'first'
-      ? 'Write experience bullets in first person (e.g., "Managed", "Developed", "Led").'
-      : 'Write experience bullets in third person (e.g., "Managed", "Developed", "Led").')
-
-  const atsShape = hasJD ? `"atsAnalysis": {
-    "genelSkor": number (0-100),
-    "deneyimSkor": number (0-100),
-    "egitimSkor": number (0-100),
-    "beceriSkor": number (0-100),
-    "eslesen": {
-      "teknikBeceriler": string[],
-      "yazilimlar": string[],
-      "anahterKelimeler": string[]
-    },
-    "eksik": string[],
-    "oneriler": string[]
-  }` : '"atsAnalysis": null'
-
-  return `Sen profesyonel bir CV yazım uzmanı ve İK danışmanısın.
-Sana ham CV metni ${hasJD ? 've iş ilanı metni ' : ''}verilecek.
-SADECE aşağıdaki JSON yapısını döndür — başka hiçbir şey yazma:
-
-{
-  "cvData": {
-    "kisiselBilgiler": {
-      "ad": string,
-      "unvan": string,
-      "email": string,
-      "telefon": string,
-      "konum": string,
-      "linkedin": string,
-      "github": string,
-      "website": string,
-      "ozet": string
-    },
-    "deneyim": [
-      {
-        "id": string,
-        "sirket": string,
-        "pozisyon": string,
-        "baslangic": string,
-        "bitis": string,
-        "halen": boolean,
-        "aciklama": string[]
-      }
-    ],
-    "egitim": [
-      {
-        "id": string,
-        "okul": string,
-        "derece": string,
-        "alan": string,
-        "baslangic": string,
-        "bitis": string,
-        "gpa": string
-      }
-    ],
-    "beceriler": {
-      "teknik": string[],
-      "diger": string[]
-    },
-    "diller": [
-      { "id": string, "dil": string, "seviye": string }
-    ],
-    "sertifikalar": [
-      { "id": string, "ad": string, "kurum": string, "tarih": string, "url": string }
-    ]
-  },
-  ${atsShape}
-}
-
-KURALLAR:
-1. CV'de bulunmayan bilgileri UYDURMA. Bilgi yoksa boş string veya boş dizi kullan.
-2. Deneyim bullet'larını güçlü eylem fiilleriyle başlat; mümkünse sayısal sonuçlar ekle.
-3. "ozet" alanını ATS uyumlu, anahtar kelime zengin şekilde yeniden yaz (3-4 cümle).
-4. Beceriler listesini CV'den çıkar; ${hasJD ? 'iş ilanındaki eşleşenleri öne al.' : 'kategorize et.'}
-5. ${langRule}
-6. ${voiceRule}
-7. Tarih formatı tutarlı olsun (örn: "Ocak 2021" veya "2021-01").
-8. Her dizi öğesi için "id" alanı üret (örn: "exp-1", "edu-1", "lang-1").${hasJD ? '\n9. ATS skorlarını gerçekçi hesapla; iş ilanı gereksinimleriyle CV içeriğini karşılaştır.' : ''}`
-}
-
-function normalizeCvData(raw: CvData): CvData {
-  const kb = raw.kisiselBilgiler
-  return {
-    ...raw,
-    kisiselBilgiler: {
-      ad: kb?.ad ?? '',
-      unvan: kb?.unvan ?? '',
-      email: kb?.email ?? '',
-      telefon: kb?.telefon ?? '',
-      konum: kb?.konum ?? '',
-      linkedin: kb?.linkedin ?? '',
-      github: kb?.github ?? '',
-      website: kb?.website ?? '',
-      ozet: kb?.ozet ?? '',
-    },
-    deneyim: (raw.deneyim ?? []).map((e, i) => ({
-      ...e,
-      id: e.id || `exp-${i}`,
-      halen: e.halen ?? false,
-      aciklama: e.aciklama ?? [],
-    })),
-    egitim: (raw.egitim ?? []).map((e, i) => ({
-      ...e,
-      id: e.id || `edu-${i}`,
-      gpa: e.gpa ?? '',
-    })),
-    beceriler: {
-      teknik: raw.beceriler?.teknik ?? [],
-      diger: raw.beceriler?.diger ?? [],
-    },
-    diller: (raw.diller ?? []).map((l, i) => ({ ...l, id: l.id || `lang-${i}` })),
-    sertifikalar: (raw.sertifikalar ?? []).map((c, i) => ({ ...c, id: c.id || `cert-${i}`, url: c.url ?? '' })),
-  }
-}
-
-async function callGemini(body: CvOptimizeRequest): Promise<CvOptimizeResponse> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY tanımlı değil')
-
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash-lite',
-    systemInstruction: buildSystemPrompt(!!body.jobDescription, body.language, body.voice),
-  })
-
-  const userContent = [
-    '=== CV METNİ ===',
-    body.cvText.slice(0, MAX_CV_TEXT),
-    body.jobDescription ? `\n=== İŞ İLANI ===\n${body.jobDescription.slice(0, MAX_JD_TEXT)}` : '',
-  ].filter(Boolean).join('\n\n')
-
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: userContent }] }],
-    generationConfig: { maxOutputTokens: 4096, temperature: 0.3 },
-  })
-
-  const text = result.response.text()
-  const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-  const match = clean.match(/\{[\s\S]*\}/)
-  if (!match) throw new Error('JSON bulunamadı')
-
-  const parsed = JSON.parse(match[0]) as CvOptimizeResponse
-  if (!parsed.cvData?.kisiselBilgiler) throw new Error('cvData eksik')
-
-  return {
-    cvData: normalizeCvData(parsed.cvData),
-    atsAnalysis: parsed.atsAnalysis ?? null,
-  }
-}
+import type { OptimizedCvData, CvOptimizeRequest } from '../src/types/cv.js'
+import { CV_SYSTEM_PROMPT } from '../src/lib/cvPrompt.js'
 
 export const maxDuration = 60
+
+function cleanMarkdown(obj: unknown): unknown {
+  if (typeof obj === 'string') return obj.replace(/\*\*/g, '')
+  if (Array.isArray(obj)) return obj.map(cleanMarkdown)
+  if (obj && typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [k, cleanMarkdown(v)])
+    )
+  }
+  return obj
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const body = req.body as CvOptimizeRequest
-  if (!body?.cvText || body.cvText.length < 50) {
-    return res.status(400).json({ error: 'CV metni çok kısa' })
+  const { cvText, jobDescription, language, parseOnly } = req.body as CvOptimizeRequest & { parseOnly?: boolean }
+  if (!cvText || cvText.length < 20) {
+    return res.status(400).json({ error: 'CV metni çok kısa.' })
   }
 
-  let retries = 0
-  while (retries <= 2) {
-    try {
-      const result = await callGemini(body)
-      return res.status(200).json(result)
-    } catch (err: unknown) {
-      const e = err as { status?: number; message?: string }
-      if ((e?.status === 503 || e?.status === 429) && retries < 2) {
-        retries++
-        await new Promise(r => setTimeout(r, 1500 * retries))
-        continue
-      }
-      const msg = e?.message ?? String(err)
-      console.error('CV optimize hatası:', msg)
-      return res.status(500).json({ error: msg })
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY tanımlı değil.' })
+
+  const langNote = language === 'tr'
+    ? 'Tüm metin alanlarını TÜRKÇE yaz.'
+    : 'Write ALL text fields in ENGLISH.'
+
+  const PARSE_ONLY_PROMPT = `Sen bir CV ayrıştırma uzmanısın. Verilen CV metnini OLDUĞU GİBİ JSON formatına dönüştür. HİÇBİR İÇERİĞİ DEĞİŞTİRME, sadece yapılandır. Eksik alanları boş string veya boş dizi bırak. Sadece JSON döndür.
+
+TEMEL ŞEMA: {"is_valid_cv":true,"name":"","title":"","location":"","phone":"","email":"","linkedin":"","summary_v1":"","summary_v3":"","experience":[{"id":"exp-0","role":"","company":"","date":"","bullets_v1":[],"bullets_v3":[],"bullets":[]}],"education":[{"id":"edu-0","degree":"","school":"","date":"","details":""}],"skills":[],"additional":[],"customLinks":[{"label":"","url":""}],"warnings":[],"analysis":{"scores":{"overall":0,"skills":0,"experience":0,"education":0},"matches":{"hard_skills":[],"soft_skills":[]},"gaps":[],"additions":[]}}
+
+DİNAMİK BÖLÜMLER: CV'deki TÜM başlıkları tara. Şemada karşılığı olmayan başlıklar (Projeler, Sertifikalar, Aktiviteler, İlgi Alanları, Diller, Referanslar, Kurslar, Ödüller vb.) için: başlığı snake_case'e dönüştür (ş→s,ç→c,ö→o,ü→u,ğ→g,ı→i, boşluk→_, küçük harf) ve JSON kökünde string dizisi olarak ekle. Örnekler: "Projeler"→"projeler", "Sertifikalar"→"sertifikalar", "Aktiviteler / İlgi Alanları"→"aktiviteler". Karmaşık maddeler (proje başlığı+açıklama) için "BAŞLIK — açıklama" formatında tek string kullan. GitHub/portfolio URL'leri customLinks'e ekle.`
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: parseOnly ? PARSE_ONLY_PROMPT : CV_SYSTEM_PROMPT,
+    })
+
+    const privacyReminder = jobDescription
+      ? `\n\n🚫 HATIRLATMA: İlan veren şirketin adı, iç programları veya iç sistem adları CV'nin HİÇBİR ALANINDA geçmeyecek. Özet ve deneyim maddeleri evrensel, transferable bir dille yazılacak.`
+      : ''
+
+    const adaptationInstruction = jobDescription
+      ? `\n\n🎯 UYARLAMA TALİMATI: ADAYIN GERÇEK BİLGİLERİ + İLANIN TERMİNOLOJİSİ = YENİ CV. Ne orijinal CV'yi kopyala ne de ilanı kopyala — ikisinin KESİŞİMİNİ bul. Adayın gerçek deneyimlerini ilanın perspektifinden yeniden anlat. Adayda direkt eşleşme yoksa ama yakın bir beceri varsa, potansiyeli ve hedefi vurgula. Bilgi UYDURMA ama bakış açısını DEĞİŞTİR.`
+      : ''
+    const userText = parseOnly
+      ? `CV:\n${cvText.slice(0, 6000)}`
+      : `${langNote}${privacyReminder}${adaptationInstruction}\n\nCV: ${cvText.slice(0, 8000)}\n\nİlan: ${(jobDescription || '').slice(0, 3000)}`
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: userText }] }],
+      generationConfig: {
+        maxOutputTokens: 8192,
+        temperature: parseOnly ? 0.1 : 0.65,
+        ...(parseOnly ? { responseMimeType: 'application/json' } : {}),
+      },
+    })
+
+    let text = result.response.text()
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim()
+
+    const parsed = JSON.parse(text) as { is_valid_cv?: boolean; error_message?: string } & OptimizedCvData
+
+    if (parsed.is_valid_cv === false) {
+      return res.status(400).json({ error: parsed.error_message })
     }
+
+    if (Array.isArray(parsed.experience)) {
+      parsed.experience = parsed.experience.map((e, i) => ({
+        ...e,
+        id: e.id || `exp-${i}-${Date.now()}`,
+        bullets: e.bullets?.length ? e.bullets : (e.bullets_v1 ?? []),
+      }))
+    }
+    if (Array.isArray(parsed.education)) {
+      parsed.education = parsed.education.map((e, i) => ({
+        ...e,
+        id: e.id || `edu-${i}-${Date.now()}`,
+      }))
+    }
+
+    const clean = cleanMarkdown(parsed) as OptimizedCvData
+    return res.status(200).json(clean)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('CV optimize hatası:', msg)
+    return res.status(500).json({ error: msg })
   }
 }

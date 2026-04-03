@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Clock, Eye, Twitter, Linkedin, Calendar } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
+import { optimizeCloudinaryUrl } from '../lib/cloudinary'
 import { useAppStore } from '../store/useAppStore'
 import { getHaberBySlug, incrementGoruntulenme, haberlerCol, updateDocument, getAll, where } from '../lib/firestore'
 import { YorumBolumu } from '../components/haberler/YorumBolumu'
@@ -69,13 +71,11 @@ export function HaberDetay() {
       .then(h => {
         if (!h || h.durum !== 'yayinda') { setNotFound(true); return }
         setHaber(h)
-        document.title = `${h.baslik} | Mülakat Soruları`
         // Görüntülenme artır
         incrementGoruntulenme(h._id).catch(() => {})
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
-    return () => { document.title = 'Mülakat Soruları' }
   }, [slug])
 
   if (loading) {
@@ -102,8 +102,25 @@ export function HaberDetay() {
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`
   const kategoriColor = KATEGORI_COLOR[haber.kategori] ?? { bg: 'rgba(99,102,241,0.15)', color: '#818cf8' }
 
+  const canonicalUrl = `https://mulakatsorulari.com.tr/haberler/${haber.slug}`
+  const ogImage = haber.medya?.[0]?.url ?? 'https://mulakatsorulari.com.tr/logo.png'
+
   return (
     <div style={{ minHeight: '100vh', paddingTop: 80, paddingBottom: 64 }}>
+      <Helmet>
+        <title>{`${haber.baslik} | Mülakat Soruları`}</title>
+        <meta name="description" content={haber.ozet || haber.baslik} />
+        <meta property="og:title" content={haber.baslik} />
+        <meta property="og:description" content={haber.ozet || haber.baslik} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={haber.baslik} />
+        <meta name="twitter:description" content={haber.ozet || haber.baslik} />
+        <meta name="twitter:image" content={ogImage} />
+        <link rel="canonical" href={canonicalUrl} />
+      </Helmet>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 16px' }}>
         {/* Geri butonu */}
         <button
@@ -156,7 +173,7 @@ export function HaberDetay() {
           <div style={{ marginBottom: 32 }}>
             {haber.medya?.slice(0, 1).map((m, i) => {
               if (m.tip === 'gorsel' || m.tip === 'gif') return (
-                <img key={i} src={m.url} alt={haber.baslik} style={{ width: '100%', maxHeight: 400, objectFit: 'cover', borderRadius: 16, marginBottom: 24 }} />
+                <img key={i} src={optimizeCloudinaryUrl(m.url, 1200)} alt={haber.baslik} style={{ width: '100%', maxHeight: 400, objectFit: 'cover', borderRadius: 16, marginBottom: 24 }} />
               )
               return null
             })}
@@ -182,7 +199,7 @@ export function HaberDetay() {
               {haber.medya.map((m, i) => {
                 if (i === 0 && (m.tip === 'gorsel' || m.tip === 'gif')) return null // ilk görsel zaten yukarıda
                 if (m.tip === 'gorsel' || m.tip === 'gif') {
-                  return <img key={i} src={m.url} alt="" style={{ width: '100%', borderRadius: 12, objectFit: 'cover' }} loading="lazy" />
+                  return <img key={i} src={optimizeCloudinaryUrl(m.url, 800)} alt="" style={{ width: '100%', borderRadius: 12, objectFit: 'cover' }} loading="lazy" />
                 }
                 if (m.tip === 'video-link') {
                   const ytId = m.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&\n?#]+)/)?.[1]

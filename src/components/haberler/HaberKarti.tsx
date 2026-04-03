@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, MessageSquare, Share2, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { optimizeCloudinaryUrl } from '../../lib/cloudinary'
 import { useAppStore } from '../../store/useAppStore'
 import type { HaberDoc } from '../../lib/firestore'
 
@@ -120,7 +121,7 @@ export function HaberKarti({ haber, yorumSayisi = 0 }: HaberKartiProps) {
           {haber.ozet && <p style={{ color: subText, fontSize: 14, margin: '0 0 12px', lineHeight: 1.6 }}>{haber.ozet}</p>}
           {kapakGorsel && (
             <img
-              src={kapakGorsel.url}
+              src={optimizeCloudinaryUrl(kapakGorsel.url, 400)}
               alt={haber.baslik}
               style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 12, marginBottom: 12 }}
               loading="lazy"
@@ -142,7 +143,7 @@ export function HaberKarti({ haber, yorumSayisi = 0 }: HaberKartiProps) {
           )}
           {kapakGorsel && (
             <img
-              src={kapakGorsel.url}
+              src={optimizeCloudinaryUrl(kapakGorsel.url, 400)}
               alt=""
               style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 12, marginBottom: 8 }}
               loading="lazy"

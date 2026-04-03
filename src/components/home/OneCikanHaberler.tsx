@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Newspaper, ArrowRight, Clock, Eye } from 'lucide-react'
+import { optimizeCloudinaryUrl } from '../../lib/cloudinary'
 import { useAppStore } from '../../store/useAppStore'
 import { getAll, haberlerCol, where } from '../../lib/firestore'
 import type { HaberDoc } from '../../lib/firestore'
@@ -131,7 +132,7 @@ export function OneCikanHaberler() {
                 {/* Kapak görseli */}
                 {kapak && (
                   <div style={{ height: 160, overflow: 'hidden' }}>
-                    <img src={kapak.url} alt={haber.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }} loading="lazy" />
+                    <img src={optimizeCloudinaryUrl(kapak.url, 400)} alt={haber.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }} loading="lazy" />
                   </div>
                 )}
 

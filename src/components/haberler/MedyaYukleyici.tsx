@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Image, Video, Link, Trash2, GripVertical, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { optimizeCloudinaryUrl } from '../../lib/cloudinary'
 import type { HaberMedya } from '../../lib/firestore'
 
 const C = {
@@ -258,7 +259,7 @@ export function MedyaYukleyici({ medya, onChange, haberId }: MedyaYukleyiciProps
             >
               <GripVertical size={14} style={{ color: C.t3, flexShrink: 0 }} />
               {(item.tip === 'gorsel' || item.tip === 'gif') ? (
-                <img src={item.url} alt="" style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+                <img src={optimizeCloudinaryUrl(item.url, 400)} alt="" style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
               ) : item.tip === 'video-link' ? (
                 <div style={{ width: 48, height: 36, background: 'rgba(99,102,241,0.15)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Video size={16} style={{ color: '#818cf8' }} />

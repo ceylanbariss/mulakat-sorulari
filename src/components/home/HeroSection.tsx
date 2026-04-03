@@ -68,6 +68,7 @@ export function HeroSection() {
                 <img
                   src="/logo.png"
                   alt="Mülakat Soruları Logo"
+                  fetchPriority="high"
                   style={{
                     width: '100%',
                     height: '100%',

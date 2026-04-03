@@ -1,85 +1,110 @@
 import { create } from 'zustand'
-import type { CvData, AtsAnalysis, CvTemplateId, PhotoShape } from '../types/cv'
-
-export const EMPTY_CV: CvData = {
-  kisiselBilgiler: { ad: '', unvan: '', email: '', telefon: '', konum: '', linkedin: '', github: '', website: '', ozet: '' },
-  deneyim: [],
-  egitim: [],
-  beceriler: { teknik: [], diger: [] },
-  diller: [],
-  sertifikalar: [],
-}
+import type { OptimizedCvData, TemplateId, NarrativeVoice, PhotoShapeClass } from '../types/cv'
 
 interface CvState {
   // CV content
-  cvText: string
+  originalCV: string
   cvFileName: string
   jobDescription: string
-  isProcessing: boolean
-  processingError: string
-  cvData: CvData | null
-  atsAnalysis: AtsAnalysis | null
-  savedSessionId: string | null
-  isSaving: boolean
+  optimizedData: OptimizedCvData | null
+  cvLanguage: 'tr' | 'en'
+  isLoading: boolean
+  error: string | null
 
   // Design settings
-  template: CvTemplateId
-  accentColor: string
-  voice: 'first' | 'third'
-  textAlign: 'left' | 'center' | 'right' | 'justify'
-  photoDataUrl: string | null
-  photoShape: PhotoShape
+  activeTemplate: TemplateId
+  themeColor: string
+  narrativeVoice: NarrativeVoice
+  textAlign: string
+  profileImage: string | null
+  photoShape: PhotoShapeClass
+  photoSize: number
+  photoObjectX: number
+  photoObjectY: number
+  photoScale: number
+  photoPosX: number | null
+  photoPosY: number | null
+  showIcons: boolean
+  showHighlights: boolean
+  sectionsOrder: string[]
+  customHeadings: Record<string, string>
+  termsAccepted: boolean
 
   // Actions
-  setCvText: (text: string, fileName: string) => void
+  setOriginalCV: (text: string, fileName?: string) => void
   setJobDescription: (text: string) => void
-  setCvData: (data: CvData) => void
-  updateCvData: (updater: (prev: CvData) => CvData) => void
-  setAtsAnalysis: (analysis: AtsAnalysis | null) => void
-  setProcessing: (v: boolean, error?: string) => void
-  setSaved: (id: string | null) => void
-  setSaving: (v: boolean) => void
-  setTemplate: (t: CvTemplateId) => void
-  setAccentColor: (c: string) => void
-  setVoice: (v: 'first' | 'third') => void
-  setTextAlign: (a: 'left' | 'center' | 'right' | 'justify') => void
-  setPhoto: (dataUrl: string | null, shape: PhotoShape) => void
+  setOptimizedData: (data: OptimizedCvData | null) => void
+  updateOptimizedData: (updater: (prev: OptimizedCvData) => OptimizedCvData) => void
+  setCvLanguage: (lang: 'tr' | 'en') => void
+  setLoading: (v: boolean) => void
+  setError: (err: string | null) => void
+  setActiveTemplate: (t: TemplateId) => void
+  setThemeColor: (c: string) => void
+  setNarrativeVoice: (v: NarrativeVoice) => void
+  setTextAlign: (a: string) => void
+  setProfileImage: (img: string | null) => void
+  setPhotoShape: (s: PhotoShapeClass) => void
+  setPhotoTransform: (size: number, x: number, y: number, scale: number) => void
+  setPhotoPosition: (x: number, y: number) => void
+  setShowIcons: (v: boolean) => void
+  setShowHighlights: (v: boolean) => void
+  setSectionsOrder: (order: string[]) => void
+  setCustomHeadings: (h: Record<string, string>) => void
+  setTermsAccepted: (v: boolean) => void
   resetSession: () => void
 }
 
 const initialState = {
-  cvText: '',
+  originalCV: '',
   cvFileName: '',
   jobDescription: '',
-  isProcessing: false,
-  processingError: '',
-  cvData: null,
-  atsAnalysis: null,
-  savedSessionId: null,
-  isSaving: false,
-  template: 'modern' as CvTemplateId,
-  accentColor: '#6366f1',
-  voice: 'first' as const,
-  textAlign: 'left' as const,
-  photoDataUrl: null,
-  photoShape: 'circle' as PhotoShape,
+  optimizedData: null as OptimizedCvData | null,
+  cvLanguage: 'tr' as const,
+  isLoading: false,
+  error: null as string | null,
+  activeTemplate: 'modern' as TemplateId,
+  themeColor: '#000000',
+  narrativeVoice: 'first' as NarrativeVoice,
+  textAlign: 'text-left',
+  profileImage: null as string | null,
+  photoShape: 'rounded-lg' as PhotoShapeClass,
+  photoSize: 88,
+  photoObjectX: 50,
+  photoObjectY: 50,
+  photoScale: 1,
+  photoPosX: null as null | number,
+  photoPosY: null as null | number,
+  showIcons: true,
+  showHighlights: false,
+  sectionsOrder: ['summary', 'experience', 'education', 'skills', 'additional'],
+  customHeadings: {} as Record<string, string>,
+  termsAccepted: false,
 }
 
 export const useCvStore = create<CvState>((set) => ({
   ...initialState,
 
-  setCvText: (text, fileName) => set({ cvText: text, cvFileName: fileName }),
+  setOriginalCV: (text, fileName = '') => set({ originalCV: text, cvFileName: fileName }),
   setJobDescription: (text) => set({ jobDescription: text }),
-  setCvData: (data) => set({ cvData: data }),
-  updateCvData: (updater) => set((state) => ({ cvData: state.cvData ? updater(state.cvData) : state.cvData })),
-  setAtsAnalysis: (analysis) => set({ atsAnalysis: analysis }),
-  setProcessing: (v, error = '') => set({ isProcessing: v, processingError: error }),
-  setSaved: (id) => set({ savedSessionId: id }),
-  setSaving: (v) => set({ isSaving: v }),
-  setTemplate: (t) => set({ template: t }),
-  setAccentColor: (c) => set({ accentColor: c }),
-  setVoice: (v) => set({ voice: v }),
+  setOptimizedData: (data) => set({ optimizedData: data }),
+  updateOptimizedData: (updater) => set((s) => ({
+    optimizedData: s.optimizedData ? updater(s.optimizedData) : null,
+  })),
+  setCvLanguage: (lang) => set({ cvLanguage: lang }),
+  setLoading: (v) => set({ isLoading: v }),
+  setError: (err) => set({ error: err }),
+  setActiveTemplate: (t) => set({ activeTemplate: t }),
+  setThemeColor: (c) => set({ themeColor: c }),
+  setNarrativeVoice: (v) => set({ narrativeVoice: v }),
   setTextAlign: (a) => set({ textAlign: a }),
-  setPhoto: (dataUrl, shape) => set({ photoDataUrl: dataUrl, photoShape: shape }),
+  setProfileImage: (img) => set({ profileImage: img }),
+  setPhotoShape: (s) => set({ photoShape: s }),
+  setPhotoTransform: (size, x, y, scale) => set({ photoSize: size, photoObjectX: x, photoObjectY: y, photoScale: scale }),
+  setPhotoPosition: (x, y) => set({ photoPosX: x, photoPosY: y }),
+  setShowIcons: (v) => set({ showIcons: v }),
+  setShowHighlights: (v) => set({ showHighlights: v }),
+  setSectionsOrder: (order) => set({ sectionsOrder: order }),
+  setCustomHeadings: (h) => set({ customHeadings: h }),
+  setTermsAccepted: (v) => set({ termsAccepted: v }),
   resetSession: () => set({ ...initialState }),
 }))

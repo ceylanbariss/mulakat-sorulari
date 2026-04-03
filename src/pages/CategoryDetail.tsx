@@ -2,6 +2,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { ChevronRight, CreditCard, ListChecks, PenLine, ArrowRight, FileText, Layers } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { useCategories } from '../hooks/useCategories'
 import { useQuestions } from '../hooks/useQuestions'
@@ -178,8 +179,38 @@ export function CategoryDetail() {
     background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
   }
 
+  const canonicalUrl = `https://mulakatsorulari.com.tr/sorular/${kategori}`
+  const metaTitle = `${category.label} Mülakat Soruları | Mulakatsorulari.com.tr`
+  const metaDesc = category.description
+    ? `${category.description} Flash Card, Quiz ve Yazılı Cevap modlarıyla çalış.`
+    : `${category.label} kategorisinde mülakat sorularını Flash Card, Quiz ve Yazılı Cevap modlarıyla çalış.`
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: questions.slice(0, 10).map(q => ({
+      '@type': 'Question',
+      name: q.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: q.answer,
+      },
+    })),
+  }
+
   return (
     <div className="min-h-screen pb-16" style={{ paddingTop: '120px' }}>
+      <Helmet>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDesc} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:url" content={canonicalUrl} />
+        <link rel="canonical" href={canonicalUrl} />
+        {questions.length > 0 && (
+          <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+        )}
+      </Helmet>
       <PageWrapper>
         {/* Breadcrumb */}
         <motion.nav

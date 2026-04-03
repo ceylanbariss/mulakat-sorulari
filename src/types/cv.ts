@@ -1,106 +1,85 @@
-// ─── Core CV Data ──────────────────────────────────────────────────────────────
+// ─── CV Module Types (Hazircv / Resumatch v2 schema) ─────────────────────────
 
-export interface KisiselBilgiler {
-  ad: string
-  unvan: string
+export interface CvWarning {
+  type: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  action: 'remove' | 'improve' | 'add'
+}
+
+export interface CustomLink {
+  label: string
+  url: string
+}
+
+export interface OptimizedCvData {
+  name: string
+  title: string
+  location: string
+  phone: string
   email: string
-  telefon: string
-  konum: string
-  linkedin?: string
-  github?: string
-  website?: string
-  ozet: string
+  linkedin: string
+  summary_v1: string    // 1. tekil şahıs (Ben)
+  summary_v3: string    // 3. tekil şahıs (O)
+  experience: {
+    id: string
+    role: string
+    company: string
+    date: string
+    bullets_v1: string[]
+    bullets_v3: string[]
+    bullets: string[]
+  }[]
+  education: {
+    id: string
+    degree: string
+    school: string
+    date: string
+    details: string
+  }[]
+  skills: string[]
+  additional: string[]
+  customLinks?: CustomLink[]
+  warnings?: CvWarning[]
+  analysis: AtsAnalysis
+  [key: string]: unknown  // custom_ bölümler için
 }
-
-export interface Deneyim {
-  id: string
-  sirket: string
-  pozisyon: string
-  baslangic: string
-  bitis: string
-  halen: boolean
-  aciklama: string[]
-}
-
-export interface Egitim {
-  id: string
-  okul: string
-  derece: string
-  alan: string
-  baslangic: string
-  bitis: string
-  gpa?: string
-}
-
-export interface Beceriler {
-  teknik: string[]
-  diger: string[]
-}
-
-export interface Dil {
-  id: string
-  dil: string
-  seviye: string
-}
-
-export interface Sertifika {
-  id: string
-  ad: string
-  kurum: string
-  tarih: string
-  url?: string
-}
-
-export interface CvData {
-  kisiselBilgiler: KisiselBilgiler
-  deneyim: Deneyim[]
-  egitim: Egitim[]
-  beceriler: Beceriler
-  diller?: Dil[]
-  sertifikalar?: Sertifika[]
-}
-
-// ─── ATS Analysis ──────────────────────────────────────────────────────────────
 
 export interface AtsAnalysis {
-  genelSkor: number
-  deneyimSkor: number
-  egitimSkor: number
-  beceriSkor: number
-  eslesen: {
-    teknikBeceriler: string[]
-    yazilimlar: string[]
-    anahterKelimeler: string[]
+  scores: {
+    overall: number
+    skills: number
+    experience: number
+    education: number
   }
-  eksik: string[]
-  oneriler: string[]
+  matches: {
+    hard_skills: string[]
+    soft_skills: string[]
+  }
+  gaps: string[]
+  additions: string[]
+  gap_mapping?: Record<string, string>
 }
 
-// ─── API ───────────────────────────────────────────────────────────────────────
-
-export type CvTemplateId = 'modern' | 'klasik' | 'profesyonel' | 'zarif' | 'guclu'
-export type PhotoShape = 'square' | 'rounded' | 'circle'
+export type TemplateId = 'modern' | 'classic' | 'professional' | 'elegant' | 'bold' | 'mevcut'
+export type NarrativeVoice = 'first' | 'third'
+export type PhotoShapeClass = 'rounded-none' | 'rounded-lg' | 'rounded-full'
 
 export interface CvOptimizeRequest {
   cvText: string
   jobDescription?: string
   language: 'tr' | 'en'
-  voice?: 'first' | 'third'
 }
 
-export interface CvOptimizeResponse {
-  cvData: CvData
-  atsAnalysis?: AtsAnalysis | null
-}
+// ─── Legacy types kept for Firebase/Firestore compatibility ──────────────────
 
-// ─── Firebase ──────────────────────────────────────────────────────────────────
+export type CvTemplateId = TemplateId
+export type PhotoShape = 'square' | 'rounded' | 'circle'
 
 export interface CvSessionData {
   userId: string
-  cvData: CvData
-  atsAnalysis?: AtsAnalysis
+  optimizedData: OptimizedCvData
   jobDescription?: string
   orijinalDosyaAdi?: string
-  ad?: string
   dil: 'tr' | 'en'
 }

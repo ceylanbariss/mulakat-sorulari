@@ -1,5 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { Analytics } from '@vercel/analytics/react'
+import { HelmetProvider } from 'react-helmet-async'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Toaster } from 'sonner'
@@ -7,7 +8,7 @@ import { AuthProvider } from './contexts/AuthProvider'
 import { Navbar } from './components/layout/Navbar'
 import { Footer } from './components/layout/Footer'
 import { AdminGuard } from './components/admin/AdminGuard'
-import AnoAI from './components/ui/animated-shader-background'
+const AnoAI = lazy(() => import('./components/ui/animated-shader-background'))
 import { Home } from './pages/Home'
 import { Questions } from './pages/Questions'
 import { CategoryDetail } from './pages/CategoryDetail'
@@ -106,7 +107,7 @@ function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative overflow-hidden">
       {/* Global Aurora Background — Auth sayfası hariç (kendi AnoAI'ı var) */}
-      {!isAuthRoute && <AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" />}
+      {!isAuthRoute && <Suspense fallback={null}><AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" /></Suspense>}
       <div className="relative z-10 flex flex-col flex-1">
         {!isTraining && <Navbar />}
         <main className="flex-1">
@@ -132,11 +133,13 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppLayout />
-      </AuthProvider>
-      <Analytics />
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppLayout />
+        </AuthProvider>
+        <Analytics />
+      </BrowserRouter>
+    </HelmetProvider>
   )
 }

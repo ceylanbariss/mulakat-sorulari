@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Newspaper, ChevronDown } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
 import { useAppStore } from '../store/useAppStore'
 import { getHaberler, haberlerCol, updateDocument, getAll, where } from '../lib/firestore'
 import { HaberKarti } from '../components/haberler/HaberKarti'
@@ -82,6 +83,14 @@ export function Haberler() {
 
   return (
     <div style={{ minHeight: '100vh', paddingTop: 80, paddingBottom: 64 }}>
+      <Helmet>
+        <title>Haberler & Duyurular | Mülakat Soruları</title>
+        <meta name="description" content="Yazılım mülakat ipuçları, sektör haberleri, platform güncellemeleri ve başarı hikâyeleri. Kariyerine değer katan içerikler mulakatsorulari.com.tr'de." />
+        <meta property="og:title" content="Haberler & Duyurular | Mülakat Soruları" />
+        <meta property="og:description" content="Yazılım mülakat ipuçları, sektör haberleri, platform güncellemeleri ve başarı hikâyeleri." />
+        <meta property="og:url" content="https://mulakatsorulari.com.tr/haberler" />
+        <link rel="canonical" href="https://mulakatsorulari.com.tr/haberler" />
+      </Helmet>
       <div style={{ maxWidth: 672, margin: '0 auto', padding: '0 16px' }}>
         {/* Sayfa başlığı */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32, textAlign: 'center' }}>
