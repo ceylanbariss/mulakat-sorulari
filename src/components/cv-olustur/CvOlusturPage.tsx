@@ -1,8 +1,4 @@
 import { useRef, useState } from 'react'
-import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, MeasuringStrategy } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, X, AlertCircle, ChevronDown, ChevronUp, Download, RotateCcw, ArrowLeft, PenLine, FileEdit, Sparkles } from 'lucide-react'
@@ -28,49 +24,6 @@ const PHOTO_SHAPES: { value: PhotoShapeClass; label: string }[] = [
   { value: 'rounded-lg', label: 'Yuvarlatılmış' },
   { value: 'rounded-full', label: 'Daire' },
 ]
-
-// ── Section ID → Türkçe başlık ────────────────────────────────────────────────
-const SECTION_LABELS: Record<string, string> = {
-  summary: 'Kişisel Özet', experience: 'İş Deneyimi', education: 'Eğitim',
-  skills: 'Beceriler', additional: 'Ek Bilgiler',
-  aktif_projeler: 'Aktif Projeler', projeler: 'Projeler', sertifikalar: 'Sertifikalar',
-  aktiviteler: 'Aktiviteler', ilgi_alanlari: 'İlgi Alanları',
-  diller: 'Diller', referanslar: 'Referanslar',
-  gonullu_calismalar: 'Gönüllü Çalışmalar', kurslar: 'Kurslar', oduller: 'Ödüller',
-  yayinlar: 'Yayınlar',
-}
-const getSectionLabel = (id: string) =>
-  SECTION_LABELS[id] || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-
-// ── Draggable section item ─────────────────────────────────────────────────────
-function SortableSection({ id, label, d, muted, border }: { id: string; label: string; d: boolean; muted: string; border: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.45 : 1,
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '5px 8px', borderRadius: 7,
-        background: isDragging ? (d ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.08)') : (d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
-        border: `1px solid ${isDragging ? 'rgba(99,102,241,0.4)' : border}`,
-        cursor: 'grab', userSelect: 'none', touchAction: 'none',
-        fontSize: 11, color: isDragging ? '#6366f1' : muted, fontWeight: 500,
-      }}
-      {...attributes}
-      {...listeners}
-    >
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ opacity: 0.5, flexShrink: 0 }}>
-        <rect x="0" y="1" width="10" height="1.5" rx="0.75" />
-        <rect x="0" y="4.25" width="10" height="1.5" rx="0.75" />
-        <rect x="0" y="7.5" width="10" height="1.5" rx="0.75" />
-      </svg>
-      {label}
-    </div>
-  )
-}
 
 // ── Score color ────────────────────────────────────────────────────────────────
 function scoreColor(n: number) {
@@ -247,20 +200,6 @@ export function CvOlusturPage() {
   const [downloading, setDownloading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
-  // ── DnD section reorder ───────────────────────────────────────────────────────
-  const dndSensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 3 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } }),
-  )
-  function handleSectionDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (over && active.id !== over.id) {
-      const oldIdx = sectionsOrder.indexOf(String(active.id))
-      const newIdx = sectionsOrder.indexOf(String(over.id))
-      if (oldIdx !== -1 && newIdx !== -1) setSectionsOrder(arrayMove(sectionsOrder, oldIdx, newIdx))
-    }
-  }
-
   // ── Undo toast ────────────────────────────────────────────────────────────────
   const [undoSnapshot, setUndoSnapshot] = useState<{ data: OptimizedCvData; label: string } | null>(null)
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -289,6 +228,10 @@ export function CvOlusturPage() {
   const [addItemSection, setAddItemSection] = useState('experience')
   const [addItemInput, setAddItemInput] = useState('')
   const [isAddingItem, setIsAddingItem] = useState(false)
+
+  // Feature 3: Summary Optimization
+  const [jdForSummary, setJdForSummary] = useState('')
+  const [isOptimizingSummary, setIsOptimizingSummary] = useState(false)
 
   // ── Item add / delete ─────────────────────────────────────────────────────────
   function addExperience() {
@@ -548,6 +491,69 @@ KURALLAR:
       setError('Öğe eklenirken hata oluştu: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setIsAddingItem(false)
+    }
+  }
+
+  // ── Feature 3: Summary Optimization ─────────────────────────────────────────
+  const SUMMARY_SYSTEM_INSTRUCTION = `You are a CV editor, not a writer. Your job is to EDIT the existing summary, not rewrite it.
+
+Step 1: Take Input 1 word by word. Keep every proper noun, institution name, year, role title, and tool name exactly as written.
+Step 2: Identify keywords in Input 2 that are missing from Input 1.
+Step 3: Weave those missing keywords into the existing text by replacing weak phrases or adding 1-2 sentences.
+Step 4: The output MUST contain every specific detail from Input 1 that is professional or personal:
+- All institution/company/organization names
+- All role titles and positions
+- All tools, technologies, languages mentioned
+- All personal motivations and background stories that sound professional
+- All years, durations, academic program names
+Do NOT remove any of these even if they seem unrelated to Input 2.
+Only remove filler phrases like 'hedefliyorum', 'amaçlamaktayım' when replacing with stronger job-aligned versions.
+Step 5: Never mention company name or program title from Input 2.
+
+Output: The edited summary only, 4-5 sentences, same language as Input 1.`
+
+  async function handleOptimizeSummary() {
+    if (!jdForSummary.trim() || !optimizedData) return
+    setIsOptimizingSummary(true)
+    const currentSummary = narrativeVoice === 'first'
+      ? optimizedData.summary_v1
+      : optimizedData.summary_v3
+
+    try {
+      let text = ''
+
+      if (import.meta.env.DEV) {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+        if (!apiKey) throw new Error('VITE_GEMINI_API_KEY tanımlı değil')
+        const { GoogleGenerativeAI } = await import('@google/generative-ai')
+        const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
+          model: 'gemini-2.5-flash',
+          systemInstruction: SUMMARY_SYSTEM_INSTRUCTION,
+        })
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: `Input 1 - Current summary:\n${currentSummary?.slice(0, 1500) ?? ''}\n\nInput 2 - Job description:\n${jdForSummary.slice(0, 3000)}\n\nIMPORTANT: Preserve every personal detail from Input 1 exactly as stated.\nOnly reframe the emphasis and ordering to align with Input 2.\nDo not generalize or remove specific facts.` }] }],
+          generationConfig: { maxOutputTokens: 512, temperature: 0.3 },
+        })
+        text = result.response.text().replace(/\*\*/g, '').trim()
+      } else {
+        const res = await fetch('/api/cv-summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentSummary, jobDescription: jdForSummary }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Sunucu hatası')
+        text = data.text || ''
+      }
+
+      if (text) {
+        updateOptimizedData(prev => ({ ...prev, summary_v1: text, summary_v3: text }))
+        setJdForSummary('')
+      }
+    } catch (err) {
+      setError('Özet optimize edilirken hata oluştu: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setIsOptimizingSummary(false)
     }
   }
 
@@ -1859,19 +1865,39 @@ KURALLAR:
               </div>
             </div>
 
-            {/* Bölüm Sırası */}
-            {activeTemplate !== 'mevcut' && (
+            {/* Kişisel Özet İyileştir */}
+            {optimizedData && (
               <div>
-                <p style={{ fontSize: 10, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 8 }}>Bölüm Sırası</p>
-                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd} measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}>
-                  <SortableContext items={sectionsOrder} strategy={verticalListSortingStrategy}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {sectionsOrder.map(id => (
-                        <SortableSection key={id} id={id} label={getSectionLabel(id)} d={d} muted={muted} border={border} />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+                <p style={{ fontSize: 10, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 4 }}>Kişisel Özet İyileştir</p>
+                <p style={{ fontSize: 10, color: muted, marginBottom: 8, lineHeight: 1.5 }}>İş ilanını yapıştır — AI özetini ATS uyumlu ve ilana odaklı şekilde yeniden yazar.</p>
+                <textarea
+                  value={jdForSummary}
+                  onChange={e => setJdForSummary(e.target.value)}
+                  placeholder="İş ilanını buraya yapıştırın..."
+                  rows={6}
+                  style={{
+                    width: '100%', boxSizing: 'border-box' as const,
+                    padding: '8px 10px', borderRadius: 8, resize: 'vertical' as const,
+                    fontSize: 11, lineHeight: 1.5, color: text,
+                    background: inputBg, border: `1px solid ${inputBdr}`,
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+                <button
+                  onClick={handleOptimizeSummary}
+                  disabled={isOptimizingSummary || !jdForSummary.trim()}
+                  style={{
+                    marginTop: 8, width: '100%', padding: '8px 0',
+                    borderRadius: 8, border: 'none', cursor: isOptimizingSummary || !jdForSummary.trim() ? 'not-allowed' : 'pointer',
+                    background: isOptimizingSummary || !jdForSummary.trim() ? (d ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)') : '#6366f1',
+                    color: isOptimizingSummary || !jdForSummary.trim() ? (d ? 'rgba(255,255,255,0.4)' : 'rgba(99,102,241,0.5)') : '#fff',
+                    fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Sparkles size={12} />
+                  {isOptimizingSummary ? 'Optimize ediliyor...' : 'İlana Göre Optimize Et'}
+                </button>
               </div>
             )}
 
