@@ -36,6 +36,8 @@ export interface OptimizedCvData {
     school: string
     date: string
     details: string
+    details_v1?: string   // 1. tekil şahıs (Ben)
+    details_v3?: string   // 3. tekil şahıs (O)
   }[]
   skills: string[]
   additional: string[]

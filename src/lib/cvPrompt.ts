@@ -144,6 +144,9 @@ Burada ne oldu: "SAP geçişi" → "ERP dönüşüm projesi" (aynı şey, farkl�
 - Eğitim bilgilerini EKSİKSİZ aktar.
 - Sertifikalar, Kurslar, Bootcamp'ler KESİNLİKLE "education" dizisine ekle ("additional"a DEĞİL).
 - İlanla ilgili ders, proje veya tez varsa "details" alanında vurgula.
+- Eğer details boş değilse, mutlaka "details_v1" (1. şahıs: "aldım", "yaptım") ve "details_v3" (3. şahıs: "almıştır", "yapmıştır") versiyonlarını da üret.
+  Örn details_v1: "Makine Öğrenimi ve Veri Analizi derslerini aldım; bitirme projemde öneri sistemi geliştirdim."
+  Örn details_v3: "Makine Öğrenimi ve Veri Analizi derslerini almıştır; bitirme projesinde öneri sistemi geliştirmiştir."
 
 🛠️ YETENEKLER (skills):
 ⚠️ KRİTİK: Sadece orijinal CV'deki yetenekleri listeleme. İlandaki terminolojiyle eşleştir ve yeniden adlandır.
@@ -164,45 +167,56 @@ Burada ne oldu: "SAP geçişi" → "ERP dönüşüm projesi" (aynı şey, farkl�
 ⚠️ ADIM 4: UYARILAR VE ÖNERİLER (warnings)
 ────────────────────────────────────────────────────
 
-"warnings" dizisine şu kontrollerin sonuçlarını ekle. Her uyarı bir obje:
+🚨 KRİTİK META-KURAL — ÖNCE OKU:
+Uyarılar SADECE senin ürettiğin final JSON çıktısına göre değerlendirilir — orijinal CV metnine göre DEĞİL.
+Eğer bir sorunu ADIM 3'te zaten düzelttiysen (güçlü fiil yazdıysan, metrik eklediysen, özet ürettiysen vb.), o konuda uyarı EKLEME.
+Aynı "type" değeriyle birden fazla uyarı üretme — her type için maksimum 1 uyarı.
+
+"warnings" dizisine aşağıdaki kontrollerin sonuçlarını ekle. Her uyarı:
 {"type": "...", "severity": "high|medium|low", "message": "...", "action": "remove|improve|add"}
 
-KONTROL LİSTESİ:
+KONTROL LİSTESİ (tüm kontroller final çıktıya göre yapılır):
 
-1. ATS UYUMSUZ ÖĞELER:
-   - CV'de tablo, grafik, infografik veya karmaşık düzen referansları varsa:
-     {"type": "ats_format", "severity": "high", "message": "CV'nizde tablo/grafik tespit edildi. ATS sistemleri bunları okuyamaz, düz metin formatı önerilir.", "action": "remove"}
+1. ATS UYUMSUZ FORMAT:
+   - YALNIZCA orijinal CV metninde açık Markdown tablo sözdizimi (|---|---|), yan yana sütun düzeni veya açıkça infografik referansı varsa ateşle:
+     {"type": "ats_format", "severity": "high", "message": "CV'nizde tablo/sütunlu düzen tespit edildi. ATS sistemleri bunları okuyamaz; düz metin formatına geçmenizi öneririz.", "action": "remove"}
+   - Şüphe durumunda bu uyarıyı VERME — yanlış pozitif, yanlış negatiften daha zararlıdır.
 
 2. PROFESYONELLİK KONTROLÜ:
-   - Hobi/ilgi alanı profesyonel değilse (örn: "Netflix izlemek", "Oyun oynamak", "Uyumak"):
-     {"type": "unprofessional_hobby", "severity": "medium", "message": "'{hobi_adı}' ilgi alanı profesyonel bir CV için uygun değil. Kaldırmanızı öneriyoruz.", "action": "remove"}
-   - Profesyonel hobiler (spor, gönüllülük, okuma, müzik aleti vb.) sorun değil, uyarma.
+   - Final "additional" dizisinde veya dinamik bölümlerde "Netflix izlemek", "oyun oynamak", "uyumak", "yemek yemek" gibi açıkça profesyonellik dışı hobiler VARSA:
+     {"type": "unprofessional_hobby", "severity": "medium", "message": "'{hobi_adı}' ilgi alanı profesyonel CV için uygun değil. Kaldırmanızı öneririz.", "action": "remove"}
+   - Spor, müzik, satranç, gönüllülük, okuma, seyahat gibi nötr veya pozitif hobiler için BU UYARIYI VERME.
 
-3. ÖZET UZUNLUĞU:
-   - Özet 2 cümleden kısaysa:
+3. ÖZET UZUNLUĞU (final summary_v1 cümle sayısına göre):
+   - summary_v1 içindeki cümle sayısı (nokta/ünlem/soru işareti) 2'den AZSA:
      {"type": "summary_short", "severity": "medium", "message": "Kişisel özetiniz çok kısa. 3-4 cümlelik, anahtar kelime zengin bir özet ATS skorunuzu artırır.", "action": "improve"}
-   - Özet 6 cümleden uzunsa:
-     {"type": "summary_long", "severity": "low", "message": "Kişisel özetiniz uzun. 3-4 cümleye kısaltmak okunabilirliği artırır.", "action": "improve"}
+   - summary_v1 içindeki cümle sayısı 6'dan FAZLAYSA:
+     {"type": "summary_long", "severity": "low", "message": "Kişisel özetiniz çok uzun. 3-4 cümleye kısaltmak okunabilirliği artırır.", "action": "improve"}
+   - Kendin 3-4 cümle özet ürettiysen bu iki uyarıyı KESİNLİKLE EKLEME.
 
-4. METRİK EKSİKLİĞİ:
-   - Deneyim maddelerinin çoğunluğunda sayısal metrik yoksa:
-     {"type": "no_metrics", "severity": "medium", "message": "Deneyim maddelerinizde sayısal sonuçlar (%, adet, süre) eksik. Metrikler eklenmesi ATS skorunuzu ve etkinizi artırır.", "action": "improve"}
+4. METRİK EKSİKLİĞİ (final bullets_v1'e göre):
+   - Tüm deneyim girişlerindeki bullets_v1 toplamı 6'dan FAZLAYSA VE içlerinde rakam/yüzde/süre içeren madde oranı %20'nin altındaysa:
+     {"type": "no_metrics", "severity": "medium", "message": "Deneyim maddelerinizde ölçülebilir sonuçlar (rakam, %, süre) oldukça az. Sayısal kanıtlar hem ATS skorunu hem de işveren etkisini artırır.", "action": "improve"}
+   - Optimizasyon sırasında metrik eklediysen veya toplam bullet 6 veya daha azsa BU UYARIYI EKLEME.
 
-5. CV UZUNLUĞU:
-   - Toplam deneyim yılı 5'ten azsa (yeni mezun / junior) ve CV içeriği tahminen 1 sayfayı aşıyorsa:
-     {"type": "too_long", "severity": "low", "message": "Yeni mezun / junior profiller için CV'nin 1 sayfada kalması önerilir. Daha az deneyimli bölümleri kısaltmayı düşünün.", "action": "improve"}
+5. CV UZUNLUĞU (final experience ve eğitime göre):
+   - Tüm deneyim girişlerindeki toplam bullets_v1 maddesi 18'den FAZLAYSA VE kariyer süresi 5 yıldan AZSA (education tarihlerine göre tahmin et):
+     {"type": "too_long", "severity": "low", "message": "Genç profiller için CV'nin 1 sayfada kalması önerilir. Daha az kritik deneyim maddelerini kısaltmayı düşünün.", "action": "improve"}
 
-6. EKSİK BÖLÜMLER:
-   - CV'de özet (summary) yoksa veya çok zayıfsa:
+6. EKSİK BÖLÜMLER (final çıktı alanlarına göre):
+   - final summary_v1 boş veya 10 kelimeden kısaysa:
      {"type": "missing_summary", "severity": "high", "message": "CV'nizde kişisel özet bölümü eksik veya çok zayıf. İK uzmanlarının %80'i önce özete bakar.", "action": "add"}
-   - CV'de skills bölümü yoksa veya çok azsa (3'ten az):
-     {"type": "missing_skills", "severity": "high", "message": "Yetenek listeniz çok az. İlandaki anahtar kelimeleri skills bölümüne ekleyin.", "action": "add"}
-   - LinkedIn yoksa:
+   - final skills dizisi 3'ten az öğe içeriyorsa:
+     {"type": "missing_skills", "severity": "high", "message": "Yetenek listeniz çok kısa. İş ilanındaki anahtar kelimeleri beceriler bölümüne ekleyin.", "action": "add"}
+   - final "linkedin" alanı boş string veya eksikse:
      {"type": "missing_linkedin", "severity": "medium", "message": "LinkedIn profil linkiniz eksik. İK uzmanlarının %87'si adayların LinkedIn profilini kontrol eder.", "action": "add"}
+   - final "phone" VE "email" alanlarının ikisi de boş veya eksikse:
+     {"type": "missing_contact", "severity": "high", "message": "CV'nizde iletişim bilgisi (telefon veya e-posta) eksik. İşveren sizi bulamayabilir.", "action": "add"}
 
-7. ZAYIF FİİL KULLANIMI:
-   - Deneyim maddelerinde "Yaptım", "Çalıştım", "İlgilendim" gibi zayıf fiiller çoksa:
-     {"type": "weak_verbs", "severity": "medium", "message": "Deneyim maddelerinizde zayıf eylem fiilleri tespit edildi. 'Yönettim', 'Geliştirdim', 'Optimize ettim' gibi güçlü fiiller kullanın.", "action": "improve"}
+7. ZAYIF FİİL KULLANIMI (final bullets_v1'e göre):
+   - bullets_v1 maddelerinin %40'ından fazlası hâlâ "yaptım", "çalıştım", "ilgilendim", "yer aldım", "bilgi edindim", "gözlemledim", "görev aldım" gibi zayıf fiillerle bitiyorsa:
+     {"type": "weak_verbs", "severity": "medium", "message": "Deneyim maddelerinizde zayıf eylem fiilleri var. 'Yönettim', 'Geliştirdim', 'Optimize ettim', 'Tasarladım' gibi güçlü fiiller daha etkili izlenim yaratır.", "action": "improve"}
+   - Maddelerin büyük çoğunluğunu güçlü fiillerle kendin yazdıysan BU UYARIYI EKLEME.
 
 ────────────────────────────────────────────────────
 📊 ADIM 5: ATS ANALİZİ
@@ -252,7 +266,7 @@ KONTROL LİSTESİ:
     "bullets_v3": ["Güçlü fiille başlayan, ilana uyarlanmış madde — şirket adı YOK (O dili)"],
     "bullets": []
   }],
-  "education": [{"id": "edu-0", "degree": "Bölüm", "school": "Okul", "date": "Tarih", "details": "Varsa ilgili detay"}],
+  "education": [{"id": "edu-0", "degree": "Bölüm", "school": "Okul", "date": "Tarih", "details": "Varsa ilgili detay", "details_v1": "Varsa 1. şahıs detay", "details_v3": "Varsa 3. şahıs detay"}],
   "skills": ["İlana öncelikli beceri", "CV'deki beceri", "Eşleşen beceri"],
   "additional": ["İngilizce (C1)", "B Sınıfı Ehliyet"],
   "analysis": {
@@ -268,12 +282,27 @@ KONTROL LİSTESİ:
     {"type": "warning_type", "severity": "high", "message": "Açıklama", "action": "remove"}
   ],
   "aktif_projeler": [
-    {"title": "mulakatsorulari.com.tr", "subtitle": "Kişisel Proje / Claude Code-Antigravity", "date": "Devam Ediyor", "details": ["Kullanıcıların işe alım süreçlerine hazırlanmasına yönelik platform", "Tüm yazılım geliştirme süreçleri tarafımca yönetilmektedir"]}
+    {"title": "mulakatsorulari.com.tr", "subtitle": "Kişisel Proje / Claude Code-Antigravity", "date": "Devam Ediyor",
+     "details": ["1. şahıs madde (varsayılan)"],
+     "details_v1": ["Platformu tek başıma tasarlayıp geliştirdim"],
+     "details_v3": ["Platformu tek başına tasarlayıp geliştirmiştir"]}
   ],
+  "gonullu_calismalar_v1": ["1. şahıs gönüllü çalışma maddesi"],
+  "gonullu_calismalar_v3": ["3. şahıs gönüllü çalışma maddesi"],
   "gonullu_calismalar": ["Gönüllü çalışma açıklaması — detay"]
 }
 
 DİNAMİK BÖLÜM NOTU: Yukarıdaki aktif_projeler, gonullu_calismalar SADECE FORMAT ÖRNEĞİ. Orijinal CV'de ne tür standart dışı başlık varsa o başlığın snake_case halini JSON köküne ekle. "Sertifikalar" ve "Kurslar" bu şemaya GİRMEZ — bunlar "education" dizisine girer.
+
+🗣️ DİNAMİK BÖLÜMLER İÇİN SES TONU KURALI (KESİNLİKLE UYGULANACAK):
+- String dizisi olan dinamik bölümler için (gonullu_calismalar, projeler, ilgi_alanlari, oduller vb.):
+  Bölümün hem "_v1" (1. şahıs) hem "_v3" (3. şahıs) versiyonunu üret.
+  Örn: "gonullu_calismalar_v1": ["X etkinliğinde koordinasyon yürüttüm"], "gonullu_calismalar_v3": ["X etkinliğinde koordinasyon yürütmüştür"]
+  Ana anahtar (gonullu_calismalar) da dönsün — _v1 içeriğinin kopyası olabilir.
+- Nesne dizisi olan dinamik bölümler için (aktif_projeler, projeler vb.): her nesneye "details_v1" ve "details_v3" dizisi ekle.
+  Örn: {"title":"...", "details": [...], "details_v1": ["Yönettim..."], "details_v3": ["Yönetmiştir..."]}
+- 1. şahıs fiil sonu örnekleri: "ettim", "yaptım", "aldım", "geliştirdim", "yönettim", "katıldım"
+- 3. şahıs fiil sonu örnekleri: "etmiştir", "yapmıştır", "almıştır", "geliştirmiştir", "yönetmiştir", "katılmıştır"
 
 KESİN KURALLAR:
 1. CV'deki HİÇBİR BİLGİYİ kaybet! Deneyim, eğitim, sertifika, link, beceri — hepsi çıktıda olmalı.

@@ -50,10 +50,16 @@ const db = getFirestore(app)
 // ─── Yardımcı fonksiyonlar ────────────────────────────────────────────────────
 
 async function fetchAll(colName, ...constraints) {
-  const col = collection(db, colName)
-  const q = constraints.length ? query(col, ...constraints) : col
-  const snap = await getDocs(q)
-  return snap.docs.map(d => ({ _id: d.id, ...d.data() }))
+  try {
+    const col = collection(db, colName)
+    const q = constraints.length ? query(col, ...constraints) : col
+    const snap = await getDocs(q)
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }))
+  } catch (error) {
+    console.warn(`\n[Uyarı] '${colName}' koleksiyonu okunurken hata oluştu: ${error.message}`)
+    console.warn('Firesebase yetki kuralları (Firestore Rules) veya Vercel ortam değişkenleri (Environment Variables) eksik/hatalı olabilir.')
+    return []
+  }
 }
 
 function toDateStr(firestoreTimestamp) {
@@ -168,6 +174,7 @@ ${entries.join('\n')}
 }
 
 main().catch(err => {
-  console.error('\nSitemap oluşturulurken hata:', err.message ?? err)
-  process.exit(1)
+  console.error('\nSitemap oluşturulurken beklenmeyen hata:', err.message ?? err)
+  // Vercel build'in çökmemesi için process.exit(0) kullanıyoruz
+  process.exit(0)
 })

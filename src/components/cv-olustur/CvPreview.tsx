@@ -119,6 +119,7 @@ interface Props {
   onReorderEducation?: (fromIdx: number, toIdx: number) => void
   onDeleteDynamicItem?: (sectionId: string, idx: number) => void
   onDeleteSection?: (sectionId: string) => void
+  onHeadingChange?: (key: string, value: string) => void
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -197,7 +198,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
     onUpdate, onAddBullet, onDeleteBullet,
     onDeleteExperience, onDeleteEducation, onDeleteSkill, onDeleteAdditional,
     onSectionsReorder, onReorderExperience, onReorderEducation, onDeleteDynamicItem,
-    onDeleteSection,
+    onDeleteSection, onHeadingChange,
   } = props
 
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -399,6 +400,37 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
     return exp.bullets || []
   }
   const bulletsKey = isFirst ? 'bullets_v1' : 'bullets_v3'
+
+  // ── Voice-aware helpers ───────────────────────────────────────────────────
+  const getEduDetails = (edu: OptimizedCvData['education'][0]) =>
+    isFirst ? (edu.details_v1 || edu.details || '') : (edu.details_v3 || edu.details || '')
+  const updateEduDetails = (idx: number, value: string) =>
+    updateArrayField('education', idx, isFirst ? 'details_v1' : 'details_v3', value)
+
+  // Dinamik bölümlerde: önce voice-specific key'e bak (_v1/_v3), yoksa base key
+  const getDynamicItems = (sectionId: string): unknown[] => {
+    const d = data as Record<string, unknown>
+    const voiceKey = sectionId + (isFirst ? '_v1' : '_v3')
+    const voiced = d[voiceKey]
+    if (Array.isArray(voiced) && voiced.length > 0) return voiced
+    return (d[sectionId] as unknown[]) || []
+  }
+  const getStructuredDetails = (a: { details?: string[]; details_v1?: string[]; details_v3?: string[] }): string[] => {
+    if (isFirst && a.details_v1?.length) return a.details_v1
+    if (!isFirst && a.details_v3?.length) return a.details_v3
+    return a.details || []
+  }
+  // Inline edit: voice-specific key varsa onu güncelle, yoksa base key
+  const updateDynamicSimpleItem = (sectionId: string, idx: number, value: string) => {
+    onUpdate(p => {
+      const d = p as Record<string, unknown>
+      const voiceKey = sectionId + (isFirst ? '_v1' : '_v3')
+      const targetKey = Array.isArray(d[voiceKey]) ? voiceKey : sectionId
+      const arr = [...(d[targetKey] as unknown[])]
+      arr[idx] = value
+      return { ...p, [targetKey]: arr }
+    })
+  }
 
   const updateField = (field: string, value: string) => {
     if (field === 'summary') {
@@ -666,7 +698,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
           style={{ color: themeColor, borderColor: themeColor, ...extraStyle }}
           contentEditable
           suppressContentEditableWarning
-          onBlur={() => {}}
+          onBlur={e => sectionId && onHeadingChange?.(sectionId, (e.currentTarget as HTMLElement).innerText)}
         >
           {toUpper(label)}
         </h3>
@@ -845,11 +877,11 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                       {edu.date || 'Tarih Ekle'}
                     </span>
                   </div>
-                  {edu.details && (
+                  {getEduDetails(edu) && (
                     <p className={`text-[11px] text-slate-500 leading-snug ${EC} ${textAlign} mt-0.5`}
                       contentEditable suppressContentEditableWarning
-                      onBlur={(e) => updateArrayField('education', idx, 'details', (e.target as HTMLElement).innerText)}>
-                      {edu.details}
+                      onBlur={(e) => updateEduDetails(idx, (e.target as HTMLElement).innerText)}>
+                      {getEduDetails(edu)}
                     </p>
                   )}
                   {onDeleteEducation && (
@@ -988,7 +1020,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
     return strings.some(s => s.includes(' — ')) || strings.reduce((s, a) => s + a.length, 0) / strings.length > 45
   }
 
-  const isStructuredItem = (a: unknown): a is { title?: string; subtitle?: string; date?: string; details?: string[] } =>
+  const isStructuredItem = (a: unknown): a is { title?: string; subtitle?: string; date?: string; details?: string[]; details_v1?: string[]; details_v3?: string[] } =>
     a !== null && typeof a === 'object' && !Array.isArray(a)
 
   const updateDynamicItem = (sectionId: string, idx: number, field: string, value: string) => {
@@ -1003,16 +1035,17 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
     onUpdate(p => {
       const arr = [...((p as Record<string, unknown>)[sectionId] as unknown[])]
       const item = { ...(arr[idx] as Record<string, unknown>) }
-      const details = [...((item.details as string[]) || [])]
+      const dk = isFirst ? 'details_v1' : 'details_v3'
+      const details = [...(((item[dk] as string[]) || (item.details as string[])) || [])]
       details[detailIdx] = value
-      arr[idx] = { ...item, details }
+      arr[idx] = { ...item, [dk]: details }
       return { ...p, [sectionId]: arr }
     })
   }
 
   // ── Generic fallback renderer — string[] olan bilinmeyen bölümler ────────
   const renderGenericSection = (sectionId: string) => {
-    const items = (data as Record<string, unknown>)[sectionId]
+    const items = getDynamicItems(sectionId)
     if (!Array.isArray(items) || items.length === 0) return null
     const heading = sectionLabel(sectionId)
     const hasStructured = items.some(isStructuredItem)
@@ -1045,9 +1078,9 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                         </span>
                       )}
                     </div>
-                    {a.details && a.details.length > 0 && (
+                    {getStructuredDetails(a).length > 0 && (
                       <ul className={`list-disc ml-4 space-y-0.5 ${textAlign}`} style={{ marginTop: 4 }}>
-                        {a.details.map((d, di) => (
+                        {getStructuredDetails(a).map((d, di) => (
                           <li key={di} className="text-[12px] text-slate-700">
                             <span className={`outline-none ${EC}`} contentEditable suppressContentEditableWarning
                               onBlur={e => updateDynamicItemDetail(sectionId, i, di, (e.target as HTMLElement).innerText.trim())}>
@@ -1070,7 +1103,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                 <div key={i} className="group/dynitem relative text-[12px] text-slate-700 flex items-start gap-2 leading-snug mb-1.5 pr-5">
                   <span className="w-1 h-1 rounded-full shrink-0 mt-[6px]" style={{ backgroundColor: themeColor }} />
                   <span className={`break-words flex-1 outline-none ${EC}`} contentEditable suppressContentEditableWarning
-                    onBlur={e => updateSimpleList(sectionId, i, (e.target as HTMLElement).innerText.trim())}>
+                    onBlur={e => updateDynamicSimpleItem(sectionId, i, (e.target as HTMLElement).innerText.trim())}>
                     {renderDynamicItemContent(a)}
                   </span>
                   {onDeleteDynamicItem && (
@@ -1107,7 +1140,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
   }
 
   const renderModernGenericSection = (sectionId: string) => {
-    const items = (data as Record<string, unknown>)[sectionId]
+    const items = getDynamicItems(sectionId)
     if (!Array.isArray(items) || items.length === 0) return null
     const heading = sectionLabel(sectionId)
     const hasStructured = items.some(isStructuredItem)
@@ -1142,9 +1175,9 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                       </span>
                     )}
                   </div>
-                  {a.details && a.details.length > 0 && (
+                  {getStructuredDetails(a).length > 0 && (
                     <div style={{ paddingLeft: 12 }}>
-                      {a.details.map((d, di) => (
+                      {getStructuredDetails(a).map((d, di) => (
                         <div key={di} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 2 }}>
                           <span style={{ color: themeColor, fontSize: 10, marginTop: 2, flexShrink: 0 }}>•</span>
                           <span contentEditable suppressContentEditableWarning
@@ -1163,7 +1196,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
                 <span style={{ color: themeColor, fontSize: 10, marginTop: 2, flexShrink: 0 }}>•</span>
                 <span contentEditable suppressContentEditableWarning
-                  onBlur={e => updateSimpleList(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
+                  onBlur={e => updateDynamicSimpleItem(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
                   style={{ fontSize: 10.5, lineHeight: 1.5, color: '#374151', outline: 'none' }}>
                   {renderDynamicItemContent(a)}
                 </span>
@@ -1173,7 +1206,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
               <span style={{ color: themeColor, fontSize: 10, marginTop: 2, flexShrink: 0 }}>•</span>
               <span contentEditable suppressContentEditableWarning
-                onBlur={e => updateSimpleList(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
+                onBlur={e => updateDynamicSimpleItem(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
                 style={{ fontSize: 10.5, lineHeight: 1.5, color: '#374151', outline: 'none' }}>
                 {renderDynamicItemContent(a)}
               </span>
@@ -1185,7 +1218,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
   }
 
   const renderProfessionalGenericSection = (sectionId: string) => {
-    const items = (data as Record<string, unknown>)[sectionId]
+    const items = getDynamicItems(sectionId)
     if (!Array.isArray(items) || items.length === 0) return null
     const heading = sectionLabel(sectionId)
     const hasStructured = items.some(isStructuredItem)
@@ -1220,9 +1253,9 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                       </span>
                     )}
                   </div>
-                  {a.details && a.details.length > 0 && (
+                  {getStructuredDetails(a).length > 0 && (
                     <div style={{ paddingLeft: 10, marginTop: 3 }}>
-                      {a.details.map((d, di) => (
+                      {getStructuredDetails(a).map((d, di) => (
                         <div key={di} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
                           <span style={{ color: '#64748b', fontSize: 10, marginTop: 2, flexShrink: 0 }}>•</span>
                           <span contentEditable suppressContentEditableWarning
@@ -1241,7 +1274,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 4 }}>
                 <span style={{ color: '#94a3b8', fontSize: 10, marginTop: 2, flexShrink: 0 }}>•</span>
                 <span contentEditable suppressContentEditableWarning
-                  onBlur={e => updateSimpleList(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
+                  onBlur={e => updateDynamicSimpleItem(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
                   style={{ fontSize: 10.5, lineHeight: 1.5, color: '#374151', outline: 'none' }}>
                   {renderDynamicItemContent(a)}
                 </span>
@@ -1251,7 +1284,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 4 }}>
               <span style={{ color: '#94a3b8', fontSize: 10, marginTop: 2, flexShrink: 0 }}>•</span>
               <span contentEditable suppressContentEditableWarning
-                onBlur={e => updateSimpleList(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
+                onBlur={e => updateDynamicSimpleItem(sectionId, i, (e.currentTarget as HTMLElement).innerText.trim())}
                 style={{ fontSize: 10.5, lineHeight: 1.5, color: '#374151', outline: 'none' }}>
                 {renderDynamicItemContent(a)}
               </span>
@@ -1287,7 +1320,12 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
         marginTop: 4,
       }}
     >
-      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, color: themeColor }}>
+      <span
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={e => sectionId && onHeadingChange?.(sectionId, (e.currentTarget as HTMLElement).innerText)}
+        style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, color: themeColor, outline: 'none', cursor: 'text' }}
+      >
         {toUpper(label)}
       </span>
       {sectionId && onDeleteSection && (
@@ -1365,9 +1403,9 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
               return (
                 <span key={i} style={{ display: 'flex', alignItems: 'center' }}>
                   <span style={{ margin: '0 7px', color: '#cbd5e1' }}>|</span>
-                  <span className="pdf-link" data-url={url} style={{ outline: 'none', cursor: 'pointer', color: 'inherit' }}>
+                  <a href={url} target="_blank" rel="noreferrer" className="pdf-link" data-url={url} style={{ outline: 'none', cursor: 'pointer', color: 'inherit', textDecoration: 'none' }}>
                     {cl.label}
-                  </span>
+                  </a>
                 </span>
               )
             })}
@@ -1509,13 +1547,13 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                 </span>
               )}
             </div>
-            {edu.details && (
+            {getEduDetails(edu) && (
               <div
                 contentEditable suppressContentEditableWarning
-                onBlur={e => updateArrayField('education', idx, 'details', (e.currentTarget as HTMLElement).innerText)}
+                onBlur={e => updateEduDetails(idx, (e.currentTarget as HTMLElement).innerText)}
                 style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, outline: 'none', textAlign: textAlignStyle }}
               >
-                {edu.details}
+                {getEduDetails(edu)}
               </div>
             )}
           </div>
@@ -1686,9 +1724,9 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
             return (
               <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <svg style={{ width: 9, height: 9, opacity: 0.7, flexShrink: 0 }} viewBox="0 0 24 24" fill="currentColor"><path d="M10 6v2H5v11h11v-5h2v6a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1h6zm11-3v8l-3.528-3.536-5.99 5.997-1.042-1.042 5.99-5.997L13 3h8z" /></svg>
-                <span className="pdf-link" data-url={url} style={{ outline: 'none', cursor: 'pointer' }}>
+                <a href={url} target="_blank" rel="noreferrer" className="pdf-link" data-url={url} style={{ outline: 'none', cursor: 'pointer', textDecoration: 'none', color: 'inherit' }}>
                   {cl.label}
-                </span>
+                </a>
               </span>
             )
           })}
@@ -1825,13 +1863,13 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                   </span>
                 )}
               </div>
-              {edu.details && (
+              {getEduDetails(edu) && (
                 <div
                   contentEditable suppressContentEditableWarning
-                  onBlur={e => updateArrayField('education', idx, 'details', (e.currentTarget as HTMLElement).innerText)}
+                  onBlur={e => updateEduDetails(idx, (e.currentTarget as HTMLElement).innerText)}
                   style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, outline: 'none' }}
                 >
-                  {edu.details}
+                  {getEduDetails(edu)}
                 </div>
               )}
             </div>
@@ -2008,9 +2046,9 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
               return (
                 <div key={i} className="flex items-center gap-1">
                   <span className="text-slate-300">•</span>
-                  <span className={`${EC} font-semibold pdf-link`} style={{ color: themeColor }} data-url={url}>
+                  <a href={url} target="_blank" rel="noreferrer" className={`font-semibold pdf-link`} data-url={url} style={{ color: themeColor, textDecoration: 'none', cursor: 'pointer', outline: 'none' }}>
                     {cl.label}
-                  </span>
+                  </a>
                 </div>
               )
             })}
@@ -2199,7 +2237,7 @@ export const CvPreview = forwardRef<CvPreviewHandle, Props>(function CvPreview(p
                       </div>
                       <span className={EC} contentEditable suppressContentEditableWarning style={{ fontSize: 11, color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 8 }} onBlur={e => updateArrayField('education', idx, 'date', (e.target as HTMLElement).innerText)}>{edu.date || 'Tarih Ekle'}</span>
                     </div>
-                    {edu.details && <div className={`text-[11px] text-slate-500 mt-0.5 ${EC}`} contentEditable suppressContentEditableWarning onBlur={e => updateArrayField('education', idx, 'details', (e.target as HTMLElement).innerText)}>{edu.details}</div>}
+                    {getEduDetails(edu) && <div className={`text-[11px] text-slate-500 mt-0.5 ${EC}`} contentEditable suppressContentEditableWarning onBlur={e => updateEduDetails(idx, (e.target as HTMLElement).innerText)}>{getEduDetails(edu)}</div>}
                     {onDeleteEducation && <button data-no-pdf="true" onClick={() => onDeleteEducation(edu.id)} className="absolute right-0 top-0 opacity-0 group-hover/item:opacity-100 text-slate-300 hover:text-red-500 transition-opacity z-10" title="Sil"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" /></svg></button>}
                   </div>
                 ))}
