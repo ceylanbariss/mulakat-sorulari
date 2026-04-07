@@ -87,6 +87,7 @@ export function CategoryDetail() {
         const sorted = [...docs].sort((a, b) => ((a as any).orderIndex ?? 0) - ((b as any).orderIndex ?? 0))
         setSubcats(sorted as any)
       })
+      .catch(() => { /* izin hatası — alt kategorisiz devam et */ })
   }, [kategori])
 
   // Top-level alanlar

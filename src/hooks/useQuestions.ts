@@ -14,30 +14,36 @@ export function useQuestions(category?: string, subcategories?: string[]) {
   useEffect(() => {
     let isMounted = true
 
+    const applyData = (all: QuestionDoc[]) => {
+      if (!isMounted) return
+      let catQuestions = all
+      if (category) catQuestions = all.filter(q => q.category === category)
+      let filteredQuestions = catQuestions
+      if (subcategories && subcategories.length > 0) {
+        filteredQuestions = catQuestions.filter(q => subcategories.includes(q.subcategory ?? ''))
+      }
+      setQuestions(filteredQuestions)
+      setAllCategoryQuestions(catQuestions)
+      setLoading(false)
+    }
+
+    // Firestore izin hatası durumunda yerel veriye düş
+    const timer = setTimeout(() => {
+      applyData(getAllQuestions().map(q => ({ ...q, _id: q.id })))
+    }, 2000)
+
     const unsub = subscribeCollection<Question>(
       questionsCol(),
       (docs) => {
+        clearTimeout(timer)
         let all = docs as QuestionDoc[]
-        if (all.length === 0) {
-          all = getAllQuestions().map(q => ({ ...q, _id: q.id }))
-        }
-        let catQuestions = all
-        if (category) {
-          catQuestions = all.filter(q => q.category === category)
-        }
-        let filteredQuestions = catQuestions
-        if (subcategories && subcategories.length > 0) {
-          filteredQuestions = catQuestions.filter(q => subcategories.includes(q.subcategory ?? ''))
-        }
-        if (isMounted) {
-          setQuestions(filteredQuestions)
-          setAllCategoryQuestions(catQuestions)
-          setLoading(false)
-        }
+        if (all.length === 0) all = getAllQuestions().map(q => ({ ...q, _id: q.id }))
+        applyData(all)
       }
     )
     return () => {
       isMounted = false
+      clearTimeout(timer)
       unsub()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -112,23 +112,8 @@ export function Navbar() {
                 </button>
               </div>
             ) : (
-              /* Giriş yapılmamışsa: Giriş Yap linki */
-              <Link
-                to="/giris"
-                className="hidden md:inline-flex items-center gap-1.5 px-1 py-1.5 active:scale-95 transition-all duration-200 group"
-              >
-                <span className="gradient-text text-sm font-bold">Giriş Yap</span>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M3 7h8M8 4l3 3-3 3" stroke="url(#gArrow)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <defs>
-                    <linearGradient id="gArrow" x1="3" y1="7" x2="11" y2="7" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#3B82F6"/>
-                      <stop offset="0.5" stopColor="#8B5CF6"/>
-                      <stop offset="1" stopColor="#06B6D4"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </Link>
+              /* GEÇİCİ: Giriş Yap butonu gizlendi — geri almak için bu yorumu kaldır */
+              null
             )}
             <button
               className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
@@ -249,18 +234,8 @@ export function Navbar() {
                       </button>
                     </div>
                   ) : (
-                    <Link
-                      to="/giris"
-                      onClick={() => setMenuOpen(false)}
-                      style={{
-                        display: 'block', padding: '18px 20px', borderRadius: '16px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                        color: 'white', fontSize: '17px', fontWeight: 700,
-                        textAlign: 'center', textDecoration: 'none',
-                      }}
-                    >
-                      Giriş Yap
-                    </Link>
+                    /* GEÇİCİ: Mobil Giriş Yap butonu gizlendi — geri almak için bu yorumu kaldır */
+                    null
                   )}
                 </motion.div>
               </div>

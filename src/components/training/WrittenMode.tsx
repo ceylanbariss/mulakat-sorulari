@@ -6,7 +6,7 @@ import { type Question } from '../../data/questions'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { useAuthStore } from '../../store/useAuthStore'
-import { addDocument, trainingSessionsCol } from '../../lib/firestore'
+// import { addDocument, trainingSessionsCol } from '../../lib/firestore' // GEÇİCİ: Firestore kayıt devre dışı
 
 interface Props {
   questions: Question[]
@@ -98,14 +98,15 @@ export function WrittenMode({ questions, kategori }: Props) {
     if (results.length === 0) return
     const u = useAuthStore.getState().user
     if (u) {
-      const correctCount = results.filter(r => r === 'correct').length
-      const partialCount = results.filter(r => r === 'partial').length
-      const wrongCount = results.filter(r => r === 'wrong').length
-      addDocument(trainingSessionsCol(), {
-        userId: u.uid, mode: 'written', category: kategori,
-        totalQuestions: results.length, correctCount, partialCount, wrongCount,
-        score: Math.round((correctCount / results.length) * 100),
-      }).catch(() => {})
+      // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
+      // const correctCount = results.filter(r => r === 'correct').length
+      // const partialCount = results.filter(r => r === 'partial').length
+      // const wrongCount = results.filter(r => r === 'wrong').length
+      // addDocument(trainingSessionsCol(), {
+      //   userId: u.uid, mode: 'written', category: kategori,
+      //   totalQuestions: results.length, correctCount, partialCount, wrongCount,
+      //   score: Math.round((correctCount / results.length) * 100),
+      // }).catch(() => {})
       localStorage.removeItem(`mulakat_session_${u.uid}_${kategori}_written`)
     }
     setEarlyFinish(true)
@@ -133,22 +134,13 @@ export function WrittenMode({ questions, kategori }: Props) {
     const newResults = [...results, score]
     setResults(newResults)
     if (index + 1 >= deck.length) {
-      const user = useAuthStore.getState().user
-      if (user) {
-        const correctCount = newResults.filter(r => r === 'correct').length
-        const partialCount = newResults.filter(r => r === 'partial').length
-        const wrongCount = newResults.filter(r => r === 'wrong').length
-        addDocument(trainingSessionsCol(), {
-          userId: user.uid,
-          mode: 'written',
-          category: kategori,
-          totalQuestions: deck.length,
-          correctCount,
-          partialCount,
-          wrongCount,
-          score: Math.round((correctCount / deck.length) * 100),
-        }).catch(() => {})
-      }
+      // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
+      // const user = useAuthStore.getState().user
+      // if (user) {
+      //   const correctCount = newResults.filter(r => r === 'correct').length
+      //   ...
+      //   addDocument(trainingSessionsCol(), { userId: user.uid, mode: 'written', ... }).catch(() => {})
+      // }
       setDone(true)
     } else {
       setIndex((i) => i + 1)

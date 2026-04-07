@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+// import { Link } from 'react-router-dom' // GEÇİCİ: auth guard kaldırıldı
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, X, AlertCircle, ChevronDown, ChevronUp, Download, RotateCcw, ArrowLeft, PenLine, FileEdit, Sparkles } from 'lucide-react'
 import mammoth from 'mammoth'
@@ -169,18 +169,19 @@ async function extractFileText(file: File): Promise<string> {
 export function CvOlusturPage() {
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
-  const user = useAuthStore(s => s.user)
+  // GEÇİCİ: user auth guard kaldırıldı — geri almak için bu yorumu aç
+  // const user = useAuthStore(s => s.user)
   const authLoading = useAuthStore(s => s.loading)
 
   const {
     originalCV, cvFileName, jobDescription, optimizedData, cvLanguage, isLoading, error,
-    activeTemplate, themeColor, narrativeVoice, profileImage, photoShape,
+    activeTemplate, themeColor, narrativeVoice, textAlign, profileImage, photoShape,
     photoSize, photoObjectX, photoObjectY, photoScale, photoPosX, photoPosY,
     showIcons, sectionsOrder, customHeadings,
     setOriginalCV, setJobDescription, setOptimizedData, updateOptimizedData, setCvLanguage,
-    setLoading, setError, setActiveTemplate, setThemeColor, setNarrativeVoice,
+    setLoading, setError, setActiveTemplate, setThemeColor, setNarrativeVoice, setTextAlign,
     setProfileImage, setPhotoShape, setPhotoTransform, setPhotoPosition, resetSession,
-    setSectionsOrder,
+    setSectionsOrder, setCustomHeadings,
   } = useCvStore()
 
   const cvPreviewRef = useRef<CvPreviewHandle>(null)
@@ -228,10 +229,11 @@ export function CvOlusturPage() {
   const [addItemSection, setAddItemSection] = useState('experience')
   const [addItemInput, setAddItemInput] = useState('')
   const [isAddingItem, setIsAddingItem] = useState(false)
+  const [customSectionTitle, setCustomSectionTitle] = useState('')
+  const [customLinkLabel, setCustomLinkLabel] = useState('')
+  const [customLinkUrl, setCustomLinkUrl] = useState('')
 
-  // Feature 3: Summary Optimization
-  const [jdForSummary, setJdForSummary] = useState('')
-  const [isOptimizingSummary, setIsOptimizingSummary] = useState(false)
+  // Feature 3: Summary Optimization — UI'dan kaldırıldı, state'ler temizlendi
 
   // ── Item add / delete ─────────────────────────────────────────────────────────
   function addExperience() {
@@ -415,8 +417,16 @@ KURALLAR:
   }
 
   // ── Feature 2: AI Item Adding ─────────────────────────────────────────────────
+  const toSectionKey = (title: string) =>
+    title.trim().toLowerCase()
+      .replace(/[şŞ]/g, 's').replace(/[çÇ]/g, 'c').replace(/[öÖ]/g, 'o')
+      .replace(/[üÜ]/g, 'u').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
+      .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 40)
+    || 'ozel_alan'
+
   async function handleAddItem() {
     if (!addItemInput.trim() || !optimizedData) return
+    if (addItemSection === 'customSection' && !customSectionTitle.trim()) return
     setIsAddingItem(true)
 
     const langText = cvLanguage === 'tr' ? 'TÜRKÇE' : 'İNGİLİZCE'
@@ -431,6 +441,8 @@ KURALLAR:
       systemInstruction = `Sen profesyonel bir CV yazarısın. Kullanıcı girdisinden bir Eğitim maddesi oluştur. Çıktı formatı JSON: {"entry": {"degree": "Bölüm/Sertifika Adı", "school": "Okul/Kurum", "date": "Tarih", "details": "Kısa açıklama"}}. Markdown kullanma. Dili: ${langText}. Sadece JSON döndür.`
     } else if (addItemSection === 'experience') {
       systemInstruction = `Sen profesyonel bir CV yazarısın. Kullanıcı girdisinden bir İş Deneyimi maddesi oluştur. Çıktı formatı JSON: {"entry": {"role": "Pozisyon", "company": "Şirket", "date": "Tarih", "bullets_v1": ["Ben diliyle madde"], "bullets_v3": ["O diliyle madde"]}}. Markdown kullanma. Dili: ${langText}. Sadece JSON döndür.`
+    } else if (addItemSection === 'customSection') {
+      systemInstruction = `Sen üst düzey bir CV yazarısın. Kullanıcının ham açıklamasını "${customSectionTitle.trim()}" başlıklı CV bölümü için tek yapılandırılmış giriş olarak işle. Çıktı formatı kesinlikle şu JSON olmalı:\n{"entry": {"title": "Başlık/Proje Adı", "subtitle": "Teknoloji/Şirket/Kurum (varsa, yoksa boş string)", "date": "Tarih veya bağlantı (varsa, yoksa boş string)", "details_v1": ["Ben diliyle, güçlü aksiyon fiiliyle başlayan, ölçülebilir sonuç içeren madde"], "details_v3": ["O diliyle, güçlü aksiyon fiiliyle başlayan, ölçülebilir sonuç içeren madde"]}}\nKURALLAR: Maddeler güçlü aksiyon fiilleriyle başlamalı (Geliştirdim/Geliştirdi, Tasarladım/Tasarladı vb.), ölçülebilir sonuç veya somut teknik detay içermeli. Markdown kullanma, sadece JSON döndür. Dili: ${langText}.`
     } else {
       systemInstruction = `Sen profesyonel bir CV yazarısın. Kullanıcının girdisini ${addItemSection === 'skills' ? 'Teknik Yetenek' : 'Ek Bilgi'} formatına çevir. Çıktı formatı JSON: {"items": ["Madde 1"]}. Markdown kullanma. Dili: ${langText}. Sadece JSON döndür.`
     }
@@ -453,12 +465,13 @@ KURALLAR:
         const text = result.response.text().replace(/```json|```/g, '').trim()
         parsed = JSON.parse(text)
       } else {
-        const res = await fetch('/api/cv-optimize', {
+        const res = await fetch('/api/generate-item', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvText: systemInstruction + '\n\n' + userPrompt, language: cvLanguage }),
+          body: JSON.stringify({ systemInstruction, userPrompt }),
         })
         parsed = await res.json()
+        if (parsed.error) throw new Error(parsed.error)
       }
 
       const uniqueId = `${addItemSection}-${Date.now()}`
@@ -481,10 +494,20 @@ KURALLAR:
           ]
         } else if ((addItemSection === 'skills' || addItemSection === 'additional') && parsed.items) {
           newData[addItemSection as 'skills' | 'additional'] = [...((newData as any)[addItemSection] || []), ...parsed.items]
+        } else if (addItemSection === 'customSection' && parsed.entry) {
+          const sKey = toSectionKey(customSectionTitle)
+          const existing = ((newData as Record<string, unknown>)[sKey] as unknown[]) || []
+          ;(newData as Record<string, unknown>)[sKey] = [...existing, parsed.entry]
         }
 
         return newData
       })
+
+      if (addItemSection === 'customSection') {
+        const sKey = toSectionKey(customSectionTitle)
+        if (!sectionsOrder.includes(sKey)) setSectionsOrder([...sectionsOrder, sKey])
+        setCustomHeadings({ ...customHeadings, [sKey]: customSectionTitle.trim() })
+      }
 
       setAddItemInput('')
     } catch (err) {
@@ -494,68 +517,27 @@ KURALLAR:
     }
   }
 
-  // ── Feature 3: Summary Optimization ─────────────────────────────────────────
-  const SUMMARY_SYSTEM_INSTRUCTION = `You are a CV editor, not a writer. Your job is to EDIT the existing summary, not rewrite it.
-
-Step 1: Take Input 1 word by word. Keep every proper noun, institution name, year, role title, and tool name exactly as written.
-Step 2: Identify keywords in Input 2 that are missing from Input 1.
-Step 3: Weave those missing keywords into the existing text by replacing weak phrases or adding 1-2 sentences.
-Step 4: The output MUST contain every specific detail from Input 1 that is professional or personal:
-- All institution/company/organization names
-- All role titles and positions
-- All tools, technologies, languages mentioned
-- All personal motivations and background stories that sound professional
-- All years, durations, academic program names
-Do NOT remove any of these even if they seem unrelated to Input 2.
-Only remove filler phrases like 'hedefliyorum', 'amaçlamaktayım' when replacing with stronger job-aligned versions.
-Step 5: Never mention company name or program title from Input 2.
-
-Output: The edited summary only, 4-5 sentences, same language as Input 1.`
-
-  async function handleOptimizeSummary() {
-    if (!jdForSummary.trim() || !optimizedData) return
-    setIsOptimizingSummary(true)
-    const currentSummary = narrativeVoice === 'first'
-      ? optimizedData.summary_v1
-      : optimizedData.summary_v3
-
-    try {
-      let text = ''
-
-      if (import.meta.env.DEV) {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-        if (!apiKey) throw new Error('VITE_GEMINI_API_KEY tanımlı değil')
-        const { GoogleGenerativeAI } = await import('@google/generative-ai')
-        const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
-          model: 'gemini-2.5-flash',
-          systemInstruction: SUMMARY_SYSTEM_INSTRUCTION,
-        })
-        const result = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: `Input 1 - Current summary:\n${currentSummary?.slice(0, 1500) ?? ''}\n\nInput 2 - Job description:\n${jdForSummary.slice(0, 3000)}\n\nIMPORTANT: Preserve every personal detail from Input 1 exactly as stated.\nOnly reframe the emphasis and ordering to align with Input 2.\nDo not generalize or remove specific facts.` }] }],
-          generationConfig: { maxOutputTokens: 512, temperature: 0.3 },
-        })
-        text = result.response.text().replace(/\*\*/g, '').trim()
-      } else {
-        const res = await fetch('/api/cv-summary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ currentSummary, jobDescription: jdForSummary }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Sunucu hatası')
-        text = data.text || ''
-      }
-
-      if (text) {
-        updateOptimizedData(prev => ({ ...prev, summary_v1: text, summary_v3: text }))
-        setJdForSummary('')
-      }
-    } catch (err) {
-      setError('Özet optimize edilirken hata oluştu: ' + (err instanceof Error ? err.message : String(err)))
-    } finally {
-      setIsOptimizingSummary(false)
-    }
+  function handleAddCustomLink() {
+    const label = customLinkLabel.trim()
+    const url = customLinkUrl.trim()
+    if (!label || !url || !optimizedData) return
+    const normalizedUrl = url.startsWith('http') ? url : `https://${url}`
+    updateOptimizedData(prev => ({
+      ...prev,
+      customLinks: [...(prev.customLinks ?? []), { label, url: normalizedUrl }],
+    }))
+    setCustomLinkLabel('')
+    setCustomLinkUrl('')
   }
+
+  function deleteCustomLink(idx: number) {
+    updateOptimizedData(prev => ({
+      ...prev,
+      customLinks: (prev.customLinks ?? []).filter((_, i) => i !== idx),
+    }))
+  }
+
+  // ── Feature 3: Summary Optimization — UI'dan kaldırıldığı için devre dışı ─────
 
   // ── Style vars ───────────────────────────────────────────────────────────────
   const bg       = d ? '#0d1117' : '#f8fafc'
@@ -585,12 +567,20 @@ Output: The edited summary only, 4-5 sentences, same language as Input 1.`
   // Parsed verideki standart dışı string-array bölümlerini sectionsOrder'a ekle
   const STANDARD_CV_KEYS = new Set(['name','title','location','phone','email','linkedin','summary_v1','summary_v3','experience','education','skills','additional','customLinks','warnings','analysis','is_valid_cv','error_message','sertifikalar','kurslar','certifications','courses'])
   function applyDynamicSections(data: Record<string, unknown>) {
-    const extras = Object.entries(data)
-      .filter(([k, v]) => !STANDARD_CV_KEYS.has(k) && Array.isArray(v) && (v as unknown[]).length > 0)
-      .map(([k]) => k)
-    if (extras.length === 0) return
+    const baseKeys = new Set<string>()
+    for (const [k, v] of Object.entries(data)) {
+      if (STANDARD_CV_KEYS.has(k)) continue
+      // _v1/_v3 suffix'li key'lerden base key'i çıkar
+      if (k.endsWith('_v1') || k.endsWith('_v3')) {
+        const base = k.slice(0, -3)
+        if (!STANDARD_CV_KEYS.has(base)) baseKeys.add(base)
+        continue
+      }
+      if (Array.isArray(v) && (v as unknown[]).length > 0) baseKeys.add(k)
+    }
+    if (baseKeys.size === 0) return
     const existing = new Set(sectionsOrder)
-    const newExtras = extras.filter(k => !existing.has(k))
+    const newExtras = [...baseKeys].filter(k => !existing.has(k))
     if (newExtras.length > 0) setSectionsOrder([...sectionsOrder, ...newExtras])
   }
 
@@ -654,6 +644,12 @@ CV'deki TÜM başlıkları tara. Şemada karşılığı olmayan bir başlık bul
 - Altındaki her madde veya paragraf string dizisi elemanı olur
 - Karmaşık maddeler (proje başlığı + URL + açıklama) için format: "BAŞLIK — açıklama" (tek string)
 - GitHub/portfolio URL'leri customLinks'e ekle
+
+SES TONU VARYANTları (PARSE MODUNDA):
+- String dizisi olan dinamik bölümler için aynı içeriği hem "_v1" hem "_v3" key'iyle döndür (parse modunda ikisi aynı olabilir).
+  Örn: "gonullu_calismalar": [...], "gonullu_calismalar_v1": [...], "gonullu_calismalar_v3": [...]
+- Nesne dizisi olan dinamik bölümler için her nesneye "details_v1" ve "details_v3" ekle (parse modunda details ile aynı olabilir).
+- education'daki "details" alanı doluysa "details_v1" ve "details_v3" de aynı içerikle döndür.
 
 KURALLAR:
 - İçeriği olduğu gibi aktar, optimize etme
@@ -875,18 +871,8 @@ KURALLAR:
     </div>
   )
 
-  if (!user) return (
-    <div style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '0 16px', background: bg }}>
-      <div style={{ maxWidth: 440, textAlign: 'center' }}>
-        <div style={{ fontSize: 52, marginBottom: 16 }}>📄</div>
-        <h2 style={{ color: text, fontSize: 22, fontWeight: 700, marginBottom: 10 }}>CV Oluştur & Optimize</h2>
-        <p style={{ color: muted, fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>Bu özelliği kullanmak için giriş yapman gerekiyor.</p>
-        <Link to="/giris" style={{ display: 'inline-block', padding: '12px 28px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>
-          Giriş Yap
-        </Link>
-      </div>
-    </div>
-  )
+  // GEÇİCİ: Giriş yapılmamış guard devre dışı — geri almak için bu yorumu kaldır
+  // if (!user) return (...)
 
   // ── Back button (fixed overlay, tüm ekranlarda görünür) ───────────────────────
   const backBtn = mod !== null ? (
@@ -944,7 +930,8 @@ KURALLAR:
     return (
       <motion.div
         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }}
-        style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: bg }}
+        className="bg-transparent"
+        style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}
       >
         <div style={{ maxWidth: 860, width: '100%' }}>
           {/* Başlık */}
@@ -1194,7 +1181,7 @@ KURALLAR:
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}
-      style={{ minHeight: 'calc(100vh - 64px)', paddingTop: 64, background: bg, display: 'flex', flexDirection: 'column' }}
+      style={{ height: '100vh', paddingTop: 64, background: bg, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     >
       {backBtn}
       <style>{`
@@ -1207,426 +1194,7 @@ KURALLAR:
 
         {/* ── Left panel ── */}
         <div style={{ width: 320, flexShrink: 0, background: surface, borderRight: `1px solid ${border}`, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Başlık */}
-          <div style={{ paddingBottom: 12, borderBottom: `1px solid ${border}` }}>
-            <h1 style={{ fontSize: 15, fontWeight: 800, color: text, marginBottom: 2 }}>CV Düzenleyici</h1>
-            <p style={{ fontSize: 11, color: muted }}>Alanları tıklayarak düzenleyebilirsiniz.</p>
-          </div>
-
-          {/* Item Management */}
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>İçerik Yönetimi</p>
-
-            {/* Experience */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Deneyim ({optimizedData.experience?.length ?? 0})</span>
-                <button onClick={addExperience} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
-              </div>
-              {optimizedData.experience?.map(exp => (
-                <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', marginBottom: 3 }}>
-                  <span style={{ flex: 1, fontSize: 10, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.role || 'Pozisyon'} · {exp.company || 'Şirket'}</span>
-                  <button onClick={() => deleteExperience(exp.id)} title="Sil" style={{ fontSize: 14, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0, opacity: 0.6 }}>×</button>
-                </div>
-              ))}
-            </div>
-
-            {/* Education */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Eğitim ({optimizedData.education?.length ?? 0})</span>
-                <button onClick={addEducation} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
-              </div>
-              {optimizedData.education?.map(edu => (
-                <div key={edu.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', marginBottom: 3 }}>
-                  <span style={{ flex: 1, fontSize: 10, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{edu.degree || 'Bölüm'}</span>
-                  <button onClick={() => deleteEducation(edu.id)} title="Sil" style={{ fontSize: 14, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0, opacity: 0.6 }}>×</button>
-                </div>
-              ))}
-            </div>
-
-            {/* Skills */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Beceriler ({optimizedData.skills?.length ?? 0})</span>
-                <button onClick={addSkill} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {optimizedData.skills?.map((skill, si) => (
-                  <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 20, background: d ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                    <span style={{ fontSize: 10, color: '#6366f1' }}>{skill}</span>
-                    <button onClick={() => deleteSkill(si)} style={{ fontSize: 12, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, opacity: 0.6 }}>×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Additional */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Ek Bilgiler ({optimizedData.additional?.length ?? 0})</span>
-                <button onClick={addAdditional} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {optimizedData.additional?.map((item, ai) => (
-                  <div key={ai} style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 20, background: d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${border}` }}>
-                    <span style={{ fontSize: 10, color: muted }}>{item}</span>
-                    <button onClick={() => deleteAdditional(ai)} style={{ fontSize: 12, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, opacity: 0.6 }}>×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* ATS Panel — sifirdan modunda hesaplanmış skor, diğer modlarda AI analizi */}
-          {mod === 'sifirdan' ? (() => {
-            const { score, checks } = computeSifirdanAts(optimizedData)
-            const sc = score >= 91 ? '#10b981' : score >= 71 ? '#3b82f6' : score >= 41 ? '#f59e0b' : '#ef4444'
-            return (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, margin: 0 }}>ATS Uyumluluğu</p>
-                  <span style={{ fontSize: 22, fontWeight: 900, color: sc }}>{score}</span>
-                </div>
-                {/* Progress bar */}
-                <div style={{ height: 8, borderRadius: 4, background: d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden', marginBottom: 12 }}>
-                  <div style={{ height: '100%', width: `${score}%`, background: sc, borderRadius: 4, transition: 'width 0.6s ease' }} />
-                </div>
-                {/* Checks */}
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                  {checks.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 10.5, color: c.passed ? (d ? '#86efac' : '#16a34a') : (d ? '#fca5a5' : '#dc2626') }}>
-                      <span style={{ flexShrink: 0, lineHeight: 1.4 }}>{c.passed ? '✓' : '✗'}</span>
-                      <span style={{ lineHeight: 1.4 }}>{c.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })() : analysis && (
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>ATS Raporu</p>
-              {/* Scores */}
-              <div style={{ marginBottom: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${border}`, background: d ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: scoreColor(analysis.scores.overall) }}>{analysis.scores.overall}</div>
-                <div style={{ fontSize: 10, color: muted, marginBottom: 8 }}>Genel Uyum Skoru</div>
-                {Object.entries({ skills: 'Beceri', experience: 'Deneyim', education: 'Eğitim' } as const).map(([k, lbl]) => (
-                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: muted, width: 52, textAlign: 'left', flexShrink: 0 }}>{lbl}</span>
-                    <div style={{ flex: 1, height: 4, borderRadius: 4, background: d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${analysis.scores[k as keyof typeof analysis.scores]}%`, background: scoreColor(analysis.scores[k as keyof typeof analysis.scores]), borderRadius: 4, transition: 'width 0.6s ease' }} />
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor(analysis.scores[k as keyof typeof analysis.scores]), width: 24, textAlign: 'right', flexShrink: 0 }}>{analysis.scores[k as keyof typeof analysis.scores]}</span>
-                  </div>
-                ))}
-              </div>
-              {/* Hard Skills */}
-              {analysis.matches.hard_skills?.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', marginBottom: 5 }}>🔧 Teknik Beceri Eşleşmeleri</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                    {analysis.matches.hard_skills.map((s, i) => (
-                      <span key={i} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: d ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)' }}>✓ {s}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Soft Skills */}
-              {analysis.matches.soft_skills?.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#8b5cf6', marginBottom: 5 }}>💬 Yumuşak Beceri Eşleşmeleri</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                    {analysis.matches.soft_skills.map((s, i) => (
-                      <span key={i} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: d ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.1)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.2)' }}>✓ {s}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Stratejik Eklenen Kelimeler */}
-              {analysis.additions?.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#10b981', marginBottom: 5 }}>💡 Stratejik Eklenen Kelimeler</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                    {analysis.additions.map((a, i) => (
-                      <span key={i} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: d ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>+ {a}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Gaps — Checkbox'lu seçim + Toplu Yedirme butonu */}
-              {analysis.gaps?.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', marginBottom: 5 }}>⚠ Eksik Alanlar</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {analysis.gaps.map((g, i) => (
-                      <label key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 6, fontSize: 10,
-                        padding: '4px 8px', borderRadius: 8, cursor: 'pointer',
-                        background: selectedGaps.includes(g)
-                          ? (d ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)')
-                          : (d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
-                        border: `1px solid ${selectedGaps.includes(g) ? 'rgba(245,158,11,0.4)' : 'transparent'}`,
-                        transition: 'all 0.15s',
-                      }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedGaps.includes(g)}
-                          onChange={() => toggleGapSelection(g)}
-                          style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
-                        />
-                        <span style={{ color: d ? '#fbbf24' : '#d97706', flex: 1 }}>{g}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {selectedGaps.length > 0 && (
-                    <button
-                      onClick={handleIntegrateBatchGaps}
-                      disabled={isIntegratingGaps}
-                      style={{
-                        width: '100%', marginTop: 8, padding: '8px 12px', borderRadius: 8,
-                        border: 'none', cursor: isIntegratingGaps ? 'wait' : 'pointer',
-                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                        color: '#fff', fontSize: 11, fontWeight: 700,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        opacity: isIntegratingGaps ? 0.7 : 1,
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {isIntegratingGaps ? (
-                        <>
-                          <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                          Yediriliyor…
-                        </>
-                      ) : (
-                        `🪄 CV'ye Yedir (${selectedGaps.length})`
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Warnings Panel */}
-          {mod !== 'sifirdan' && optimizedData.warnings && optimizedData.warnings.length > 0 && (
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Öneriler</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {optimizedData.warnings.map((w, i) => {
-                  const isHigh = w.severity === 'high'
-                  const isMed  = w.severity === 'medium'
-                  const accent = isHigh ? '#ef4444' : isMed ? '#f59e0b' : '#6366f1'
-                  const bg     = isHigh
-                    ? (d ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)')
-                    : isMed
-                    ? (d ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)')
-                    : (d ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)')
-                  return (
-                    <div key={i} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${accent}30`, background: bg, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: 13, flexShrink: 0, lineHeight: 1 }}>
-                        {isHigh ? '🔴' : isMed ? '🟡' : '🔵'}
-                      </span>
-                      <p style={{ fontSize: 10.5, color: text, lineHeight: 1.45, margin: 0, flex: 1 }}>{w.message}</p>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* AI ile Madde Ekle Panel */}
-          {optimizedData && (
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>AI ile Madde Ekle</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/* Section selector */}
-                <select
-                  value={addItemSection}
-                  onChange={e => setAddItemSection(e.target.value)}
-                  style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value="experience">İş Deneyimi</option>
-                  <option value="education">Eğitim</option>
-                  <option value="skills">Beceri</option>
-                  <option value="additional">Ek Bilgi</option>
-                  <option value="summary">Özet Güncelle</option>
-                </select>
-                {/* Input */}
-                <textarea
-                  value={addItemInput}
-                  onChange={e => setAddItemInput(e.target.value)}
-                  placeholder={
-                    addItemSection === 'experience' ? 'Ör: 2022–2024 arası X şirketinde React geliştirici olarak çalıştım…'
-                    : addItemSection === 'education' ? 'Ör: Boğaziçi Üniversitesi Bilgisayar Mühendisliği, 2020…'
-                    : addItemSection === 'skills' ? 'Ör: Docker, Kubernetes, CI/CD'
-                    : addItemSection === 'summary' ? 'Özete eklemek istediğiniz bilgiyi yazın…'
-                    : 'Ör: B sınıfı sürücü belgesi, İngilizce C1'
-                  }
-                  rows={3}
-                  style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, lineHeight: 1.55, fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
-                />
-                {/* Add button */}
-                <button
-                  onClick={handleAddItem}
-                  disabled={isAddingItem || !addItemInput.trim()}
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: 8,
-                    border: 'none',
-                    cursor: isAddingItem || !addItemInput.trim() ? 'not-allowed' : 'pointer',
-                    background: isAddingItem || !addItemInput.trim()
-                      ? (d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')
-                      : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                    color: isAddingItem || !addItemInput.trim() ? muted : '#fff',
-                    fontSize: 12, fontWeight: 700,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    opacity: isAddingItem ? 0.7 : 1,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {isAddingItem ? (
-                    <>
-                      <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                      Ekleniyor…
-                    </>
-                  ) : (
-                    '✨ AI ile Ekle'
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Center — CV Preview ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px', background: d ? '#0d1117' : '#eef0f4' }}>
-          <div style={{ width: '100%' }}>
-          {/* Mevcut template: orijinal dosyayı görsel olarak göster */}
-          {activeTemplate === 'mevcut' && originalPageImages.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
-              {originalPageImages.map((src, i) => (
-                <img key={i} src={src} alt={`Sayfa ${i + 1}`}
-                  style={{ width: '100%', maxWidth: 794, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', borderRadius: 2, display: 'block' }} />
-              ))}
-            </div>
-          )}
-          {activeTemplate === 'mevcut' && !originalPageImages.length && originalDocHtml && (
-            <div style={{ maxWidth: 794, margin: '0 auto', background: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', borderRadius: 2, padding: '48px 56px', minHeight: 1123, fontFamily: 'Arial, sans-serif', fontSize: 13, color: '#111', lineHeight: 1.6 }}
-              dangerouslySetInnerHTML={{ __html: originalDocHtml }} />
-          )}
-          {!(activeTemplate === 'mevcut' && (originalPageImages.length > 0 || originalDocHtml)) && <CvPreview
-            ref={cvPreviewRef}
-            data={optimizedData}
-            template={activeTemplate}
-            themeColor={themeColor}
-            narrativeVoice={narrativeVoice}
-            textAlign="text-left"
-            profileImage={profileImage}
-            photoShape={photoShape}
-            photoSize={photoSize}
-            photoObjectX={photoObjectX}
-            photoObjectY={photoObjectY}
-            photoScale={photoScale}
-            photoPosX={photoPosX}
-            photoPosY={photoPosY}
-            onPhotoChange={(sz, x, y, sc) => setPhotoTransform(sz, x, y, sc)}
-            onPhotoPosChange={(x, y) => setPhotoPosition(x, y)}
-            showIcons={showIcons}
-            cvLanguage={cvLanguage}
-            sectionsOrder={sectionsOrder}
-            customHeadings={customHeadings}
-            onUpdate={updateOptimizedData}
-            onAddBullet={handleAddBullet}
-            onDeleteBullet={(expId, bIdx) => {
-              deleteWithUndo('Madde silindi', prev => ({
-                ...prev,
-                experience: prev.experience.map(exp => exp.id !== expId ? exp : {
-                  ...exp,
-                  bullets_v1: exp.bullets_v1.filter((_, i) => i !== bIdx),
-                  bullets_v3: exp.bullets_v3.filter((_, i) => i !== bIdx),
-                }),
-              }))
-            }}
-            onDeleteExperience={(id) => {
-              const exp = optimizedData.experience.find(e => e.id === id)
-              deleteWithUndo(`"${exp?.role || 'Deneyim'}" silindi`, prev => ({
-                ...prev, experience: prev.experience.filter(e => e.id !== id),
-              }))
-            }}
-            onDeleteEducation={(id) => {
-              const edu = optimizedData.education.find(e => e.id === id)
-              deleteWithUndo(`"${edu?.degree || 'Eğitim'}" silindi`, prev => ({
-                ...prev, education: prev.education.filter(e => e.id !== id),
-              }))
-            }}
-            onDeleteSkill={(idx) => {
-              const skill = optimizedData.skills[idx]
-              deleteWithUndo(`"${skill}" silindi`, prev => ({
-                ...prev, skills: prev.skills.filter((_, i) => i !== idx),
-              }))
-            }}
-            onDeleteAdditional={(idx) => {
-              const item = optimizedData.additional[idx]
-              deleteWithUndo(`"${item}" silindi`, prev => ({
-                ...prev, additional: prev.additional.filter((_, i) => i !== idx),
-              }))
-            }}
-            onDeleteSection={(sectionId) => {
-              const headingMap: Record<string, string> = { summary: 'Kişisel Özet', experience: 'İş Deneyimi', education: 'Eğitim', skills: 'Teknik Yetenekler', additional: 'Ek Bilgiler' }
-              deleteWithUndo(`"${headingMap[sectionId] || sectionId}" bölümü silindi`, prev => {
-                if (sectionId === 'summary') return { ...prev, summary_v1: '', summary_v3: '' }
-                if (sectionId === 'skills') return { ...prev, skills: [] }
-                if (sectionId === 'additional') return { ...prev, additional: [] }
-                if (sectionId === 'experience') return { ...prev, experience: [] }
-                if (sectionId === 'education') return { ...prev, education: [] }
-                const rest = { ...prev } as Record<string, unknown>
-                delete rest[sectionId]
-                return rest as typeof prev
-              })
-            }}
-            onSectionsReorder={(newOrder) => setSectionsOrder(newOrder)}
-            onReorderExperience={(from, to) => {
-              updateOptimizedData(prev => {
-                const arr = [...prev.experience]
-                const [item] = arr.splice(from, 1)
-                arr.splice(to, 0, item)
-                return { ...prev, experience: arr }
-              })
-            }}
-            onReorderEducation={(from, to) => {
-              updateOptimizedData(prev => {
-                const arr = [...prev.education]
-                const [item] = arr.splice(from, 1)
-                arr.splice(to, 0, item)
-                return { ...prev, education: arr }
-              })
-            }}
-            onDeleteDynamicItem={(sectionId, idx) => {
-              deleteWithUndo('Öğe silindi', prev => {
-                const arr = [...((prev as Record<string, unknown>)[sectionId] as unknown[])]
-                arr.splice(idx, 1)
-                return { ...prev, [sectionId]: arr } as OptimizedCvData
-              })
-            }}
-          />}
-          </div>
-        </div>
-
-        {/* ── Right sidebar — Şablon, Renk, Ses Tonu, Fotoğraf ── */}
-        <div className="cv-right-sidebar" style={{ width: 320, flexShrink: 0, background: surface, borderLeft: `1px solid ${border}`, overflowY: 'auto', padding: '16px 16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-            {/* Aksiyon butonları */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 14, borderBottom: `1px solid ${border}` }}>
-              <button onClick={handleDownload} disabled={downloading}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', cursor: downloading ? 'wait' : 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 4px 14px rgba(99,102,241,0.25)' }}>
-                <Download size={14} /> {downloading ? 'Hazırlanıyor…' : 'PDF İndir'}
-              </button>
-              <button onClick={() => { if (confirm('CV oturumunu sıfırlamak istediğinizden emin misiniz?')) { resetSession(); setPasteText('') } }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, border: `1px solid ${border}`, background: 'transparent', color: muted, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                <RotateCcw size={13} /> Yeni CV
-              </button>
-            </div>
 
             {/* Fotoğraf */}
             <div>
@@ -1680,8 +1248,6 @@ KURALLAR:
                   { id: 'modern' as TemplateId,       label: 'Modern',       desc: 'Çağdaş & dinamik' },
                   { id: 'classic' as TemplateId,      label: 'Klasik',       desc: 'Geleneksel & güvenilir' },
                   { id: 'professional' as TemplateId, label: 'Profesyonel',  desc: 'Kurumsal & güçlü' },
-                  { id: 'elegant' as TemplateId,      label: 'Zarif',        desc: 'Minimal & şık' },
-                  { id: 'bold' as TemplateId,         label: 'Güçlü',        desc: 'Dikkat çekici' },
                 ] as const).map(({ id, label, desc }) => {
                   const active = activeTemplate === id
                   // Mevcut CV thumbnail
@@ -1865,39 +1431,516 @@ KURALLAR:
               </div>
             </div>
 
-            {/* Kişisel Özet İyileştir */}
+            {/* Metin Hizalama */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 8 }}>Metin Hizalama</p>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([
+                  ['text-left',    '⬅', 'Sol'],
+                  ['text-center',  '↔', 'Orta'],
+                  ['text-right',   '➡', 'Sağ'],
+                  ['text-justify', '☰', 'Yası'],
+                ] as const).map(([v, icon, lbl]) => (
+                  <button key={v} onClick={() => setTextAlign(v)} title={lbl}
+                    style={{ flex: 1, padding: '7px 4px', borderRadius: 8, border: `2px solid ${textAlign === v ? '#6366f1' : border}`, background: textAlign === v ? (d ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)') : 'transparent', color: textAlign === v ? '#6366f1' : text, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AI ile Madde Ekle */}
             {optimizedData && (
               <div>
-                <p style={{ fontSize: 10, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 4 }}>Kişisel Özet İyileştir</p>
-                <p style={{ fontSize: 10, color: muted, marginBottom: 8, lineHeight: 1.5 }}>İş ilanını yapıştır — AI özetini ATS uyumlu ve ilana odaklı şekilde yeniden yazar.</p>
-                <textarea
-                  value={jdForSummary}
-                  onChange={e => setJdForSummary(e.target.value)}
-                  placeholder="İş ilanını buraya yapıştırın..."
-                  rows={6}
-                  style={{
-                    width: '100%', boxSizing: 'border-box' as const,
-                    padding: '8px 10px', borderRadius: 8, resize: 'vertical' as const,
-                    fontSize: 11, lineHeight: 1.5, color: text,
-                    background: inputBg, border: `1px solid ${inputBdr}`,
-                    outline: 'none', fontFamily: 'inherit',
-                  }}
-                />
-                <button
-                  onClick={handleOptimizeSummary}
-                  disabled={isOptimizingSummary || !jdForSummary.trim()}
-                  style={{
-                    marginTop: 8, width: '100%', padding: '8px 0',
-                    borderRadius: 8, border: 'none', cursor: isOptimizingSummary || !jdForSummary.trim() ? 'not-allowed' : 'pointer',
-                    background: isOptimizingSummary || !jdForSummary.trim() ? (d ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)') : '#6366f1',
-                    color: isOptimizingSummary || !jdForSummary.trim() ? (d ? 'rgba(255,255,255,0.4)' : 'rgba(99,102,241,0.5)') : '#fff',
-                    fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <Sparkles size={12} />
-                  {isOptimizingSummary ? 'Optimize ediliyor...' : 'İlana Göre Optimize Et'}
-                </button>
+                <p style={{ fontSize: 10, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 10 }}>AI ile Madde Ekle</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {/* Section selector */}
+                  <select
+                    value={addItemSection}
+                    onChange={e => setAddItemSection(e.target.value)}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="experience">İş Deneyimi</option>
+                    <option value="education">Eğitim</option>
+                    <option value="skills">Beceri</option>
+                    <option value="additional">Ek Bilgi</option>
+                    <option value="summary">Özet Güncelle</option>
+                    <option value="customLink">Özel Link</option>
+                    <option value="customSection">Yeni Özel Alan</option>
+                  </select>
+                  {/* Custom section title input */}
+                  {addItemSection === 'customSection' && (
+                    <input
+                      type="text"
+                      value={customSectionTitle}
+                      onChange={e => setCustomSectionTitle(e.target.value)}
+                      placeholder="Bölüm başlığı (ör: Projelerim, Sertifikalar)"
+                      style={{ width: '100%', boxSizing: 'border-box' as const, padding: '8px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                    />
+                  )}
+                  {/* Özel Link inputs */}
+                  {addItemSection === 'customLink' ? (
+                    <>
+                      <input
+                        type="text"
+                        value={customLinkLabel}
+                        onChange={e => setCustomLinkLabel(e.target.value)}
+                        placeholder="Etiket (ör: GitHub, Portfolio)"
+                        style={{ width: '100%', boxSizing: 'border-box' as const, padding: '8px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                      />
+                      <input
+                        type="url"
+                        value={customLinkUrl}
+                        onChange={e => setCustomLinkUrl(e.target.value)}
+                        placeholder="URL (ör: https://github.com/kullanici)"
+                        style={{ width: '100%', boxSizing: 'border-box' as const, padding: '8px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                      />
+                    </>
+                  ) : (
+                    /* AI Input */
+                    <textarea
+                      value={addItemInput}
+                      onChange={e => setAddItemInput(e.target.value)}
+                      placeholder={
+                        addItemSection === 'experience' ? 'Ör: 2022–2024 arası X şirketinde React geliştirici olarak çalıştım…'
+                        : addItemSection === 'education' ? 'Ör: Boğaziçi Üniversitesi Bilgisayar Mühendisliği, 2020…'
+                        : addItemSection === 'skills' ? 'Ör: Docker, Kubernetes, CI/CD'
+                        : addItemSection === 'summary' ? 'Özete eklemek istediğiniz bilgiyi yazın…'
+                        : addItemSection === 'customSection' ? 'Ham açıklamanızı yazın; AI profesyonel maddelere dönüştürsün…'
+                        : 'Ör: B sınıfı sürücü belgesi, İngilizce C1'
+                      }
+                      rows={3}
+                      style={{ width: '100%', boxSizing: 'border-box' as const, padding: '8px 10px', borderRadius: 8, border: `1px solid ${inputBdr}`, background: inputBg, color: text, fontSize: 12, lineHeight: 1.55, fontFamily: 'inherit', outline: 'none', resize: 'vertical' as const }}
+                    />
+                  )}
+                  {/* Add button */}
+                  {addItemSection === 'customLink' ? (
+                    <button
+                      onClick={handleAddCustomLink}
+                      disabled={!customLinkLabel.trim() || !customLinkUrl.trim()}
+                      style={{
+                        width: '100%', padding: '8px 12px', borderRadius: 8,
+                        border: 'none',
+                        cursor: !customLinkLabel.trim() || !customLinkUrl.trim() ? 'not-allowed' : 'pointer',
+                        background: !customLinkLabel.trim() || !customLinkUrl.trim()
+                          ? (d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')
+                          : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                        color: !customLinkLabel.trim() || !customLinkUrl.trim() ? muted : '#fff',
+                        fontSize: 12, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      🔗 Link Ekle
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAddItem}
+                      disabled={isAddingItem || !addItemInput.trim() || (addItemSection === 'customSection' && !customSectionTitle.trim())}
+                      style={{
+                        width: '100%', padding: '8px 12px', borderRadius: 8,
+                        border: 'none',
+                        cursor: isAddingItem || !addItemInput.trim() || (addItemSection === 'customSection' && !customSectionTitle.trim()) ? 'not-allowed' : 'pointer',
+                        background: isAddingItem || !addItemInput.trim() || (addItemSection === 'customSection' && !customSectionTitle.trim())
+                          ? (d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')
+                          : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                        color: isAddingItem || !addItemInput.trim() || (addItemSection === 'customSection' && !customSectionTitle.trim()) ? muted : '#fff',
+                        fontSize: 12, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        opacity: isAddingItem ? 0.7 : 1,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {isAddingItem ? (
+                        <>
+                          <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                          Ekleniyor…
+                        </>
+                      ) : (
+                        '✨ AI ile Ekle'
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* ── Center — CV Preview ── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px', background: d ? '#0d1117' : '#eef0f4' }}>
+          <div style={{ width: '100%' }}>
+          {/* Mevcut template: orijinal dosyayı görsel olarak göster */}
+          {activeTemplate === 'mevcut' && originalPageImages.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+              {originalPageImages.map((src, i) => (
+                <img key={i} src={src} alt={`Sayfa ${i + 1}`}
+                  style={{ width: '100%', maxWidth: 794, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', borderRadius: 2, display: 'block' }} />
+              ))}
+            </div>
+          )}
+          {activeTemplate === 'mevcut' && !originalPageImages.length && originalDocHtml && (
+            <div style={{ maxWidth: 794, margin: '0 auto', background: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', borderRadius: 2, padding: '48px 56px', minHeight: 1123, fontFamily: 'Arial, sans-serif', fontSize: 13, color: '#111', lineHeight: 1.6 }}
+              dangerouslySetInnerHTML={{ __html: originalDocHtml }} />
+          )}
+          {!(activeTemplate === 'mevcut' && (originalPageImages.length > 0 || originalDocHtml)) && <CvPreview
+            ref={cvPreviewRef}
+            data={optimizedData}
+            template={activeTemplate}
+            themeColor={themeColor}
+            narrativeVoice={narrativeVoice}
+            textAlign={textAlign}
+            profileImage={profileImage}
+            photoShape={photoShape}
+            photoSize={photoSize}
+            photoObjectX={photoObjectX}
+            photoObjectY={photoObjectY}
+            photoScale={photoScale}
+            photoPosX={photoPosX}
+            photoPosY={photoPosY}
+            onPhotoChange={(sz, x, y, sc) => setPhotoTransform(sz, x, y, sc)}
+            onPhotoPosChange={(x, y) => setPhotoPosition(x, y)}
+            showIcons={showIcons}
+            cvLanguage={cvLanguage}
+            sectionsOrder={sectionsOrder}
+            customHeadings={customHeadings}
+            onUpdate={updateOptimizedData}
+            onAddBullet={handleAddBullet}
+            onDeleteBullet={(expId, bIdx) => {
+              deleteWithUndo('Madde silindi', prev => ({
+                ...prev,
+                experience: prev.experience.map(exp => exp.id !== expId ? exp : {
+                  ...exp,
+                  bullets_v1: exp.bullets_v1.filter((_, i) => i !== bIdx),
+                  bullets_v3: exp.bullets_v3.filter((_, i) => i !== bIdx),
+                }),
+              }))
+            }}
+            onDeleteExperience={(id) => {
+              const exp = optimizedData.experience.find(e => e.id === id)
+              deleteWithUndo(`"${exp?.role || 'Deneyim'}" silindi`, prev => ({
+                ...prev, experience: prev.experience.filter(e => e.id !== id),
+              }))
+            }}
+            onDeleteEducation={(id) => {
+              const edu = optimizedData.education.find(e => e.id === id)
+              deleteWithUndo(`"${edu?.degree || 'Eğitim'}" silindi`, prev => ({
+                ...prev, education: prev.education.filter(e => e.id !== id),
+              }))
+            }}
+            onDeleteSkill={(idx) => {
+              const skill = optimizedData.skills[idx]
+              deleteWithUndo(`"${skill}" silindi`, prev => ({
+                ...prev, skills: prev.skills.filter((_, i) => i !== idx),
+              }))
+            }}
+            onDeleteAdditional={(idx) => {
+              const item = optimizedData.additional[idx]
+              deleteWithUndo(`"${item}" silindi`, prev => ({
+                ...prev, additional: prev.additional.filter((_, i) => i !== idx),
+              }))
+            }}
+            onDeleteSection={(sectionId) => {
+              const headingMap: Record<string, string> = { summary: 'Kişisel Özet', experience: 'İş Deneyimi', education: 'Eğitim', skills: 'Teknik Yetenekler', additional: 'Ek Bilgiler' }
+              deleteWithUndo(`"${headingMap[sectionId] || sectionId}" bölümü silindi`, prev => {
+                if (sectionId === 'summary') return { ...prev, summary_v1: '', summary_v3: '' }
+                if (sectionId === 'skills') return { ...prev, skills: [] }
+                if (sectionId === 'additional') return { ...prev, additional: [] }
+                if (sectionId === 'experience') return { ...prev, experience: [] }
+                if (sectionId === 'education') return { ...prev, education: [] }
+                const rest = { ...prev } as Record<string, unknown>
+                delete rest[sectionId]
+                return rest as typeof prev
+              })
+            }}
+            onHeadingChange={(key, value) => setCustomHeadings({ ...customHeadings, [key]: value })}
+            onSectionsReorder={(newOrder) => setSectionsOrder(newOrder)}
+            onReorderExperience={(from, to) => {
+              updateOptimizedData(prev => {
+                const arr = [...prev.experience]
+                const [item] = arr.splice(from, 1)
+                arr.splice(to, 0, item)
+                return { ...prev, experience: arr }
+              })
+            }}
+            onReorderEducation={(from, to) => {
+              updateOptimizedData(prev => {
+                const arr = [...prev.education]
+                const [item] = arr.splice(from, 1)
+                arr.splice(to, 0, item)
+                return { ...prev, education: arr }
+              })
+            }}
+            onDeleteDynamicItem={(sectionId, idx) => {
+              deleteWithUndo('Öğe silindi', prev => {
+                const arr = [...((prev as Record<string, unknown>)[sectionId] as unknown[])]
+                arr.splice(idx, 1)
+                return { ...prev, [sectionId]: arr } as OptimizedCvData
+              })
+            }}
+          />}
+          </div>
+        </div>
+
+        {/* ── Right sidebar — Şablon, Renk, Ses Tonu, Fotoğraf ── */}
+        <div className="cv-right-sidebar" style={{ width: 320, flexShrink: 0, background: surface, borderLeft: `1px solid ${border}`, overflowY: 'auto', padding: '16px 16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+            {/* Aksiyon butonları */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 14, borderBottom: `1px solid ${border}` }}>
+              <button onClick={handleDownload} disabled={downloading}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', cursor: downloading ? 'wait' : 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 4px 14px rgba(99,102,241,0.25)' }}>
+                <Download size={14} /> {downloading ? 'Hazırlanıyor…' : 'PDF İndir'}
+              </button>
+              <button onClick={() => { if (confirm('CV oturumunu sıfırlamak istediğinizden emin misiniz?')) { resetSession(); setPasteText('') } }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, border: `1px solid ${border}`, background: 'transparent', color: muted, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                <RotateCcw size={13} /> Yeni CV
+              </button>
+            </div>
+
+            {/* Başlık */}
+            <div style={{ paddingBottom: 12, borderBottom: `1px solid ${border}` }}>
+              <h1 style={{ fontSize: 15, fontWeight: 800, color: text, marginBottom: 2 }}>CV Düzenleyici</h1>
+              <p style={{ fontSize: 11, color: muted }}>Alanları tıklayarak düzenleyebilirsiniz.</p>
+            </div>
+
+            {/* Item Management */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>İçerik Yönetimi</p>
+
+              {/* Experience */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Deneyim ({optimizedData.experience?.length ?? 0})</span>
+                  <button onClick={addExperience} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
+                </div>
+                {optimizedData.experience?.map(exp => (
+                  <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', marginBottom: 3 }}>
+                    <span style={{ flex: 1, fontSize: 10, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.role || 'Pozisyon'} · {exp.company || 'Şirket'}</span>
+                    <button onClick={() => deleteExperience(exp.id)} title="Sil" style={{ fontSize: 14, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0, opacity: 0.6 }}>×</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Education */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Eğitim ({optimizedData.education?.length ?? 0})</span>
+                  <button onClick={addEducation} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
+                </div>
+                {optimizedData.education?.map(edu => (
+                  <div key={edu.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', marginBottom: 3 }}>
+                    <span style={{ flex: 1, fontSize: 10, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{edu.degree || 'Bölüm'}</span>
+                    <button onClick={() => deleteEducation(edu.id)} title="Sil" style={{ fontSize: 14, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0, opacity: 0.6 }}>×</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Skills */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Beceriler ({optimizedData.skills?.length ?? 0})</span>
+                  <button onClick={addSkill} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {optimizedData.skills?.map((skill, si) => (
+                    <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 20, background: d ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      <span style={{ fontSize: 10, color: '#6366f1' }}>{skill}</span>
+                      <button onClick={() => deleteSkill(si)} style={{ fontSize: 12, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, opacity: 0.6 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Additional */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Ek Bilgiler ({optimizedData.additional?.length ?? 0})</span>
+                  <button onClick={addAdditional} style={{ fontSize: 11, color: '#6366f1', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>+ Ekle</button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {optimizedData.additional?.map((item, ai) => (
+                    <div key={ai} style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 20, background: d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${border}` }}>
+                      <span style={{ fontSize: 10, color: muted }}>{item}</span>
+                      <button onClick={() => deleteAdditional(ai)} style={{ fontSize: 12, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, opacity: 0.6 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Özel Linkler */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: text }}>Özel Linkler ({optimizedData.customLinks?.filter(cl => !cl.url?.toLowerCase().includes('linkedin.com')).length ?? 0})</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {(optimizedData.customLinks ?? []).filter(cl => !cl.url?.toLowerCase().includes('linkedin.com')).map((cl, ci) => {
+                    const realIdx = (optimizedData.customLinks ?? []).findIndex(x => x === cl)
+                    return (
+                      <div key={ci} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}>
+                        <span style={{ flex: 1, fontSize: 10, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cl.label} · {cl.url}</span>
+                        <button onClick={() => deleteCustomLink(realIdx)} title="Sil" style={{ fontSize: 14, color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0, opacity: 0.6 }}>×</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ATS Panel — sifirdan modunda hesaplanmış skor, diğer modlarda AI analizi */}
+            {mod === 'sifirdan' ? (() => {
+              const { score, checks } = computeSifirdanAts(optimizedData)
+              const sc = score >= 91 ? '#10b981' : score >= 71 ? '#3b82f6' : score >= 41 ? '#f59e0b' : '#ef4444'
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase' as const, letterSpacing: 1, margin: 0 }}>ATS Uyumluluğu</p>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: sc }}>{score}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height: 8, borderRadius: 4, background: d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden', marginBottom: 12 }}>
+                    <div style={{ height: '100%', width: `${score}%`, background: sc, borderRadius: 4, transition: 'width 0.6s ease' }} />
+                  </div>
+                  {/* Checks */}
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+                    {checks.map((c, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 10.5, color: c.passed ? (d ? '#86efac' : '#16a34a') : (d ? '#fca5a5' : '#dc2626') }}>
+                        <span style={{ flexShrink: 0, lineHeight: 1.4 }}>{c.passed ? '✓' : '✗'}</span>
+                        <span style={{ lineHeight: 1.4 }}>{c.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })() : analysis && (
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>ATS Raporu</p>
+                {/* Scores */}
+                <div style={{ marginBottom: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${border}`, background: d ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: scoreColor(analysis.scores.overall) }}>{analysis.scores.overall}</div>
+                  <div style={{ fontSize: 10, color: muted, marginBottom: 8 }}>Genel Uyum Skoru</div>
+                  {Object.entries({ skills: 'Beceri', experience: 'Deneyim', education: 'Eğitim' } as const).map(([k, lbl]) => (
+                    <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, color: muted, width: 52, textAlign: 'left', flexShrink: 0 }}>{lbl}</span>
+                      <div style={{ flex: 1, height: 4, borderRadius: 4, background: d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${analysis.scores[k as keyof typeof analysis.scores]}%`, background: scoreColor(analysis.scores[k as keyof typeof analysis.scores]), borderRadius: 4, transition: 'width 0.6s ease' }} />
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor(analysis.scores[k as keyof typeof analysis.scores]), width: 24, textAlign: 'right', flexShrink: 0 }}>{analysis.scores[k as keyof typeof analysis.scores]}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Hard Skills */}
+                {analysis.matches.hard_skills?.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', marginBottom: 5 }}>🔧 Teknik Beceri Eşleşmeleri</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                      {analysis.matches.hard_skills.map((s, i) => (
+                        <span key={i} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: d ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)' }}>✓ {s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Soft Skills */}
+                {analysis.matches.soft_skills?.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#8b5cf6', marginBottom: 5 }}>💬 Yumuşak Beceri Eşleşmeleri</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                      {analysis.matches.soft_skills.map((s, i) => (
+                        <span key={i} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: d ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.1)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.2)' }}>✓ {s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Stratejik Olarak Beklenen Kelimeler */}
+                {analysis.additions?.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#10b981', marginBottom: 5 }}>💡 Stratejik Olarak Beklenen Kelimeler</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                      {analysis.additions.map((a, i) => (
+                        <span key={i} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: d ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>+ {a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Gaps — Checkbox'lu seçim + Toplu Yedirme butonu */}
+                {analysis.gaps?.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', marginBottom: 5 }}>⚠ Eksik Alanlar</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {analysis.gaps.map((g, i) => (
+                        <label key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: 6, fontSize: 10,
+                          padding: '4px 8px', borderRadius: 8, cursor: 'pointer',
+                          background: selectedGaps.includes(g)
+                            ? (d ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)')
+                            : (d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                          border: `1px solid ${selectedGaps.includes(g) ? 'rgba(245,158,11,0.4)' : 'transparent'}`,
+                          transition: 'all 0.15s',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedGaps.includes(g)}
+                            onChange={() => toggleGapSelection(g)}
+                            style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
+                          />
+                          <span style={{ color: d ? '#fbbf24' : '#d97706', flex: 1 }}>{g}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedGaps.length > 0 && (
+                      <button
+                        onClick={handleIntegrateBatchGaps}
+                        disabled={isIntegratingGaps}
+                        style={{
+                          width: '100%', marginTop: 8, padding: '8px 12px', borderRadius: 8,
+                          border: 'none', cursor: isIntegratingGaps ? 'wait' : 'pointer',
+                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          color: '#fff', fontSize: 11, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          opacity: isIntegratingGaps ? 0.7 : 1,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {isIntegratingGaps ? (
+                          <>
+                            <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                            Yediriliyor…
+                          </>
+                        ) : (
+                          `🪄 CV'ye Yedir (${selectedGaps.length})`
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Warnings Panel */}
+            {mod !== 'sifirdan' && optimizedData.warnings && optimizedData.warnings.length > 0 && (
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Öneriler</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {optimizedData.warnings.map((w, i) => {
+                    const isHigh = w.severity === 'high'
+                    const isMed  = w.severity === 'medium'
+                    const accent = isHigh ? '#ef4444' : isMed ? '#f59e0b' : '#6366f1'
+                    const bg     = isHigh
+                      ? (d ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)')
+                      : isMed
+                      ? (d ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)')
+                      : (d ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)')
+                    return (
+                      <div key={i} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${accent}30`, background: bg, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 13, flexShrink: 0, lineHeight: 1 }}>
+                          {isHigh ? '🔴' : isMed ? '🟡' : '🔵'}
+                        </span>
+                        <p style={{ fontSize: 10.5, color: text, lineHeight: 1.45, margin: 0, flex: 1 }}>{w.message}</p>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 

@@ -8,7 +8,7 @@ import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { PageWrapper } from '../layout/PageWrapper'
 import { useAuthStore } from '../../store/useAuthStore'
-import { addDocument, trainingSessionsCol } from '../../lib/firestore'
+// import { addDocument, trainingSessionsCol } from '../../lib/firestore' // GEÇİCİ: Firestore kayıt devre dışı
 
 interface Props {
   questions: Question[]
@@ -174,12 +174,13 @@ export function QuizMode({ questions, kategori }: Props) {
     if (answered === 0) return
     const u = useAuthStore.getState().user
     if (u) {
-      addDocument(trainingSessionsCol(), {
-        userId: u.uid, mode: 'quiz', category: kategori,
-        totalQuestions: answered, correctCount: score,
-        partialCount: 0, wrongCount: wrongAnswers.length,
-        score: Math.round((score / answered) * 100),
-      }).catch(() => {})
+      // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
+      // addDocument(trainingSessionsCol(), {
+      //   userId: u.uid, mode: 'quiz', category: kategori,
+      //   totalQuestions: answered, correctCount: score,
+      //   partialCount: 0, wrongCount: wrongAnswers.length,
+      //   score: Math.round((score / answered) * 100),
+      // }).catch(() => {})
       localStorage.removeItem(`mulakat_session_${u.uid}_${kategori}_quiz`)
     }
     setEarlyFinish(true)
@@ -231,19 +232,16 @@ export function QuizMode({ questions, kategori }: Props) {
 
   const goNext = () => {
     if (index + 1 >= deck.length) {
-      const user = useAuthStore.getState().user
-      if (user) {
-        addDocument(trainingSessionsCol(), {
-          userId: user.uid,
-          mode: 'quiz',
-          category: kategori,
-          totalQuestions: deck.length,
-          correctCount: score,
-          partialCount: 0,
-          wrongCount: wrongAnswers.length,
-          score: Math.round((score / deck.length) * 100),
-        }).catch(() => {})
-      }
+      // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
+      // const user = useAuthStore.getState().user
+      // if (user) {
+      //   addDocument(trainingSessionsCol(), {
+      //     userId: user.uid, mode: 'quiz', category: kategori,
+      //     totalQuestions: deck.length, correctCount: score,
+      //     partialCount: 0, wrongCount: wrongAnswers.length,
+      //     score: Math.round((score / deck.length) * 100),
+      //   }).catch(() => {})
+      // }
       setDone(true)
     } else {
       setIndex((i) => i + 1)

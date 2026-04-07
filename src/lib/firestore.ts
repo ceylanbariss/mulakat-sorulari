@@ -86,9 +86,10 @@ export function subscribeCollection<T>(
   ...constraints: QueryConstraint[]
 ): Unsubscribe {
   const q = constraints.length ? query(col, ...constraints) : query(col)
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ _id: d.id, ...(d.data() as T) })))
-  })
+  return onSnapshot(q,
+    snap => { callback(snap.docs.map(d => ({ _id: d.id, ...(d.data() as T) }))) },
+    () => { callback([]) } // izin hatası veya bağlantı hatasında boş array döndür → yerel veriye düşer
+  )
 }
 
 // ─── Mülakat Simülasyonu ──────────────────────────────────────────────────────

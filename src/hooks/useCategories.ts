@@ -11,9 +11,20 @@ export function useCategories() {
   useEffect(() => {
     let isMounted = true
 
+    const fallbackToLocal = () => {
+      if (isMounted) {
+        setCategories(CATEGORIES.map(c => ({ ...c, _id: c.id, count: c.count })))
+        setLoading(false)
+      }
+    }
+
+    // Firestore izin hatası durumunda (giriş yapılmamış kullanıcı) yerel veriye düş
+    const timer = setTimeout(fallbackToLocal, 2000)
+
     const unsub = subscribeCollection<Category>(
       categoriesCol(),
       async (docs) => {
+        clearTimeout(timer)
         let all = docs as CategoryDoc[]
         if (all.length === 0) {
           all = CATEGORIES.map(c => ({ ...c, _id: c.id, count: c.count }))
@@ -35,6 +46,7 @@ export function useCategories() {
     )
     return () => {
       isMounted = false
+      clearTimeout(timer)
       unsub()
     }
   }, [])
