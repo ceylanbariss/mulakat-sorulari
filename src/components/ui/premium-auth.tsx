@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import {
   Mail, Lock, User, Eye, EyeOff, Shield,
@@ -578,9 +579,9 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
                 style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
               />
               <span className="text-sm text-slate-500">
-                <a href="#" className="text-slate-400 underline hover:text-slate-300 transition-colors">Kullanım Koşulları</a>
+                <Link to="/kullanim-sartlari" className="text-slate-400 underline hover:text-slate-300 transition-colors">Kullanım Koşulları</Link>
                 {' '}ve{' '}
-                <a href="#" className="text-slate-400 underline hover:text-slate-300 transition-colors">Gizlilik Politikası</a>
+                <Link to="/gizlilik-politikasi" className="text-slate-400 underline hover:text-slate-300 transition-colors">Gizlilik Politikası</Link>
                 'nı kabul ediyorum
               </span>
             </label>

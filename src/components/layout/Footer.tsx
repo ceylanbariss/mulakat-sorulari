@@ -188,19 +188,19 @@ export function Footer() {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
-              <span style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+              <Link to="/gizlilik-politikasi" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', cursor: 'pointer', transition: 'color 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
               >
                 Gizlilik Politikası
-              </span>
+              </Link>
               <span>·</span>
-              <span style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+              <Link to="/kullanim-sartlari" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', cursor: 'pointer', transition: 'color 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
               >
                 Kullanım Şartları
-              </span>
+              </Link>
             </div>
             <motion.button
               whileHover={{ scale: 1.1 }}

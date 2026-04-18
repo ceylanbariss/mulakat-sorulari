@@ -28,6 +28,8 @@ import { Haberler } from './pages/Haberler'
 import { HaberDetay } from './pages/HaberDetay'
 import { AdminHaberler } from './pages/admin/AdminHaberler'
 import { AdminHaberEkle } from './pages/admin/AdminHaberEkle'
+import { GizlilikPolitikasi } from './pages/GizlilikPolitikasi'
+import { KullanimSartlari } from './pages/KullanimSartlari'
 
 // @react-pdf/renderer lazy load — eager import'ta browser crash'e yol açıyor
 const CvOlustur = lazy(() => import('./pages/cv-olustur').then(m => ({ default: m.CvOlustur })))
@@ -63,6 +65,8 @@ function AnimatedRoutes() {
           <Route path="/cv-olustur" element={<Suspense fallback={<div style={{ minHeight: '100vh' }} />}><CvOlustur /></Suspense>} />
           <Route path="/haberler" element={<Haberler />} />
           <Route path="/haberler/:slug" element={<HaberDetay />} />
+          <Route path="/gizlilik-politikasi" element={<GizlilikPolitikasi />} />
+          <Route path="/kullanim-sartlari" element={<KullanimSartlari />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
