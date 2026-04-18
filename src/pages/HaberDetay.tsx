@@ -150,7 +150,7 @@ export function HaberDetay() {
             {/* Yazar */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <img src="/logo.png" alt="logo" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'contain', background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', padding: 2 }} />
-              <span style={{ color: d ? '#cbd5e1' : '#334155', fontWeight: 600, fontSize: 13 }}>mulakatsorulari.com.tr</span>
+              <span style={{ color: d ? '#cbd5e1' : '#334155', fontWeight: 600, fontSize: 13 }}>Mülakat Soruları</span>
             </div>
             <span style={{ color: mutedColor }}>·</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: mutedColor, fontSize: 12 }}>

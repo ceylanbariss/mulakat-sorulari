@@ -32,9 +32,6 @@ function formatDate(ts: unknown): string {
   return new Date(ms).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
 }
 
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -93,11 +90,9 @@ export function HaberKarti({ haber, yorumSayisi = 0 }: HaberKartiProps) {
     >
       {/* Üst: yazar + tarih + kategori */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-          {initials(haber.yazar)}
-        </div>
+        <img src="/logo.png" alt="Mülakat Soruları" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'contain', background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', padding: 3, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <span style={{ color: textColor, fontWeight: 600, fontSize: 13 }}>{haber.yazar}</span>
+          <span style={{ color: textColor, fontWeight: 600, fontSize: 13 }}>Mülakat Soruları</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ color: mutedColor, fontSize: 11 }}>{formatDate(haber.olusturmaTarihi)}</span>
             {haber.okumaSuresi > 0 && haber.tip === 'makale' && (
