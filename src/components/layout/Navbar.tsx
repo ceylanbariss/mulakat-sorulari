@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, BarChart2, Info, Brain, Menu, X, LogOut, Newspaper, FileText } from 'lucide-react'
+import { BookOpen, BarChart2, Info, Brain, Menu, X, LogOut, Newspaper, FileText, Target } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ThemeToggle } from '../ui/ThemeToggle'
@@ -13,6 +13,7 @@ const navLinks = [
   { to: '/mulakat-sim', label: 'AI Mülakat', icon: Brain },
   { to: '/cv-olustur', label: 'CV Oluştur', icon: FileText },
   { to: '/haberler', label: 'Haberler', icon: Newspaper },
+  { to: '/it-kariyer-testi', label: 'Kariyer Testi', icon: Target },
   { to: '/hakkimizda', label: 'Hakkımızda', icon: Info },
 ]
 

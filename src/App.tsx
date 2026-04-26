@@ -34,6 +34,11 @@ import { KullanimSartlari } from './pages/KullanimSartlari'
 // @react-pdf/renderer lazy load — eager import'ta browser crash'e yol açıyor
 const CvOlustur = lazy(() => import('./pages/cv-olustur').then(m => ({ default: m.CvOlustur })))
 
+const ITKariyerTesti = lazy(() => import('./pages/ITKariyerTesti/index'))
+const ITKariyerQuiz = lazy(() => import('./pages/ITKariyerTesti/QuizPage'))
+const ITKariyerSonuc = lazy(() => import('./pages/ITKariyerTesti/ResultPage'))
+const ITKariyerEgitim = lazy(() => import('./pages/ITKariyerTesti/EgitimPage'))
+
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
   enter: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const } },
@@ -67,6 +72,10 @@ function AnimatedRoutes() {
           <Route path="/haberler/:slug" element={<HaberDetay />} />
           <Route path="/gizlilik-politikasi" element={<GizlilikPolitikasi />} />
           <Route path="/kullanim-sartlari" element={<KullanimSartlari />} />
+          <Route path="/it-kariyer-testi" element={<Suspense fallback={<div style={{ minHeight: '100vh' }} />}><ITKariyerTesti /></Suspense>} />
+          <Route path="/it-kariyer-testi/quiz" element={<Suspense fallback={<div style={{ minHeight: '100vh' }} />}><ITKariyerQuiz /></Suspense>} />
+          <Route path="/it-kariyer-testi/sonuc" element={<Suspense fallback={<div style={{ minHeight: '100vh' }} />}><ITKariyerSonuc /></Suspense>} />
+          <Route path="/it-kariyer-testi/egitim" element={<Suspense fallback={<div style={{ minHeight: '100vh' }} />}><ITKariyerEgitim /></Suspense>} />
         </Routes>
       </motion.div>
     </AnimatePresence>
