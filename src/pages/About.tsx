@@ -143,7 +143,7 @@ export function About() {
                 Platformu
               </h1>
               <p style={{ fontSize: '16px', lineHeight: 1.8, color: textMuted, maxWidth: '520px', marginBottom: '32px' }}>
-                Kariyer hedeflerine ulaşmak için doğru adayı değil, en hazırlıklı adayı arıyoruz. mulakatsorulari.com.tr bu yolda yanında.
+                Kariyer hedeflerine ulaşmak için en doğru, en hazırlıklı aday olma yolunda mulakatsorulari.com.tr yanında...
               </p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <Link to="/sorular" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 24px', borderRadius: '10px', background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', color: 'white', fontSize: '15px', fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 20px rgba(124,58,237,0.35)' }}>
