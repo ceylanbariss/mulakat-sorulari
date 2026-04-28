@@ -29,12 +29,12 @@ export interface AuthFormProps {
 
 interface FormData {
   name: string; email: string; password: string; confirmPassword: string
-  phone: string; agreeToTerms: boolean; rememberMe: boolean; verificationCode: string
+  phone: string; agreeToTerms: boolean; agreeToKvkk: boolean; agreeToAI: boolean; rememberMe: boolean; verificationCode: string
 }
 
 interface FormErrors {
   name?: string; email?: string; password?: string; confirmPassword?: string
-  phone?: string; agreeToTerms?: string; general?: string; verificationCode?: string
+  phone?: string; agreeToTerms?: string; agreeToKvkk?: string; general?: string; verificationCode?: string
 }
 
 // ─── Password Strength ────────────────────────────────────────────────────────
@@ -245,10 +245,18 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
   const [successMsg, setSuccessMsg] = useState('')
   const [form, setForm] = useState<FormData>({
     name: '', email: '', password: '', confirmPassword: '',
-    phone: '', agreeToTerms: false, rememberMe: false, verificationCode: '',
+    phone: '', agreeToTerms: false, agreeToKvkk: false, agreeToAI: false, rememberMe: false, verificationCode: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [kvkkScrolled, setKvkkScrolled] = useState(false)
+
+  const handleKvkkScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    if (scrollHeight - scrollTop <= clientHeight + 10) {
+      setKvkkScrolled(true)
+    }
+  }
 
   React.useEffect(() => {
     const saved = localStorage.getItem('userEmail')
@@ -271,7 +279,8 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       case 'confirmPassword': return (authMode === 'signup' && value !== form.password) ? 'Şifreler eşleşmiyor' : ''
       case 'phone': return (typeof value === 'string' && value && !/^\+?[\d\s\-()]+$/.test(value)) ? 'Geçerli bir telefon numarası girin' : ''
       case 'verificationCode': return (typeof value === 'string' && authMode === 'signup' && step === 'verification' && !/^\d{6}$/.test(value)) ? 'Kod 6 haneli olmalıdır' : ''
-      case 'agreeToTerms': return (authMode === 'signup' && !value) ? 'Koşulları kabul etmelisiniz' : ''
+      case 'agreeToTerms': return (authMode === 'signup' && !value) ? 'Üyelik Sözleşmesini kabul etmelisiniz' : ''
+      case 'agreeToKvkk': return (authMode === 'signup' && !value) ? 'Aydınlatma Metnini onaylamalısınız' : ''
       default: return ''
     }
   }, [form.password, authMode, step])
@@ -289,7 +298,7 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
   const validateAll = useCallback(() => {
     const fields: (keyof FormData)[] = ['email']
     if (authMode !== 'reset') fields.push('password')
-    if (authMode === 'signup') fields.push('name', 'confirmPassword', 'agreeToTerms')
+    if (authMode === 'signup') fields.push('name', 'confirmPassword', 'agreeToTerms', 'agreeToKvkk')
     if (step === 'verification') fields.push('verificationCode')
     const newErr: FormErrors = {}
     fields.forEach(f => { const e = validate(f, form[f]); if (e) newErr[f as keyof FormErrors] = e })
@@ -570,28 +579,80 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
               Şifremi unuttum?
             </button>
           </>) : (
-            <label className="flex items-start gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.agreeToTerms}
-                onChange={e => onChange('agreeToTerms', e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
-                style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
-              />
-              <span className="text-sm text-slate-500">
-                <Link to="/kullanim-sartlari" className="text-slate-400 underline hover:text-slate-300 transition-colors">Kullanım Koşulları</Link>
-                {' '}ve{' '}
-                <Link to="/gizlilik-politikasi" className="text-slate-400 underline hover:text-slate-300 transition-colors">Gizlilik Politikası</Link>
-                'nı kabul ediyorum
-              </span>
-            </label>
+            <div className="flex flex-col gap-4">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.agreeToTerms}
+                  onChange={e => onChange('agreeToTerms', e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
+                  style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
+                />
+                <span className="text-sm text-slate-500">
+                  <Link to="/kullanim-sartlari" target="_blank" className="text-slate-400 underline hover:text-slate-300 transition-colors">Üyelik Sözleşmesi</Link>'ni okudum, kabul ediyorum. <span className="text-red-400">*</span>
+                </span>
+              </label>
+
+              <div className="bg-slate-50/5 border border-slate-200/20 rounded-lg p-3" style={{ background: d ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderColor: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
+                <div className="text-xs mb-2" style={{ color: d ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }}>Lütfen onaylamak için metnin sonuna kadar okuyun/kaydırın.</div>
+                <div 
+                  onScroll={handleKvkkScroll}
+                  className="h-32 overflow-y-auto text-xs pr-2 mb-3 space-y-2"
+                  style={{ color: d ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}
+                >
+                  <p><strong>KİŞİSEL VERİLERİN İŞLENMESİNE İLİŞKİN AYDINLATMA METNİ</strong></p>
+                  <p><strong>1. Giriş</strong><br/>mulakatsorulari.com.tr platformu olarak kişisel verilerinizin güvenliğine önem veriyoruz. Bu metin, verilerinizin hangi kapsamda işlendiği ve haklarınız hakkında bilgilendirme amacı taşır.</p>
+                  <p><strong>2. Veri Sorumlusu</strong><br/>Kişisel verileriniz, 6698 sayılı KVKK kapsamında veri sorumlusu sıfatıyla İsmail Tayşi (info@mulakatsorulari.com.tr) tarafından işlenmektedir.</p>
+                  <p><strong>3. Hangi Kişisel Verilerinizi İşliyoruz?</strong><br/>Kullanıcı hesap bilgileri, CV içerikleri, yapay zeka destekli mülakat simülasyon yanıtları, performans verileri, IP adresi ve cihaz bilgileri gibi verileriniz işlenmektedir.</p>
+                  <p><strong>4. İşlenme Amaçları ve Hukuki Sebepleri</strong><br/>Sözleşmenin kurulması, üyelik yönetimi, yapay zeka ile mülakat analizi, kişiselleştirilmiş geri bildirim sağlanması, platform deneyiminin geliştirilmesi ve hukuki yükümlülüklerin yerine getirilmesi amaçlarıyla işlenmektedir.</p>
+                  <p><strong>5. Aktarım</strong><br/>Mülakat analizi ve CV değerlendirme hizmetleri için kişisel verileriniz; bulut hizmet sağlayıcılarımıza yurt dışına açık rızanıza istinaden aktarılabilir. Ayrıca yasal zorunluluklarda yetkili kurumlara aktarılabilir.</p>
+                  <p><strong>6. Saklanması ve Korunması</strong><br/>Verileriniz üyelik süresince ve kanuni sürelere uygun şekilde güvenli olarak saklanır. Güvenli bağlantılar ve şifreleme teknolojileri kullanılır.</p>
+                  <p><strong>7. Haklarınız</strong><br/>KVKK md. 11 kapsamındaki haklarınızı info@mulakatsorulari.com.tr adresine başvurarak kullanabilirsiniz.</p>
+                </div>
+                <label className={cn("flex items-start gap-2 select-none transition-opacity", kvkkScrolled ? "cursor-pointer" : "cursor-not-allowed opacity-50")}>
+                  <input
+                    type="checkbox"
+                    disabled={!kvkkScrolled}
+                    checked={form.agreeToKvkk}
+                    onChange={e => onChange('agreeToKvkk', e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded accent-indigo-500 flex-shrink-0"
+                    style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', cursor: kvkkScrolled ? 'pointer' : 'not-allowed' }}
+                  />
+                  <span className="text-sm text-slate-500">
+                    Kişisel verilerimin işlenmesine yönelik <Link to="/gizlilik-politikasi" target="_blank" className="text-slate-400 underline hover:text-slate-300">Aydınlatma Metni</Link> kapsamında bilgilendirildim. <span className="text-red-400">*</span>
+                  </span>
+                </label>
+              </div>
+
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.agreeToAI}
+                  onChange={e => onChange('agreeToAI', e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
+                  style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
+                />
+                <span className="text-sm text-slate-500">
+                  Verilerimin AI analizleri için yurt dışına aktarılmasına ve profilleme yapılmasına <Link to="/gizlilik-politikasi" target="_blank" className="text-slate-400 underline hover:text-slate-300">Açık Rıza</Link> veriyorum. <span className="text-slate-400 text-xs">(İsteğe bağlı)</span>
+                </span>
+              </label>
+            </div>
           )}
         </div>
 
-        {errors.agreeToTerms && (
-          <p className="flex items-center gap-1 text-xs text-red-400">
-            <AlertTriangle className="h-3 w-3" />{errors.agreeToTerms}
-          </p>
+        {(errors.agreeToTerms || errors.agreeToKvkk) && (
+          <div className="flex flex-col gap-1">
+            {errors.agreeToTerms && (
+              <p className="flex items-center gap-1 text-xs text-red-400">
+                <AlertTriangle className="h-3 w-3" />{errors.agreeToTerms}
+              </p>
+            )}
+            {errors.agreeToKvkk && (
+              <p className="flex items-center gap-1 text-xs text-red-400">
+                <AlertTriangle className="h-3 w-3" />{errors.agreeToKvkk}
+              </p>
+            )}
+          </div>
         )}
 
         <div className="pt-5">
