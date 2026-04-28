@@ -7,7 +7,7 @@ import { MAX_QUESTIONS, INTERVIEW_TYPE_LABELS } from '../../config/mulakatConfig
 import { ChatMessage } from './ChatMessage'
 import { FinishModal } from './FinishModal'
 import { AnalysisReport } from './AnalysisReport'
-// import { saveMulakatSession } from '../../lib/firestore' // GEÇİCİ: Firestore kayıt devre dışı
+import { saveMulakatSession } from '../../lib/firestore'
 
 interface Props {
   d: boolean
@@ -25,7 +25,7 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
     interviewType,
     cvText,
     jobDescription,
-    // cvFileName, // GEÇİCİ: Firestore kayıt devre dışı
+    cvFileName,
     addMessage,
     setCurrentAnswer,
     setLoading,
@@ -124,9 +124,16 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
       if (data.terminated) {
         setIsTerminated(true)
         try {
-          // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
-          // await saveMulakatSession({ userId, interviewType: ..., terminated: true, ... })
-          void userId // kullanılmayan değişken uyarısını önle
+          await saveMulakatSession({
+            userId,
+            interviewType: interviewType ?? 'ik',
+            jobDescription: jobDescription.slice(0, 500),
+            cvFileName,
+            questionCount,
+            summary: 'Uygunsuz içerik nedeniyle sonlandırıldı.',
+            messages: [...messages, { role: 'interviewer', content: data.question }].map((m) => ({ role: m.role, content: m.content })),
+            terminated: true,
+          })
         } catch { /* sessiz hata */ }
         return
       }
@@ -183,12 +190,20 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
   async function handleSaveWithAnalysis() {
     setSaving(true)
     try {
-      // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
-      // const lastQuestion = messages.filter((m) => m.role === 'interviewer').slice(-1)[0]?.content ?? ''
-      // await saveMulakatSession({ userId, ..., analysis: analysisData ?? undefined })
-      // toast.success('Mülakat geçmişe kaydedildi!')
+      const lastQuestion = messages.filter((m) => m.role === 'interviewer').slice(-1)[0]?.content ?? ''
+      await saveMulakatSession({
+        userId,
+        interviewType: interviewType ?? 'ik',
+        jobDescription: jobDescription.slice(0, 500),
+        cvFileName,
+        questionCount,
+        summary: lastQuestion.slice(0, 200),
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        analysis: analysisData ?? undefined,
+      })
+      toast.success('Mülakat geçmişe kaydedildi!')
       resetSession()
-      onFinished(false)
+      onFinished(true)
     } catch {
       toast.error('Kaydetme sırasında bir hata oluştu.')
     } finally {
@@ -199,10 +214,17 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
   async function handleSaveSession() {
     setSaving(true)
     try {
-      // GEÇİCİ: Firestore kayıt devre dışı — geri almak için bu yorumu kaldır
-      // const lastQuestion = messages.filter((m) => m.role === 'interviewer').slice(-1)[0]?.content ?? ''
-      // await saveMulakatSession({ userId, ..., messages: [...] })
-      // toast.success('Mülakat geçmişe kaydedildi!')
+      const lastQuestion = messages.filter((m) => m.role === 'interviewer').slice(-1)[0]?.content ?? ''
+      await saveMulakatSession({
+        userId,
+        interviewType: interviewType ?? 'ik',
+        jobDescription: jobDescription.slice(0, 500),
+        cvFileName,
+        questionCount,
+        summary: lastQuestion.slice(0, 200),
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      })
+      toast.success('Mülakat geçmişe kaydedildi!')
       setShowFinishModal(false)
       resetSession()
       onFinished(true)

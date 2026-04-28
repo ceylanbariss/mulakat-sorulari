@@ -1,7 +1,7 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
-// import { Link } from 'react-router-dom' // GEÇİCİ: auth guard kaldırıldı
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-// import { ArrowRight } from 'lucide-react' // GEÇİCİ: auth guard kaldırıldı
+import { ArrowRight } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import { useAuthStore } from '../../store/useAuthStore'
 import { useMulakatStore } from '../../store/useMulakatStore'
@@ -61,8 +61,38 @@ export function MulakatSimPage() {
     )
   }
 
-  // GEÇİCİ: Giriş yapılmamış guard devre dışı — geri almak için bu yorumu kaldır
-  // if (!user) { return (...) }
+  // ── Giriş yapılmamış ──
+  if (!user) {
+    return (
+      <div style={{ minHeight: '100vh', paddingTop: '120px', paddingBottom: '80px' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', padding: '0 24px' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, borderRadius: '24px', textAlign: 'center', padding: '64px 40px' }}
+          >
+            <div style={{ fontSize: '64px', marginBottom: '24px', lineHeight: 1 }}>🤖</div>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: d ? 'white' : '#0f172a', marginBottom: '12px', letterSpacing: '-0.02em' }}>
+              AI Mülakat Simülasyonu
+            </h2>
+            <p style={{ fontSize: '15px', color: d ? 'rgba(148,163,184,0.75)' : 'rgba(71,85,105,0.75)', maxWidth: '360px', margin: '0 auto 32px', lineHeight: 1.75 }}>
+              CV'nizi yükleyip yapay zeka ile gerçekçi mülakat pratiği yapmak için giriş yapın.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link
+                to="/giris"
+                className="btn-gradient-bg"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 28px', borderRadius: '14px', fontSize: '14px', fontWeight: 700, boxShadow: '0 8px 24px rgba(99,102,241,0.35)', textDecoration: 'none' }}
+              >
+                Giriş Yap <ArrowRight size={16} />
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
 
   // ── Ana içerik ──
   const stepTitles = ['CV & İş İlanı', 'Mülakat Türü', 'AI ile Mülakat']
@@ -133,7 +163,7 @@ export function MulakatSimPage() {
                 <Step2TypeSelect d={d} onStart={() => goToStep(3)} />
               )}
               {step === 3 && (
-                <Step3Chat d={d} userId={user?.uid ?? 'misafir'} onFinished={handleFinished} />
+                <Step3Chat d={d} userId={user.uid} onFinished={handleFinished} />
               )}
             </motion.div>
           </div>
@@ -155,7 +185,7 @@ export function MulakatSimPage() {
         {step === 1 && (
           <div ref={historyRef} style={{ marginTop: '32px' }}>
             <HistoryPanel
-              userId={user?.uid ?? ''}
+              userId={user.uid}
               d={d}
               refreshKey={historyRefreshKey}
               autoExpand={historyAutoExpand}

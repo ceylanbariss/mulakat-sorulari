@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, Trash2, Send } from 'lucide-react'
-// import { LogIn } from 'lucide-react' // GEÇİCİ: auth guard kaldırıldı
-// import { Link } from 'react-router-dom' // GEÇİCİ: auth guard kaldırıldı
+import { MessageSquare, Trash2, Send, LogIn } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuthStore, useIsAdmin } from '../../store/useAuthStore'
 import { useAppStore } from '../../store/useAppStore'
 import { addYorum, getYorumlar, deleteYorum } from '../../lib/firestore'
@@ -120,9 +119,12 @@ export function YorumBolumu({ haberFirestoreId }: YorumBolumuProps) {
           </div>
         </div>
       ) : (
-        /* GEÇİCİ: Giriş yapılmamış yorum formu — geri almak için bu yorumu kaldır */
-        <div style={{ marginBottom: 24, background: cardBg, border: cardBorder, borderRadius: 16, padding: 20 }}>
-          <p style={{ color: mutedColor, fontSize: 13, textAlign: 'center' }}>Misafir olarak yorum görüntüleyebilirsiniz.</p>
+        <div style={{ marginBottom: 24, background: cardBg, border: cardBorder, borderRadius: 16, padding: 24, textAlign: 'center' }}>
+          <LogIn size={24} style={{ color: mutedColor, marginBottom: 8 }} />
+          <p style={{ color: mutedColor, fontSize: 14, margin: '0 0 12px' }}>Yorum yapmak için giriş yapman gerekiyor.</p>
+          <Link to="/giris" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', textDecoration: 'none', fontSize: 13, fontWeight: 700 }}>
+            Giriş Yap
+          </Link>
         </div>
       )}
 
