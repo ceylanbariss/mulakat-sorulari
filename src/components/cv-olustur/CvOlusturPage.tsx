@@ -723,7 +723,7 @@ KURALLAR:
         if (!apiKey) throw new Error('VITE_GEMINI_API_KEY .env dosyasına eklenmemiş. GEMINI_API_KEY değerini VITE_ önekiyle kopyalayın.')
         const { GoogleGenerativeAI } = await import('@google/generative-ai')
         const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
-          model: 'gemini-2.5-flash-lite',
+          model: 'gemini-2.5-flash',
           systemInstruction: CV_SYSTEM_PROMPT,
         })
         const langNote = cvLanguage === 'tr' ? 'Tüm metin alanlarını TÜRKÇE yaz.' : 'Write ALL text fields in ENGLISH.'
@@ -732,7 +732,7 @@ KURALLAR:
           : ''
         const result = await model.generateContent({
           contents: [{ role: 'user', parts: [{ text: `${langNote}${adaptNote}\n\nCV: ${cvText.slice(0, 8000)}\n\nİlan: ${(jobDescription || '').slice(0, 3000)}` }] }],
-          generationConfig: { maxOutputTokens: 8192, temperature: 0.65 },
+          generationConfig: { maxOutputTokens: 8192, temperature: 0.65, responseMimeType: 'application/json' },
         })
         let text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim()
         let parsed = JSON.parse(text) as Record<string, unknown>

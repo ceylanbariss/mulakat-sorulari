@@ -61,7 +61,7 @@ SES TONU VARYANTları: String dizisi olan dinamik bölümler için "_v1" ve "_v3
       generationConfig: {
         maxOutputTokens: 8192,
         temperature: parseOnly ? 0.1 : 0.65,
-        ...(parseOnly ? { responseMimeType: 'application/json' } : {}),
+        responseMimeType: 'application/json',
       },
     })
 
