@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, BarChart2, Info, Brain, Menu, X, LogOut, Newspaper, FileText, Target } from 'lucide-react'
+import { BookOpen, BarChart2, Info, Brain, Menu, X, LogOut, Newspaper, FileText, Target, ChevronLeft } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ThemeToggle } from '../ui/ThemeToggle'
@@ -161,16 +161,28 @@ export function Navbar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden fixed inset-0 z-40"
-            style={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(8,12,28,0.82)' }}
+            className="md:hidden fixed inset-0 z-[60] flex flex-col"
+            style={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(8,12,28,0.95)' }}
             onClick={() => setMenuOpen(false)}
           >
+            {/* ─── Mobile Menu Header ─── */}
+            <div className="flex items-center justify-between h-16 px-6 sm:px-8 flex-shrink-0" onClick={e => e.stopPropagation()}>
+              <button 
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 text-white/90 hover:text-white transition-colors py-2"
+              >
+                <ChevronLeft size={24} />
+                <span className="font-semibold text-base">Geri Dön</span>
+              </button>
+            </div>
+
             <motion.div
               initial={{ y: -16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -16, opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              style={{ paddingTop: '80px', paddingLeft: '24px', paddingRight: '24px' }}
+              className="flex-1 overflow-y-auto"
+              style={{ paddingTop: '16px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '32px' }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
