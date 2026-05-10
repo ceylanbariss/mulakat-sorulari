@@ -298,7 +298,7 @@ export function Step1Upload({ d, onNext }: Props) {
       </div>
 
       {/* İleri Butonu */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div>
         <button
           onClick={() => {
             // Yapıştırma metni kullanılıyorsa store'a aktar
@@ -310,8 +310,12 @@ export function Step1Upload({ d, onNext }: Props) {
           disabled={!canProceed}
           className={canProceed ? 'btn-gradient-bg' : ''}
           style={{
-            display: 'inline-flex',
+            display: 'flex',
+            width: '100%',
+            justifyContent: 'center',
             alignItems: 'center',
+            position: 'relative',
+            zIndex: 10,
             gap: '8px',
             padding: '11px 28px',
             borderRadius: '12px',

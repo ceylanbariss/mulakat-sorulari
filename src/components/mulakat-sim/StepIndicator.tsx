@@ -20,14 +20,12 @@ export function StepIndicator({ currentStep, d }: Props) {
           <div key={step.num} style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
               <div
+                className="w-8 h-8 sm:w-10 sm:h-10 text-sm sm:text-base"
                 style={{
-                  width: '28px',
-                  height: '28px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '12px',
                   fontWeight: 700,
                   transition: 'all 0.3s',
                   background: isCompleted

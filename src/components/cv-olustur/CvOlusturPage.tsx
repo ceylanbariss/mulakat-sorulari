@@ -198,6 +198,7 @@ export function CvOlusturPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [originalPageImages, setOriginalPageImages] = useState<string[]>([])
   const [originalDocHtml, setOriginalDocHtml] = useState<string>('')
+  const [isTranslating, setIsTranslating] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -776,6 +777,56 @@ KURALLAR:
     }
   }
 
+  // ── Translate CV ─────────────────────────────────────────────────────────────
+  async function handleTranslateCV(targetLang: 'tr' | 'en') {
+    if (!optimizedData) return
+    if (targetLang === cvLanguage) return
+    setIsTranslating(true)
+    setCvLanguage(targetLang)
+    try {
+      const systemInstruction = `Sen profesyonel bir CV çevirmenisin. Verilen JSON formatındaki CV verisini BİREBİR ${targetLang === 'tr' ? 'TÜRKÇE' : 'İNGİLİZCE'} diline çevir.
+JSON yapısını (key'leri) ASLA değiştirme. Sadece değerleri (metinleri) hedef dile çevir.
+ID'leri, URL'leri veya email adreslerini çevirme. İsim ve iletişim bilgilerini olduğu gibi bırak.
+"is_valid_cv", "error_message" gibi meta verileri çevirebilirsin.`
+
+      const userPrompt = JSON.stringify(optimizedData)
+      let newJson: OptimizedCvData
+
+      if (import.meta.env.DEV) {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+        if (!apiKey) throw new Error('VITE_GEMINI_API_KEY bulunamadı.')
+        const { GoogleGenerativeAI } = await import('@google/generative-ai')
+        const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
+          model: 'gemini-2.5-flash',
+          systemInstruction,
+        })
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          generationConfig: { maxOutputTokens: 8192, temperature: 0.2, responseMimeType: 'application/json' },
+        })
+        const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim()
+        newJson = JSON.parse(text)
+      } else {
+        const res = await fetch('/api/generate-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ systemInstruction, userPrompt }),
+        })
+        const rawText = await res.text()
+        if (!res.ok) throw new Error('Çeviri başarısız oldu.')
+        newJson = JSON.parse(rawText)
+      }
+
+      setOptimizedData(newJson as never)
+      applyDynamicSections(newJson)
+    } catch (e) {
+      alert(`Çeviri hatası: ${e instanceof Error ? e.message : String(e)}`)
+      setCvLanguage(cvLanguage)
+    } finally {
+      setIsTranslating(false)
+    }
+  }
+
   // ── PDF download ─────────────────────────────────────────────────────────────
   async function handleDownload() {
     if (!cvPreviewRef.current) { alert('Önizleme yüklenemedi, lütfen sayfayı yenileyin.'); return }
@@ -1141,17 +1192,8 @@ KURALLAR:
             <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: muted, marginTop: 4 }}>{jobDescription.length} / 3000</div>
           </div>}
 
-          {/* Language + Optimize */}
+          {/* Optimize Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <span style={{ fontSize: 13, color: muted, fontWeight: 600, alignSelf: 'center' }}>Dil:</span>
-              {(['tr', 'en'] as const).map(lang => (
-                <button key={lang} onClick={() => setCvLanguage(lang)}
-                  style={{ padding: '6px 14px', borderRadius: 8, background: cvLanguage === lang ? '#6366f1' : 'transparent', color: cvLanguage === lang ? '#fff' : muted, border: `1px solid ${cvLanguage === lang ? '#6366f1' : border}`, cursor: 'pointer', fontWeight: 600, fontSize: 13, transition: 'all 0.15s' }}>
-                  {lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
             <button onClick={mod === 'duzenle' ? handleParseAndEdit : handleOptimize} disabled={!canOptimize}
               style={{ flex: 1, minWidth: 200, padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 700, border: 'none', cursor: canOptimize ? 'pointer' : 'not-allowed', background: canOptimize ? (mod === 'duzenle' ? 'linear-gradient(135deg,#3b82f6,#2563eb)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)') : (d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'), color: canOptimize ? '#fff' : muted, boxShadow: canOptimize ? (mod === 'duzenle' ? '0 8px 24px rgba(59,130,246,0.3)' : '0 8px 24px rgba(99,102,241,0.3)') : 'none', transition: 'all 0.2s' }}>
               {mod === 'duzenle' ? '✏️ Düzenleyiciyi Aç' : '✨ CV Optimize Et'}
@@ -1697,6 +1739,24 @@ KURALLAR:
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, border: `1px solid ${border}`, background: 'transparent', color: muted, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 <RotateCcw size={13} /> Yeni CV
               </button>
+
+              {/* Dil Seçimi */}
+              <div style={{ marginTop: 4 }}>
+                <div style={{ display: 'flex', gap: 6, background: d ? 'rgba(255,255,255,0.03)' : '#f8f9fa', padding: 4, borderRadius: 10, border: `1px solid ${border}` }}>
+                  {([['tr', 'Türkçe'], ['en', 'English']] as const).map(([v, lbl]) => (
+                    <button key={v} onClick={() => handleTranslateCV(v as 'tr' | 'en')} disabled={isTranslating || cvLanguage === v}
+                      style={{ flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none', background: cvLanguage === v ? '#6366f1' : 'transparent', color: cvLanguage === v ? '#fff' : text, cursor: (isTranslating || cvLanguage === v) ? 'default' : 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                {isTranslating && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8, fontSize: 11, fontWeight: 600, color: '#6366f1' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid rgba(99,102,241,0.3)', borderTopColor: '#6366f1', animation: 'spin 0.8s linear infinite' }} />
+                    {cvLanguage === 'en' ? 'İngilizceye çevriliyor...' : 'Türkçeye çevriliyor...'}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Başlık */}

@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       generationConfig: {
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
         temperature: 0.3,
         responseMimeType: 'application/json',
       },

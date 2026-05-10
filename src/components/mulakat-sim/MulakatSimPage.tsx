@@ -104,36 +104,32 @@ export function MulakatSimPage() {
 
   return (
     /* Sayfa scroll'una izin verir; kart viewport'a kilitli kalır */
-    <div style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '40px', boxSizing: 'border-box' }}>
+    <div style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '40px', boxSizing: 'border-box', overflowX: 'hidden' }}>
       <div style={{ maxWidth: '1400px', width: '100%', margin: '0 auto', padding: '0 24px' }}>
 
         {/* ── Tek büyük kart: viewport yüksekliğine kilitli ── */}
-        <div style={{
-          height: 'min(calc(100vh - 100px), 900px)',
-          display: 'flex',
-          alignItems: 'stretch',
-          position: 'relative',
-          background: 'rgba(2,6,23,0.96)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '28px',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
-          overflow: 'hidden',
-        }}>
+        <div
+          className="flex flex-col lg:flex-row items-stretch"
+          style={{
+            minHeight: 'min(calc(100vh - 100px), 900px)',
+            position: 'relative',
+          }}>
           <Spotlight
             className="-top-40 left-0 md:left-60 md:-top-20"
             fill="white"
           />
 
           {/* ── Sol: form içeriği ── */}
-          <div style={{ flex: 1, minWidth: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflowY: step === 3 ? 'auto' : 'hidden' }}>
+          <div className="w-full lg:w-3/5" style={{ minWidth: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflowY: step === 3 ? 'auto' : 'visible' }}>
             {/* Başlık */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
+              className="px-4 sm:px-8"
               style={{ marginBottom: '12px', textAlign: 'center' }}
             >
-              <h1 style={{ fontSize: '22px', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '6px' }}>
+              <h1 style={{ fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '6px' }}>
                 AI Mülakat Simülasyonu
               </h1>
               <p style={{ fontSize: '13px', color: 'rgba(148,163,184,0.65)' }}>
@@ -150,7 +146,8 @@ export function MulakatSimPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow, borderRadius: '20px', padding: '16px 24px', marginTop: '6px', ...(step === 3 ? { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: '12px' } : {}) }}
+              className="p-4 sm:p-6"
+              style={{ marginTop: '6px', ...(step === 3 ? { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: '12px' } : {}) }}
             >
               <h2 style={{ fontSize: '16px', fontWeight: 800, color: d ? 'white' : '#0f172a', marginBottom: '16px', letterSpacing: '-0.01em' }}>
                 {stepTitles[step - 1]}
@@ -170,8 +167,8 @@ export function MulakatSimPage() {
 
           {/* ── Sağ: Spline robot (mobilde gizli, kart yüksekliğini doldurur) ── */}
           <div
-            className="hidden xl:block"
-            style={{ width: '580px', flexShrink: 0 }}
+            className="hidden lg:block lg:w-2/5"
+            style={{ flexShrink: 0 }}
           >
             <SplineScene
               scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
