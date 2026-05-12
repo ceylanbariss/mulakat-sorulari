@@ -90,34 +90,101 @@
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Area preview cards (landing) – light default */
-.kt-area-preview {
+/* Area cards (landing) – light default */
+.kt-area-card {
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 14px;
-  padding: 16px 12px;
-  background: rgba(0, 0, 0, 0.025);
+  border-radius: 16px;
+  padding: 18px 18px 36px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  position: relative;
+  min-height: 150px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
 }
 
-.kt-area-preview:hover {
+.kt-area-card:hover {
   transform: translateY(-3px);
   border-color: rgba(99, 102, 241, 0.25);
-  background: rgba(99, 102, 241, 0.04);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
 }
 
-.dark .kt-area-preview {
-  border-color: rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
+.dark .kt-area-card {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(15, 23, 42, 0.55);
 }
 
-.dark .kt-area-preview:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.055);
+.dark .kt-area-card:hover {
+  border-color: rgba(99, 102, 241, 0.22);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.kt-area-card .kt-info-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-style: italic;
+}
+
+.kt-area-card .kt-info-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #6366f1;
+}
+
+.dark .kt-area-card .kt-info-btn {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #64748b;
+}
+
+.dark .kt-area-card .kt-info-btn:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+}
+
+/* Area grid helpers */
+.kt-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.kt-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.kt-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+/* Modal 2-col body */
+.kt-modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Score / result bar */
@@ -246,6 +313,22 @@
   100% { transform: translateY(110vh) rotate(600deg) scale(0.6); opacity: 0; }
 }
 
+@media (max-width: 768px) {
+  .kt-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kt-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .kt-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .kt-modal-body {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 @media (max-width: 640px) {
   .kt-page {
     padding: 4.5rem 1rem 2rem;
@@ -257,5 +340,9 @@
   .kt-edu-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .kt-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 }

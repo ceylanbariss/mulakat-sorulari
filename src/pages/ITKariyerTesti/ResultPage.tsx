@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Share2, RotateCcw, BookOpen, ChevronRight } from 'lucide-react'
+import { Share2, RotateCcw, BookOpen, ChevronRight, Bot, FileText } from 'lucide-react'
 import { IKON_MAP } from './ikon-map'
 import { IT_ALANLARI } from './it-kariyer-data'
 import { useAppStore } from '../../store/useAppStore'
@@ -253,6 +253,99 @@ export default function ResultPage() {
                 </div>
               )
             })}
+          </div>
+
+          {/* Şimdi Ne Yapmalısın? */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: d ? '#f1f5f9' : '#0f172a', margin: '0 0 4px' }}>
+                🚀 Şimdi Ne Yapmalısın?
+              </h3>
+              <p style={{ fontSize: '13px', color: d ? '#64748b' : '#94a3b8', margin: 0 }}>
+                Platforma bu alanda hemen başlamak için 3 adım:
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+              {[
+                {
+                  icon: BookOpen,
+                  color: '#6366f1',
+                  title: 'Mülakat Sorularını Çalış',
+                  text: `${top.alan.ad} kategorisindeki sorularla kendini test et.`,
+                  btn: 'Sorulara Git →',
+                  to: '/sorular',
+                },
+                {
+                  icon: Bot,
+                  color: '#06b6d4',
+                  title: 'AI Mülakat Yap',
+                  text: `${top.alan.ad} pozisyonu için yapay zeka ile pratik mülakat yap.`,
+                  btn: 'Mülakata Başla →',
+                  to: '/mulakat-sim',
+                },
+                {
+                  icon: FileText,
+                  color: '#10b981',
+                  title: "CV'ni Güncelle",
+                  text: `CV'nde ${top.alan.ad} yetkinliklerini öne çıkar.`,
+                  btn: 'CV Oluştur →',
+                  to: '/cv-olustur',
+                },
+              ].map(({ icon: Icon, color, title, text, btn, to }) => (
+                <div
+                  key={to}
+                  style={{
+                    border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: '16px', padding: '18px',
+                    background: d ? 'rgba(15,23,42,0.6)' : 'rgba(248,250,252,0.85)',
+                    backdropFilter: 'blur(12px)',
+                    display: 'flex', flexDirection: 'column', gap: '8px',
+                  }}
+                >
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: `${color}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <Icon size={18} color={color} strokeWidth={1.8} />
+                  </div>
+                  <p style={{ fontSize: '13.5px', fontWeight: 700, color: d ? '#f1f5f9' : '#0f172a', margin: 0 }}>
+                    {title}
+                  </p>
+                  <p style={{ fontSize: '12px', color: d ? '#94a3b8' : '#64748b', lineHeight: 1.55, margin: 0, flex: 1 }}>
+                    {text}
+                  </p>
+                  <button
+                    onClick={() => navigate(to)}
+                    style={{
+                      padding: '8px 0', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                      background: `${color}14`,
+                      border: `1px solid ${color}30`,
+                      color, cursor: 'pointer', width: '100%',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    {btn}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Öncelikli Gelişim Alanı */}
+            <div style={{
+              borderTop: '1px solid rgba(245,158,11,0.25)',
+              borderRight: '1px solid rgba(245,158,11,0.25)',
+              borderBottom: '1px solid rgba(245,158,11,0.25)',
+              borderLeft: '3px solid #f59e0b',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              background: 'rgba(245,158,11,0.08)',
+            }}>
+              <p style={{ fontSize: '13.5px', color: d ? '#fcd34d' : '#92400e', margin: 0, lineHeight: 1.55 }}>
+                💡 <strong>İlk odaklanman gereken konu:</strong> {top.alan.dikkatEt[0]}
+              </p>
+            </div>
           </div>
 
           {/* Action buttons */}

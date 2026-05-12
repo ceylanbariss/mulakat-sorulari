@@ -1055,7 +1055,7 @@ ID'leri, URL'leri veya email adreslerini çevirme. İsim ve iletişim bilgilerin
   if (isLoading) return (
     <>{backBtn}<motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
-      style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 16, background: bg }}
+      style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 16 }}
     >
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
       <div style={{ position: 'relative', width: 72, height: 72 }}>
@@ -1083,7 +1083,7 @@ ID'leri, URL'leri veya email adreslerini çevirme. İsim ve iletişim bilgilerin
     return (
       <>{backBtn}<motion.div
         initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}
-        style={{ minHeight: 'calc(100vh - 64px)', background: bg, padding: '32px 16px' }}
+        style={{ minHeight: 'calc(100vh - 64px)', padding: '32px 16px' }}
       >
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <div style={{ maxWidth: mod === 'duzenle' ? 480 : 640, margin: '0 auto' }}>
