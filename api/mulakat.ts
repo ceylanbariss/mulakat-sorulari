@@ -21,10 +21,20 @@ const BLOCKED_KEYWORDS = [
   'fuck', 'motherfuck', 'cunt', 'bitch',
 ]
 
+// These short keywords appear as substrings in innocent Turkish words
+// (e.g. "amına" inside "ortamına", "oç" inside "koç") → exact word match only
+const WORD_ONLY_BLOCKED = new Set(['amına', 'amk', 'oç', 'piç'])
+
 function containsInappropriateContent(text: string): boolean {
   const lower = text.toLowerCase()
-  return BLOCKED_KEYWORDS.some((kw) => lower.includes(kw))
+  // Tokenize by splitting on whitespace and common punctuation
+  const words = new Set(lower.split(/[\s.,!?;:()"'\[\]{}/\\]+/).filter(Boolean))
+  return BLOCKED_KEYWORDS.some((kw) =>
+    WORD_ONLY_BLOCKED.has(kw) ? words.has(kw) : lower.includes(kw)
+  )
 }
+
+const MAX_USER_ANSWER_LENGTH = 2000
 const MAX_CV_TEXT_LENGTH = 6000
 const MAX_JOB_DESC_LENGTH = 1500
 
@@ -34,17 +44,38 @@ const EN_STOPWORDS = new Set([
   'experience', 'skills', 'work',
 ])
 
-function detectLanguage(cvText: string, jobDescription: string, userAnswer?: string): 'en' | 'tr' {
-  const combined = (cvText + ' ' + jobDescription).toLowerCase()
-  const words = combined.match(/\b[a-z]+\b/g) ?? []
-  const enCount = words.filter((w) => EN_STOPWORDS.has(w)).length
-  let lang: 'en' | 'tr' = words.length > 0 && enCount / words.length > 0.3 ? 'en' : 'tr'
+function detectLanguage(
+  cvText: string,
+  jobDescription: string,
+  userAnswer?: string,
+  history?: Array<{ role: 'interviewer' | 'user'; content: string }>
+): 'en' | 'tr' {
+  const THRESHOLD = 0.15
 
-  if (userAnswer && lang === 'tr') {
-    const answerWords = userAnswer.toLowerCase().match(/\b[a-z]+\b/g) ?? []
-    const answerEnCount = answerWords.filter((w) => EN_STOPWORDS.has(w)).length
-    if (answerWords.length > 0 && answerEnCount / answerWords.length > 0.3) {
-      lang = 'en'
+  const combined = (cvText + ' ' + jobDescription).toLowerCase()
+  const baseWords = combined.match(/\b[a-z]+\b/g) ?? []
+  const baseEnCount = baseWords.filter((w) => EN_STOPWORDS.has(w)).length
+  let lang: 'en' | 'tr' = baseWords.length > 0 && baseEnCount / baseWords.length > THRESHOLD ? 'en' : 'tr'
+
+  if (lang === 'tr') {
+    // Son 3 kullanıcı mesajını tara — önceki turda İngilizce yazıldıysa yakala
+    if (history && history.length > 0) {
+      const recentText = history
+        .filter((m) => m.role === 'user')
+        .slice(-3)
+        .map((m) => m.content)
+        .join(' ')
+        .toLowerCase()
+      const hWords = recentText.match(/\b[a-z]+\b/g) ?? []
+      const hEnCount = hWords.filter((w) => EN_STOPWORDS.has(w)).length
+      if (hWords.length > 0 && hEnCount / hWords.length > THRESHOLD) lang = 'en'
+    }
+
+    // Güncel cevap en güçlü sinyal
+    if (userAnswer) {
+      const aWords = userAnswer.toLowerCase().match(/\b[a-z]+\b/g) ?? []
+      const aEnCount = aWords.filter((w) => EN_STOPWORDS.has(w)).length
+      if (aWords.length > 0 && aEnCount / aWords.length > THRESHOLD) lang = 'en'
     }
   }
 
@@ -167,7 +198,7 @@ async function callGemini(
     req.jobDescription.slice(0, MAX_JOB_DESC_LENGTH),
   ].join('\n')
 
-  const detectedLang = detectLanguage(req.cvText, req.jobDescription, req.userAnswer)
+  const detectedLang = detectLanguage(req.cvText, req.jobDescription, req.userAnswer, req.history)
   const basePrompt = buildSystemPrompt(req.interviewType, context, req.questionNumber, detectedLang)
   const empathyNote =
     req.action === 'answer' && Math.random() < 0.2
@@ -255,6 +286,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Eksik parametreler' })
   }
 
+  // Uzun cevapları token limitine takılmadan önce kırp
+  if (body.action === 'answer' && body.userAnswer && body.userAnswer.length > MAX_USER_ANSWER_LENGTH) {
+    body.userAnswer = body.userAnswer.slice(0, MAX_USER_ANSWER_LENGTH)
+  }
+
   // Uygunsuz içerik kontrolü
   if (body.action === 'answer' && body.userAnswer && containsInappropriateContent(body.userAnswer)) {
     return res.status(200).json({
@@ -263,7 +299,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       isFollowUp: false,
       terminated: true,
       taskType: 'normal',
-      detectedLang: detectLanguage(body.cvText, body.jobDescription, body.userAnswer),
+      detectedLang: detectLanguage(body.cvText, body.jobDescription, body.userAnswer, body.history),
     })
   }
 

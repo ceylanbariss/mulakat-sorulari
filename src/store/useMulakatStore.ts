@@ -32,6 +32,7 @@ interface MulakatState {
   incrementQuestion: () => void
   goToStep: (step: 1 | 2 | 3) => void
   resetSession: () => void
+  resetChat: () => void
 }
 
 const initialState = {
@@ -66,4 +67,11 @@ export const useMulakatStore = create<MulakatState>((set) => ({
   incrementQuestion: () => set((state) => ({ questionCount: state.questionCount + 1 })),
   goToStep: (step) => set({ step }),
   resetSession: () => set(initialState),
+  resetChat: () => set({
+    messages: [],
+    currentAnswer: '',
+    isLoading: false,
+    isFinished: false,
+    questionCount: 0,
+  }),
 }))

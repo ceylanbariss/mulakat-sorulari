@@ -122,7 +122,7 @@ export function MulakatSimPage() {
           />
 
           {/* ── Sol: form içeriği ── */}
-          <div className="w-full lg:w-3/5" style={{ minWidth: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflow: step === 3 ? 'hidden' : 'visible' }}>
+          <div className="w-full lg:w-3/5" style={{ minWidth: 0, minHeight: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflow: step === 3 ? 'hidden' : 'visible' }}>
             {/* Başlık */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -149,7 +149,7 @@ export function MulakatSimPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="p-4 sm:p-6"
-              style={{ marginTop: '6px', ...(step === 3 ? { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: '12px' } : {}) }}
+              style={{ marginTop: '6px', ...(step === 3 ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: '12px' } : {}) }}
             >
               <h2 style={{ fontSize: '16px', fontWeight: 800, color: d ? 'white' : '#0f172a', marginBottom: '16px', letterSpacing: '-0.01em' }}>
                 {stepTitles[step - 1]}

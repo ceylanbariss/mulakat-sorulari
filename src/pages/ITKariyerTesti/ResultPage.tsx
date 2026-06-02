@@ -3,8 +3,24 @@ import { useNavigate } from 'react-router-dom'
 import { Share2, RotateCcw, BookOpen, ChevronRight, Bot, FileText } from 'lucide-react'
 import { IKON_MAP } from './ikon-map'
 import { IT_ALANLARI } from './it-kariyer-data'
+import { AREA_DESCRIPTIONS } from '../../data/careerTestQuestions'
+import type { AreaScores } from '../../data/careerTestQuestions'
 import { useAppStore } from '../../store/useAppStore'
 import './it-kariyer-testi.css'
+
+// Maps it-kariyer-data keys → careerTestQuestions AreaScores keys
+const OLD_TO_NEW: Record<string, keyof AreaScores> = {
+  yazilim: 'yazilim',
+  veri: 'veri',
+  siber: 'siberGuvenlik',
+  ag_sistem: 'sistemAg',
+  proje: 'projeYonetimi',
+  ux: 'uxui',
+  devops: 'devops',
+  destek: 'itDestek',
+}
+
+const MAX_PER_AREA = 60 // 20 sorular × max 3 puan
 
 interface ScoreEntry { id: string; yuzde: number; alan: (typeof IT_ALANLARI)[0] }
 
@@ -66,11 +82,10 @@ export default function ResultPage() {
   const ranked: ScoreEntry[] = useMemo(() => {
     const puanlar = getPuanlar()
     if (Object.keys(puanlar).length === 0) return []
-    const total = Object.values(puanlar).reduce((a, b) => a + b, 0) || 1
     return Object.entries(puanlar)
       .map(([id, puan]) => ({
         id,
-        yuzde: Math.round((puan / total) * 100),
+        yuzde: Math.round((puan / MAX_PER_AREA) * 100),
         alan: IT_ALANLARI.find(a => a.id === id)!,
       }))
       .filter(e => e.alan)
@@ -84,20 +99,23 @@ export default function ResultPage() {
 
   const top = ranked[0]
   const TopIcon = IKON_MAP[top.alan.ikon]
+  const topDesc = AREA_DESCRIPTIONS[OLD_TO_NEW[top.id]]
 
-  const handleShare = async () => {
-    const text = `IT Kariyer Testini çözdüm! En uygun alanım: ${top.alan.ad} (%${top.yuzde}). Sen de dene: ${window.location.origin}/it-kariyer-testi`
+  const handleCopyResult = async () => {
+    const top3 = ranked.slice(0, 3).map(e => `${e.alan.ad} %${e.yuzde}`).join(' | ')
+    const text = `IT Kariyer Testim: ${top3} — mulakatsorulari.com.tr`
     if (navigator.share) {
       await navigator.share({ title: 'IT Kariyer Testi Sonucum', text })
     } else {
-      await navigator.clipboard.writeText(`${window.location.origin}/it-kariyer-testi`)
-      setShareMsg('Link kopyalandı!')
+      await navigator.clipboard.writeText(text)
+      setShareMsg('Kopyalandı!')
       setTimeout(() => setShareMsg(''), 2500)
     }
   }
 
   const handleRestart = () => {
     sessionStorage.removeItem('it_kariyer_puanlar')
+    localStorage.removeItem('careerTest_progress')
     navigate('/it-kariyer-testi/quiz')
   }
 
@@ -138,22 +156,30 @@ export default function ResultPage() {
                 {TopIcon && <TopIcon size={26} color={top.alan.renk} strokeWidth={1.8} />}
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: d ? '#64748b' : '#475569', fontWeight: 600, marginBottom: '2px' }}>
-                  EN UYGUN ALAN
+                <div style={{
+                  display: 'inline-block',
+                  fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
+                  color: top.alan.renk,
+                  background: `${top.alan.renk}18`,
+                  border: `1px solid ${top.alan.renk}35`,
+                  borderRadius: '6px', padding: '2px 8px', marginBottom: '4px',
+                }}>
+                  BİRİNCİL EĞİLİM
                 </div>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: d ? '#f1f5f9' : '#0f172a', margin: 0 }}>
                   {top.alan.ad}
                 </h2>
               </div>
-              <div style={{
-                marginLeft: 'auto', fontSize: '2rem', fontWeight: 800,
-                color: top.alan.renk, lineHeight: 1,
-              }}>
-                %{top.yuzde}
+              <div style={{ marginLeft: 'auto', textAlign: 'right', lineHeight: 1 }}>
+                <div style={{ fontSize: '11px', color: d ? '#64748b' : '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                  Yakınlık oranı
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: top.alan.renk }}>
+                  %{top.yuzde}
+                </div>
               </div>
             </div>
 
-            {/* Score bar */}
             <div className="kt-bar-track" style={{ marginBottom: '1.25rem' }}>
               <div
                 className="kt-bar-fill"
@@ -164,8 +190,9 @@ export default function ResultPage() {
               />
             </div>
 
+            {/* Description from AREA_DESCRIPTIONS */}
             <p style={{ color: d ? '#94a3b8' : '#475569', fontSize: '0.9rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              {top.alan.aciklama}
+              {topDesc}
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -193,7 +220,6 @@ export default function ResultPage() {
               </div>
             </div>
 
-            {/* Career path */}
             <div>
               <p style={{ color: d ? '#64748b' : '#475569', fontSize: '11px', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Kariyer Yolu
@@ -217,10 +243,11 @@ export default function ResultPage() {
             </div>
           </div>
 
-          {/* Secondary results */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '2rem' }}>
+          {/* 2nd & 3rd results */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
             {ranked.slice(1, 3).map(({ id, yuzde, alan }) => {
               const Icon = IKON_MAP[alan.ikon]
+              const desc = AREA_DESCRIPTIONS[OLD_TO_NEW[id]]
               return (
                 <div key={id} style={{
                   border: `1px solid ${alan.renk}28`,
@@ -236,12 +263,14 @@ export default function ResultPage() {
                     }}>
                       {Icon && <Icon size={20} color={alan.renk} strokeWidth={1.8} />}
                     </div>
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '13px', fontWeight: 700, color: d ? '#e2e8f0' : '#0f172a', lineHeight: 1.3 }}>{alan.ad}</div>
-                      <div style={{ fontSize: '12px', color: alan.renk, fontWeight: 600 }}>%{yuzde}</div>
+                      <div style={{ fontSize: '11px', color: d ? '#64748b' : '#94a3b8', fontWeight: 600 }}>
+                        Yakınlık oranı: <span style={{ color: alan.renk }}>%{yuzde}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="kt-bar-track">
+                  <div className="kt-bar-track" style={{ marginBottom: '10px' }}>
                     <div
                       className="kt-bar-fill"
                       style={{
@@ -250,6 +279,66 @@ export default function ResultPage() {
                       }}
                     />
                   </div>
+                  {desc && (
+                    <p style={{ fontSize: '12px', color: d ? '#64748b' : '#64748b', lineHeight: 1.5, margin: 0 }}>
+                      {desc}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* All 8 areas ranked list */}
+          <div style={{
+            marginBottom: '2rem',
+            border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            background: d ? 'rgba(15,23,42,0.45)' : 'rgba(248,250,252,0.7)',
+            backdropFilter: 'blur(12px)',
+          }}>
+            <div style={{ padding: '14px 18px 10px', borderBottom: d ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)' }}>
+              <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: d ? '#64748b' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Tüm Alan Yakınlık Oranları
+              </h3>
+            </div>
+            {ranked.map(({ id, yuzde, alan }, idx) => {
+              const Icon = IKON_MAP[alan.ikon]
+              const isLast = idx === ranked.length - 1
+              return (
+                <div
+                  key={id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 18px',
+                    borderBottom: isLast ? 'none' : (d ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'),
+                  }}
+                >
+                  <span style={{ width: '18px', fontSize: '12px', fontWeight: 700, color: d ? '#475569' : '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                    {idx + 1}
+                  </span>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '8px',
+                    background: `${alan.renk}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    {Icon && <Icon size={14} color={alan.renk} strokeWidth={1.8} />}
+                  </div>
+                  <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: d ? '#cbd5e1' : '#334155' }}>
+                    {alan.ad}
+                  </span>
+                  <div style={{ width: 100, height: 6, background: d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius: '99px', overflow: 'hidden', flexShrink: 0 }}>
+                    <div style={{
+                      height: '100%', borderRadius: '99px',
+                      background: `linear-gradient(90deg, ${alan.renk}, ${alan.renk}bb)`,
+                      width: barVisible ? `${yuzde}%` : '0%',
+                      transition: `width 0.8s cubic-bezier(0.16,1,0.3,1) ${0.1 + idx * 0.06}s`,
+                    }} />
+                  </div>
+                  <span style={{ width: '36px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: alan.renk, flexShrink: 0 }}>
+                    %{yuzde}
+                  </span>
                 </div>
               )
             })}
@@ -306,7 +395,7 @@ export default function ResultPage() {
                   <div style={{
                     width: '38px', height: '38px', borderRadius: '10px',
                     background: `${color}18`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Icon size={18} color={color} strokeWidth={1.8} />
                   </div>
@@ -320,10 +409,8 @@ export default function ResultPage() {
                     onClick={() => navigate(to)}
                     style={{
                       padding: '8px 0', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
-                      background: `${color}14`,
-                      border: `1px solid ${color}30`,
-                      color, cursor: 'pointer', width: '100%',
-                      transition: 'background 0.15s',
+                      background: `${color}14`, border: `1px solid ${color}30`,
+                      color, cursor: 'pointer', width: '100%', transition: 'background 0.15s',
                     }}
                   >
                     {btn}
@@ -332,14 +419,12 @@ export default function ResultPage() {
               ))}
             </div>
 
-            {/* Öncelikli Gelişim Alanı */}
             <div style={{
               borderTop: '1px solid rgba(245,158,11,0.25)',
               borderRight: '1px solid rgba(245,158,11,0.25)',
               borderBottom: '1px solid rgba(245,158,11,0.25)',
               borderLeft: '3px solid #f59e0b',
-              borderRadius: '10px',
-              padding: '12px 14px',
+              borderRadius: '10px', padding: '12px 14px',
               background: 'rgba(245,158,11,0.08)',
             }}>
               <p style={{ fontSize: '13.5px', color: d ? '#fcd34d' : '#92400e', margin: 0, lineHeight: 1.55 }}>
@@ -374,11 +459,11 @@ export default function ResultPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
                 }}
               >
-                <RotateCcw size={15} /> Testi Yeniden Başlat
+                <RotateCcw size={15} /> Testi Tekrarla
               </button>
 
               <button
-                onClick={handleShare}
+                onClick={handleCopyResult}
                 style={{
                   background: d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                   border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
@@ -387,7 +472,7 @@ export default function ResultPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
                 }}
               >
-                <Share2 size={15} /> {shareMsg || 'Sonucu Paylaş'}
+                <Share2 size={15} /> {shareMsg || 'Sonucu Kopyala'}
               </button>
             </div>
           </div>

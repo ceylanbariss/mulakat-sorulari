@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .map((m) => `${m.role === 'interviewer' ? 'Mülakat Yapan' : 'Aday'}: ${m.content}`)
     .join('\n\n')
 
-  const prompt = `Sen deneyimli bir İK uzmanı ve kariyer koçusun. Aşağıdaki iş mülakatı konuşmasını derinlemesine analiz et.
+  const prompt = `Sen deneyimli bir İK uzmanı ve kariyer koçusun. Aşağıdaki iş mülakatı konuşmasını derinlemesine analiz et ve CV'yi iş ilanına göre değerlendir.
 
 Mülakat Türü: ${typeLabel}
 
@@ -69,7 +69,15 @@ Sayısal değerleri hesaplarken: her kullanıcı cevabını 1-10 arasında puanl
   "teknikYetkinlik": { "puan": 0, "yorum": "1 cümle" },
   "eleyebilecekNoktalar": ["Kısa madde 1", "Kısa madde 2"],
   "avantajliNoktalar": ["Kısa madde 1", "Kısa madde 2"],
-  "tavsiye": "En kritik ve uygulanabilir tek cümle öneri."
+  "tavsiye": "En kritik ve uygulanabilir tek cümle öneri.",
+  "cvAnaliz": {
+    "pozisyonUyumPuani": 0,
+    "eksikAnahtarKelimeler": ["İlan'da geçen ama CV'de olmayan keyword 1", "keyword 2"],
+    "gelistirilmesiGerekenBolumler": [
+      { "bolum": "CV'deki bölüm/proje adı", "oneri": "Ne eklenmeli veya nasıl güçlendirilmeli — somut, 1-2 cümle" }
+    ],
+    "gucluUyumlar": ["CV'deki güçlü eşleşme 1", "güçlü eşleşme 2"]
+  }
 }
 
 Kurallar:
@@ -79,7 +87,11 @@ Kurallar:
 - gelisimAlanlari: 2-4 madde, oncelik değerleri yalnızca "yüksek", "orta" veya "düşük" olabilir
 - eleyebilecekNoktalar: 1-3 gerçek kırmızı bayrak (varsa)
 - avantajliNoktalar: 1-3 gerçek avantaj
-- Sadece verilen konuşmaya dayandır, tahmin yapma`
+- Sadece verilen konuşmaya dayandır, tahmin yapma
+- cvAnaliz.pozisyonUyumPuani: CV'nin ilan ile ne kadar örtüştüğünü 0-100 arası bir sayı ile ifade et
+- cvAnaliz.eksikAnahtarKelimeler: İlanda geçen ancak CV'de hiç geçmeyen veya çok zayıf kalan teknik/yetkinlik kelimeleri listele (3-6 madde)
+- cvAnaliz.gelistirilmesiGerekenBolumler: CV'de var olan ama yetersiz olan bölümlere somut düzeltme önerileri ver (2-4 madde)
+- cvAnaliz.gucluUyumlar: CV'deki pozisyonla örtüşen güçlü noktaları listele (2-3 madde)`
 
   try {
     const result = await model.generateContent({

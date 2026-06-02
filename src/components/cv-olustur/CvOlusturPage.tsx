@@ -131,6 +131,56 @@ async function renderPdfToImages(file: File): Promise<string[]> {
   return images
 }
 
+// scale:1.5 + quality:0.75 → OCR için yeterli, boyut küçük
+async function renderPdfForOcr(file: File): Promise<string[]> {
+  const buf = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+  const images: string[] = []
+  for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+    const page = await pdf.getPage(i)
+    const viewport = page.getViewport({ scale: 1.5 })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    await page.render({ canvasContext: ctx, canvas, viewport }).promise
+    images.push(canvas.toDataURL('image/jpeg', 0.75))
+  }
+  return images
+}
+
+async function ocrPdfImages(images: string[]): Promise<string> {
+  const OCR_PROMPT = 'Bu CV görsellerindeki tüm metni aynen çıkar. Hiçbir şey ekleme veya çıkarma, sadece ham metin döndür.'
+  const imageParts = images.map(img => {
+    const [meta, data] = img.split(',')
+    const mimeType = (meta.match(/data:(.*?);/) ?? [])[1] ?? 'image/jpeg'
+    return { inlineData: { mimeType, data } }
+  })
+
+  if (import.meta.env.DEV) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+    if (!apiKey) throw new Error('Taranmış PDF algılandı ancak VITE_GEMINI_API_KEY tanımlı değil.')
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: OCR_PROMPT }, ...imageParts] }],
+    })
+    const text = result.response.text().trim()
+    if (text.length < 20) throw new Error('OCR başarısız: CV görselinden metin çıkarılamadı.')
+    return text
+  }
+
+  const res = await fetch('/api/cv-ocr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ images }),
+  })
+  const json = await res.json() as { text?: string; error?: string }
+  if (!res.ok || !json.text) throw new Error(json.error ?? 'OCR başarısız.')
+  return json.text
+}
+
 // ── File text extractor ───────────────────────────────────────────────────────
 async function extractFileText(file: File): Promise<string> {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
@@ -147,8 +197,12 @@ async function extractFileText(file: File): Promise<string> {
       parts.push(content.items.map(it => ('str' in it ? it.str : '')).join(' '))
     }
     const text = parts.join('\n\n').trim()
-    if (text.length < 20) throw new Error('PDF okunamadı (taranmış görsel olabilir). Word veya TXT deneyin.')
-    return text
+    if (text.length >= 20) return text
+
+    // Taranmış PDF — Gemini Vision ile OCR
+    const images = await renderPdfForOcr(file)
+    if (images.length === 0) throw new Error('PDF okunamadı ve görsel render başarısız.')
+    return await ocrPdfImages(images)
   }
 
   if (ext === 'docx' || ext === 'doc') {

@@ -206,6 +206,64 @@
   transition: width 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s;
 }
 
+/* Quiz option cards – 2×2 grid */
+.kt-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kt-option-card {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: rgba(0, 0, 0, 0.025);
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: left;
+  min-height: 80px;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.dark .kt-option-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.kt-option-card:hover:not(:disabled) {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.06);
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+}
+
+.dark .kt-option-card:hover:not(:disabled) {
+  border-color: rgba(99, 102, 241, 0.45);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.kt-option-card:disabled {
+  cursor: default;
+}
+
+.kt-option-card.kt-option-card--selected {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+.dark .kt-option-card.kt-option-card--selected {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
 /* Education resource card – light default */
 .kt-edu-card {
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -344,5 +402,13 @@
   .kt-grid-4 {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
+  }
+  .kt-options-grid {
+    grid-template-columns: 1fr;
+  }
+  .kt-option-card {
+    font-size: 13px;
+    min-height: auto;
+    padding: 14px 16px;
   }
 }

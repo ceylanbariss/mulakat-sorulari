@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Send, StopCircle, ShieldAlert } from 'lucide-react'
+import * as Dialog from '@radix-ui/react-dialog'
+import { Send, StopCircle, ShieldAlert, ArrowLeft } from 'lucide-react'
+
+const MAX_ANSWER_CHARS = 2000
 import { toast } from 'sonner'
 import { useMulakatStore } from '../../store/useMulakatStore'
 import { MAX_QUESTIONS, INTERVIEW_TYPE_LABELS } from '../../config/mulakatConfig'
@@ -33,9 +36,12 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
     setFinished,
     incrementQuestion,
     resetSession,
+    resetChat,
+    goToStep,
   } = useMulakatStore()
 
   const [showFinishModal, setShowFinishModal] = useState(false)
+  const [showBackConfirm, setShowBackConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isTerminated, setIsTerminated] = useState(false)
   const [analysisData, setAnalysisData] = useState<Record<string, unknown> | null>(null)
@@ -248,6 +254,21 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
     onFinished()
   }
 
+  function handleGoBack() {
+    if (messages.length === 0) {
+      resetChat()
+      goToStep(2)
+    } else {
+      setShowBackConfirm(true)
+    }
+  }
+
+  function handleConfirmGoBack() {
+    setShowBackConfirm(false)
+    resetChat()
+    goToStep(2)
+  }
+
   // Analysis screen — portal kullanarak Framer Motion transform context'inden çık
   if (analysisData) {
     return createPortal(
@@ -269,6 +290,24 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
       {/* Başlık çubuğu */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={handleGoBack}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '5px 10px',
+              borderRadius: '10px',
+              border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+              background: 'transparent',
+              color: d ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.7)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft size={12} /> Geri
+          </button>
           <span style={{
             padding: '5px 12px',
             borderRadius: '20px',
@@ -442,26 +481,41 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
             alignItems: 'flex-end',
             boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
           }}>
-            <textarea
-              value={currentAnswer}
-              onChange={(e) => setCurrentAnswer(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Cevabınızı yazın… (Enter ile gönderin, Ctrl+Enter alt satır)"
-              rows={2}
-              disabled={isLoading}
-              style={{
-                flex: 1,
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                resize: 'none',
-                fontSize: '14px',
-                lineHeight: 1.65,
-                color: d ? 'rgba(226,232,240,0.9)' : '#0f172a',
-                fontFamily: 'inherit',
-                opacity: isLoading ? 0.5 : 1,
-              }}
-            />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              <textarea
+                value={currentAnswer}
+                onChange={(e) => setCurrentAnswer(e.target.value.slice(0, MAX_ANSWER_CHARS))}
+                onKeyDown={handleKeyDown}
+                placeholder="Cevabınızı yazın… (Enter ile gönderin, Ctrl+Enter alt satır)"
+                rows={2}
+                disabled={isLoading}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  resize: 'none',
+                  fontSize: '14px',
+                  lineHeight: 1.65,
+                  color: d ? 'rgba(226,232,240,0.9)' : '#0f172a',
+                  fontFamily: 'inherit',
+                  opacity: isLoading ? 0.5 : 1,
+                }}
+              />
+              {currentAnswer.length > MAX_ANSWER_CHARS * 0.7 && (
+                <span style={{
+                  fontSize: '11px',
+                  color: currentAnswer.length >= MAX_ANSWER_CHARS
+                    ? '#f87171'
+                    : d ? 'rgba(148,163,184,0.5)' : 'rgba(100,116,139,0.5)',
+                  alignSelf: 'flex-end',
+                  lineHeight: 1,
+                  paddingBottom: '2px',
+                }}>
+                  {currentAnswer.length}/{MAX_ANSWER_CHARS}
+                </span>
+              )}
+            </div>
             <button
               onClick={handleSendAnswer}
               disabled={!currentAnswer.trim() || isLoading}
@@ -534,6 +588,35 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
         d={d}
         saving={saving}
       />
+
+      <Dialog.Root open={showBackConfirm} onOpenChange={(v) => !v && setShowBackConfirm(false)}>
+        <Dialog.Portal>
+          <Dialog.Overlay style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 200 }} />
+          <Dialog.Content style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: d ? '#1e293b' : '#ffffff', border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', borderRadius: '20px', padding: '36px', width: '90vw', maxWidth: '380px', zIndex: 201, textAlign: 'center', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: '44px', marginBottom: '14px', lineHeight: 1 }}>⚠️</div>
+            <Dialog.Title style={{ fontSize: '18px', fontWeight: 800, color: d ? 'white' : '#0f172a', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+              Mülakata Geri Dön?
+            </Dialog.Title>
+            <p style={{ fontSize: '14px', color: d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.75)', lineHeight: 1.65, marginBottom: '24px' }}>
+              Mülakat devam ediyor. Geri dönerseniz bu oturum kaybolacak ve mülakat türü seçim ekranına yönlendirileceksiniz.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowBackConfirm(false)}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 600, border: d ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: d ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)', cursor: 'pointer' }}
+              >
+                Devam Et
+              </button>
+              <button
+                onClick={handleConfirmGoBack}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 700, border: 'none', background: 'rgba(239,68,68,0.15)', color: '#f87171', cursor: 'pointer' }}
+              >
+                Geri Dön
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }

@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import { CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Save, X, RotateCcw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Save, X, RotateCcw, FileEdit, Tag, ChevronRight } from 'lucide-react'
+import { useMulakatStore } from '../../store/useMulakatStore'
+import { useCvStore } from '../../store/useCvStore'
+
+interface CvAnaliz {
+  pozisyonUyumPuani: number
+  eksikAnahtarKelimeler: string[]
+  gelistirilmesiGerekenBolumler: Array<{ bolum: string; oneri: string }>
+  gucluUyumlar: string[]
+}
 
 interface AnalysisData {
   genelPuan: number
@@ -11,6 +21,7 @@ interface AnalysisData {
   eleyebilecekNoktalar: string[]
   avantajliNoktalar: string[]
   tavsiye: string
+  cvAnaliz?: CvAnaliz
 }
 
 interface Props {
@@ -78,7 +89,10 @@ const PRIORITY_STYLES: Record<string, { bg: string; border: string; label: strin
 }
 
 export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: Props) {
-  const [activeTab, setActiveTab] = useState<'ozet' | 'detay'>('ozet')
+  const [activeTab, setActiveTab] = useState<'ozet' | 'detay' | 'cv'>('ozet')
+  const navigate = useNavigate()
+  const { cvText, cvFileName, jobDescription } = useMulakatStore()
+  const { setOriginalCV, setJobDescription } = useCvStore()
 
   const bg = d ? 'rgba(15,23,42,0.98)' : 'rgba(248,250,252,0.98)'
   const card = d ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.9)'
@@ -159,20 +173,26 @@ export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: 
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['ozet', 'detay'] as const).map((tab) => (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          {(['ozet', 'detay', 'cv'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
                 padding: '7px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
                 border: activeTab === tab ? 'none' : border,
-                background: activeTab === tab ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
+                background: activeTab === tab
+                  ? tab === 'cv'
+                    ? 'linear-gradient(135deg, #0ea5e9, #6366f1)'
+                    : 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                  : 'transparent',
                 color: activeTab === tab ? '#fff' : muted,
                 cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
               }}
             >
-              {tab === 'ozet' ? 'Güçlü & Gelişim' : 'Detaylı Analiz'}
+              {tab === 'cv' && <FileEdit size={13} />}
+              {tab === 'ozet' ? 'Güçlü & Gelişim' : tab === 'detay' ? 'Detaylı Analiz' : 'CV Önerileri'}
             </button>
           ))}
         </div>
@@ -243,6 +263,160 @@ export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: 
               </div>
             </div>
 
+          </div>
+        )}
+
+        {activeTab === 'cv' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {!analysis.cvAnaliz ? (
+              <div style={{
+                padding: '32px', borderRadius: 20, textAlign: 'center',
+                background: card, border,
+                color: muted, fontSize: 14,
+              }}>
+                CV analizi bu oturumda mevcut değil.
+              </div>
+            ) : (
+              <>
+                {/* Pozisyon Uyum Puanı */}
+                <div style={{
+                  background: card, border, borderRadius: 20, padding: 20,
+                  display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+                }}>
+                  {(() => {
+                    const score = analysis.cvAnaliz.pozisyonUyumPuani
+                    const r = 40
+                    const circ = 2 * Math.PI * r
+                    const offset = circ - (score / 100) * circ
+                    const color = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444'
+                    return (
+                      <div style={{ position: 'relative', width: 100, height: 100, flexShrink: 0 }}>
+                        <svg width={100} height={100} style={{ transform: 'rotate(-90deg)' }}>
+                          <circle cx={50} cy={50} r={r} fill="none" stroke={d ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'} strokeWidth={8} />
+                          <circle cx={50} cy={50} r={r} fill="none" stroke={color} strokeWidth={8}
+                            strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+                            style={{ transition: 'stroke-dashoffset 1s ease' }} />
+                        </svg>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1 }}>{score}</span>
+                          <span style={{ fontSize: 10, color: muted, marginTop: 1 }}>/ 100</span>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: text, margin: '0 0 4px' }}>Pozisyon Uyum Puanı</p>
+                    <p style={{ fontSize: 13, color: muted, margin: 0, lineHeight: 1.6 }}>
+                      CV'nin bu iş ilanıyla ne kadar örtüştüğünü gösterir. Düşükse aşağıdaki önerilerle güçlendirebilirsin.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Eksik Anahtar Kelimeler */}
+                {analysis.cvAnaliz.eksikAnahtarKelimeler.length > 0 && (
+                  <div style={{ background: card, border, borderRadius: 20, padding: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                      <Tag size={15} color="#f87171" />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>Eksik Anahtar Kelimeler</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: muted, marginBottom: 12, lineHeight: 1.5 }}>
+                      İş ilanında geçen ancak CV'nde bulunmayan kelimeler. Bunları uygun bölümlere eklemen ATS puanını artırır.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {analysis.cvAnaliz.eksikAnahtarKelimeler.map((kw, i) => (
+                        <span key={i} style={{
+                          padding: '5px 12px', borderRadius: 99,
+                          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                          color: '#fca5a5', fontSize: 12, fontWeight: 600,
+                        }}>
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Geliştirme Önerileri */}
+                {analysis.cvAnaliz.gelistirilmesiGerekenBolumler.length > 0 && (
+                  <div style={{ background: card, border, borderRadius: 20, padding: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                      <TrendingUp size={15} color="#fb923c" />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fb923c' }}>Somut Düzenleme Önerileri</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {analysis.cvAnaliz.gelistirilmesiGerekenBolumler.map((item, i) => (
+                        <div key={i} style={{
+                          padding: '12px 14px', borderRadius: 12,
+                          background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
+                          display: 'flex', gap: 10, alignItems: 'flex-start',
+                        }}>
+                          <ChevronRight size={14} color="#fbbf24" style={{ flexShrink: 0, marginTop: 2 }} />
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', margin: '0 0 3px' }}>{item.bolum}</p>
+                            <p style={{ fontSize: 13, color: muted, margin: 0, lineHeight: 1.6 }}>{item.oneri}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Güçlü Uyumlar */}
+                {analysis.cvAnaliz.gucluUyumlar.length > 0 && (
+                  <div style={{
+                    background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)',
+                    borderRadius: 16, padding: 18,
+                  }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#4ade80', margin: '0 0 10px' }}>Güçlü Uyumlar</p>
+                    <ul style={{ margin: 0, padding: '0 0 0 16px' }}>
+                      {analysis.cvAnaliz.gucluUyumlar.map((item, i) => (
+                        <li key={i} style={{ fontSize: 13, color: muted, lineHeight: 1.7 }}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* CTA: CV'yi Düzenle */}
+                <div style={{
+                  padding: '20px', borderRadius: 20,
+                  background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(99,102,241,0.12))',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                      background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <FileEdit size={18} color="#fff" />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: text, margin: '0 0 4px' }}>CV'ni İlana Göre Hemen Düzenle</p>
+                      <p style={{ fontSize: 13, color: muted, margin: 0, lineHeight: 1.55 }}>
+                        Yukarıdaki öneriler ışığında CV'ni optimize et. CV'n ve ilan metni otomatik olarak aktarılacak.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setOriginalCV(cvText, cvFileName)
+                      setJobDescription(jobDescription)
+                      navigate('/cv-olustur')
+                    }}
+                    style={{
+                      width: '100%', padding: '13px', borderRadius: 14, border: 'none',
+                      background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                      color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                      boxShadow: '0 6px 20px rgba(99,102,241,0.35)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    }}
+                  >
+                    <FileEdit size={15} /> CV Düzenleme Aracına Git
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
