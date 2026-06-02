@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import {
   Mail, Lock, User, Eye, EyeOff, Shield,
-  AlertTriangle, KeyRound, Phone, Loader2, CheckCircle2,
+  AlertTriangle, KeyRound, Phone, Loader2,
 } from 'lucide-react'
 import {
   loginWithEmail,
@@ -164,55 +164,6 @@ function InputField({ icon, error, rightElement, dark = true, className: _cls, .
       {error && (
         <p className="flex items-center gap-1 mt-1.5 text-xs text-red-400">
           <AlertTriangle className="h-3 w-3 flex-shrink-0" />{error}
-        </p>
-      )}
-    </div>
-  )
-}
-
-// ─── OTP Input ────────────────────────────────────────────────────────────────
-
-function OtpInput({ value, error, onChange, onBlur, dark = true }: {
-  value: string; error?: string; onChange: (v: string) => void; onBlur: () => void; dark?: boolean
-}) {
-  const [focused, setFocused] = useState(false)
-  const borderColor = error
-    ? (focused ? 'rgba(239,68,68,0.8)' : 'rgba(239,68,68,0.55)')
-    : (focused ? 'rgba(99,102,241,0.65)' : (dark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.15)'))
-  const boxShadow = focused
-    ? (error ? '0 0 0 3px rgba(239,68,68,0.15)' : '0 0 0 3px rgba(99,102,241,0.18)')
-    : 'none'
-  return (
-    <div>
-      <input
-        type="text"
-        placeholder="000000"
-        value={value}
-        maxLength={6}
-        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        onFocus={() => setFocused(true)}
-        onBlur={() => { setFocused(false); onBlur() }}
-        style={{
-          width: '100%',
-          minHeight: 56,
-          padding: '14px 16px',
-          borderRadius: 12,
-          textAlign: 'center',
-          background: dark ? 'rgba(255,255,255,0.08)' : '#f8fafc',
-          color: dark ? '#f1f5f9' : '#0f172a',
-          border: `1px solid ${borderColor}`,
-          fontSize: 24,
-          fontFamily: 'monospace',
-          letterSpacing: '0.5em',
-          outline: 'none',
-          boxSizing: 'border-box',
-          transition: 'border-color 0.2s, box-shadow 0.2s',
-          boxShadow,
-        }}
-      />
-      {error && (
-        <p className="flex items-center justify-center gap-1 mt-1.5 text-xs text-red-400">
-          <AlertTriangle className="h-3 w-3" />{error}
         </p>
       )}
     </div>
