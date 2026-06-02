@@ -279,7 +279,7 @@ export default function QuizPage() {
                 })}
               </motion.div>
 
-              {!hasAnswer && (
+              {currentAnswer === null && (
                 <p style={{ fontSize: '12px', color: d ? '#64748b' : '#94a3b8', marginTop: '14px' }}>
                   ℹ️ Devam etmek için bir seçenek seçmelisin.
                 </p>
