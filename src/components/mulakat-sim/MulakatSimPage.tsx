@@ -112,7 +112,7 @@ export function MulakatSimPage() {
           className="flex flex-col lg:flex-row items-stretch"
           style={{
             ...(step === 3
-              ? { height: 'min(calc(100vh - 100px), 900px)' }
+              ? { height: 'calc(100vh - 120px)' }
               : { minHeight: 'min(calc(100vh - 100px), 900px)' }),
             position: 'relative',
           }}>
@@ -122,25 +122,27 @@ export function MulakatSimPage() {
           />
 
           {/* ── Sol: form içeriği ── */}
-          <div className="w-full lg:w-3/5" style={{ minWidth: 0, minHeight: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflow: step === 3 ? 'hidden' : 'visible' }}>
-            {/* Başlık */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="px-4 sm:px-8"
-              style={{ marginBottom: '12px', textAlign: 'center' }}
-            >
-              <h1 style={{ fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '6px' }}>
-                AI Mülakat Simülasyonu
-              </h1>
-              <p style={{ fontSize: '13px', color: 'rgba(148,163,184,0.65)' }}>
-                {stepDescs[step - 1]}
-              </p>
-            </motion.div>
+          <div className="w-full lg:w-3/5" style={{ minWidth: 0, minHeight: 0, padding: step === 3 ? '12px 20px' : '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflow: step === 3 ? 'hidden' : 'visible' }}>
+            {/* Başlık — step 3'te gizli */}
+            {step !== 3 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="px-4 sm:px-8"
+                style={{ marginBottom: '12px', textAlign: 'center' }}
+              >
+                <h1 style={{ fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '6px' }}>
+                  AI Mülakat Simülasyonu
+                </h1>
+                <p style={{ fontSize: '13px', color: 'rgba(148,163,184,0.65)' }}>
+                  {stepDescs[step - 1]}
+                </p>
+              </motion.div>
+            )}
 
-            {/* Adım göstergesi */}
-            <StepIndicator currentStep={step} d={d} />
+            {/* Adım göstergesi — step 3'te gizli */}
+            {step !== 3 && <StepIndicator currentStep={step} d={d} />}
 
             {/* Adım içeriği */}
             <motion.div
@@ -148,12 +150,14 @@ export function MulakatSimPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="p-4 sm:p-6"
-              style={{ marginTop: '6px', ...(step === 3 ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: '12px' } : {}) }}
+              className={step === 3 ? 'p-0' : 'p-4 sm:p-6'}
+              style={{ marginTop: step === 3 ? 0 : '6px', ...(step === 3 ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' } : {}) }}
             >
-              <h2 style={{ fontSize: '16px', fontWeight: 800, color: d ? 'white' : '#0f172a', marginBottom: '16px', letterSpacing: '-0.01em' }}>
-                {stepTitles[step - 1]}
-              </h2>
+              {step !== 3 && (
+                <h2 style={{ fontSize: '16px', fontWeight: 800, color: d ? 'white' : '#0f172a', marginBottom: '16px', letterSpacing: '-0.01em' }}>
+                  {stepTitles[step - 1]}
+                </h2>
+              )}
 
               {step === 1 && (
                 <Step1Upload d={d} onNext={() => goToStep(2)} />
