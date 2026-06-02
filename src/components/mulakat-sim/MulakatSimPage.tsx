@@ -111,7 +111,9 @@ export function MulakatSimPage() {
         <div
           className="flex flex-col lg:flex-row items-stretch"
           style={{
-            minHeight: 'min(calc(100vh - 100px), 900px)',
+            ...(step === 3
+              ? { height: 'min(calc(100vh - 100px), 900px)' }
+              : { minHeight: 'min(calc(100vh - 100px), 900px)' }),
             position: 'relative',
           }}>
           <Spotlight
@@ -120,7 +122,7 @@ export function MulakatSimPage() {
           />
 
           {/* ── Sol: form içeriği ── */}
-          <div className="w-full lg:w-3/5" style={{ minWidth: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflowY: step === 3 ? 'auto' : 'visible' }}>
+          <div className="w-full lg:w-3/5" style={{ minWidth: 0, padding: '16px 28px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: step === 3 ? 'flex-start' : 'center', overflow: step === 3 ? 'hidden' : 'visible' }}>
             {/* Başlık */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}

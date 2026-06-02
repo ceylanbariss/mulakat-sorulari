@@ -28,6 +28,29 @@ function containsInappropriateContent(text: string): boolean {
 const MAX_CV_TEXT_LENGTH = 6000
 const MAX_JOB_DESC_LENGTH = 1500
 
+const EN_STOPWORDS = new Set([
+  'the', 'and', 'or', 'is', 'are', 'with', 'for', 'in', 'of', 'to',
+  'a', 'an', 'that', 'this', 'have', 'has', 'been', 'will', 'can',
+  'experience', 'skills', 'work',
+])
+
+function detectLanguage(cvText: string, jobDescription: string, userAnswer?: string): 'en' | 'tr' {
+  const combined = (cvText + ' ' + jobDescription).toLowerCase()
+  const words = combined.match(/\b[a-z]+\b/g) ?? []
+  const enCount = words.filter((w) => EN_STOPWORDS.has(w)).length
+  let lang: 'en' | 'tr' = words.length > 0 && enCount / words.length > 0.3 ? 'en' : 'tr'
+
+  if (userAnswer && lang === 'tr') {
+    const answerWords = userAnswer.toLowerCase().match(/\b[a-z]+\b/g) ?? []
+    const answerEnCount = answerWords.filter((w) => EN_STOPWORDS.has(w)).length
+    if (answerWords.length > 0 && answerEnCount / answerWords.length > 0.3) {
+      lang = 'en'
+    }
+  }
+
+  return lang
+}
+
 type InterviewType = 'ik' | 'teknik' | 'her-ikisi'
 
 interface MulakatRequest {
@@ -48,7 +71,7 @@ function detectTaskType(q: string): 'normal' | 'code' | 'sql' | 'algorithm' {
   return 'code'
 }
 
-function buildSystemPrompt(type: InterviewType, context: string, questionNumber: number): string {
+function buildSystemPrompt(type: InterviewType, context: string, questionNumber: number, detectedLang: 'en' | 'tr'): string {
   const isLast = questionNumber >= MAX_QUESTIONS
 
   const roleDescription: Record<InterviewType, string> = {
@@ -85,7 +108,14 @@ taskType: SQL/SELECT/sorgu/tablo içeriyorsa "sql"; algoritma/fonksiyon/dizi/fun
     ? '\n\nBu SON sorudur. Kapanış yap: adaya eklemek istediği bir şey olup olmadığını sor.'
     : ''
 
-  return `${roleDescription[type]}${codeTaskRules}${closingHint}
+  const langInstruction =
+    detectedLang === 'en'
+      ? 'Respond ONLY in English. All your questions and responses must be in English.'
+      : 'Tüm sorularını ve yanıtlarını yalnızca Türkçe yaz.'
+
+  return `${langInstruction}
+
+${roleDescription[type]}${codeTaskRules}${closingHint}
 
 Aşağıdaki aday bilgilerini kullanarak mülakatı yürüt:
 ${context}
@@ -123,7 +153,7 @@ taskType: "[KOD_GÖREVİ]" etiketi yoksa "normal", varsa içeriğe göre "sql" /
 async function callGemini(
   req: MulakatRequest,
   _retryCount = 0
-): Promise<{ question: string; isLastQuestion: boolean; isFollowUp: boolean; taskType: 'normal' | 'code' | 'sql' | 'algorithm' }> {
+): Promise<{ question: string; isLastQuestion: boolean; isFollowUp: boolean; taskType: 'normal' | 'code' | 'sql' | 'algorithm'; detectedLang: 'en' | 'tr' }> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY tanımlı değil')
 
@@ -137,7 +167,8 @@ async function callGemini(
     req.jobDescription.slice(0, MAX_JOB_DESC_LENGTH),
   ].join('\n')
 
-  const basePrompt = buildSystemPrompt(req.interviewType, context, req.questionNumber)
+  const detectedLang = detectLanguage(req.cvText, req.jobDescription, req.userAnswer)
+  const basePrompt = buildSystemPrompt(req.interviewType, context, req.questionNumber, detectedLang)
   const empathyNote =
     req.action === 'answer' && Math.random() < 0.2
       ? '\n\nBu yanıtta acknowledge ederken kısa bir empati cümlesi ekle. Örnek: "Bu tür durumlar gerçekten zorlu olabiliyor." veya "Özellikle ilk dönemlerde böyle zorluklar normaldir."'
@@ -210,7 +241,7 @@ async function callGemini(
 
   if (!question) throw new Error('Boş yanıt alındı')
 
-  return { question, isLastQuestion, isFollowUp, taskType }
+  return { question, isLastQuestion, isFollowUp, taskType, detectedLang }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -232,13 +263,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       isFollowUp: false,
       terminated: true,
       taskType: 'normal',
+      detectedLang: detectLanguage(body.cvText, body.jobDescription, body.userAnswer),
     })
   }
 
   // İlk mesaj: statik karşılama (Gemini çağrısı yok)
   if (body.action === 'start') {
     const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
-    return res.status(200).json({ question: greeting, isLastQuestion: false, isFollowUp: false, taskType: 'normal' })
+    return res.status(200).json({
+      question: greeting,
+      isLastQuestion: false,
+      isFollowUp: false,
+      taskType: 'normal',
+      detectedLang: detectLanguage(body.cvText, body.jobDescription),
+    })
   }
 
   let retries = 0

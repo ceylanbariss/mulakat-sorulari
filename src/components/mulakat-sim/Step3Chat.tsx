@@ -7,6 +7,7 @@ import { MAX_QUESTIONS, INTERVIEW_TYPE_LABELS } from '../../config/mulakatConfig
 import { ChatMessage } from './ChatMessage'
 import { FinishModal } from './FinishModal'
 import { AnalysisReport } from './AnalysisReport'
+import { MulakatAnalizLoading } from './MulakatAnalizLoading'
 import { saveMulakatSession } from '../../lib/firestore'
 
 interface Props {
@@ -38,7 +39,8 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
   const [saving, setSaving] = useState(false)
   const [isTerminated, setIsTerminated] = useState(false)
   const [analysisData, setAnalysisData] = useState<Record<string, unknown> | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [, setIsAnalyzing] = useState(false)
+  const [showCompleteLoading, setShowCompleteLoading] = useState(false)
   const [currentTaskType, setCurrentTaskType] = useState<'normal' | 'code' | 'sql' | 'algorithm'>('normal')
   const [codeAnswer, setCodeAnswer] = useState('')
   const [codeExplanation, setCodeExplanation] = useState('')
@@ -59,13 +61,6 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
     const el = chatContainerRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, isLoading])
-
-  // Mülakat bitince analiz başlat
-  useEffect(() => {
-    if (isFinished) {
-      runAnalysis()
-    }
-  }, [isFinished])
 
   async function runAnalysis() {
     setIsAnalyzing(true)
@@ -88,6 +83,18 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
       setShowFinishModal(true)
     } finally {
       setIsAnalyzing(false)
+    }
+  }
+
+  async function handleCompleteInterview() {
+    const startTime = Date.now()
+    setShowCompleteLoading(true)
+    try {
+      await runAnalysis()
+    } finally {
+      const remaining = 3000 - (Date.now() - startTime)
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining))
+      setShowCompleteLoading(false)
     }
   }
 
@@ -255,30 +262,10 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
     )
   }
 
-  // Analyzing overlay
-  if (isAnalyzing) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center', padding: '80px 20px' }}>
-        <div style={{
-          width: 60, height: 60, borderRadius: '50%',
-          border: '4px solid rgba(99,102,241,0.15)',
-          borderTopColor: '#6366f1',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 20px',
-        }} />
-        <p style={{ fontSize: 16, fontWeight: 600, color: d ? 'rgba(226,232,240,0.85)' : '#334155' }}>
-          Mülakat analiz ediliyor…
-        </p>
-        <p style={{ fontSize: 13, color: d ? 'rgba(148,163,184,0.6)' : 'rgba(100,116,139,0.7)', marginTop: 6 }}>
-          AI performansınızı değerlendiriyor
-        </p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-      </div>
-    )
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {showCompleteLoading && <MulakatAnalizLoading />}
+
       {/* Başlık çubuğu */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -499,6 +486,29 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
             </button>
           </div>
         )
+      )}
+
+      {isFinished && !isTerminated && !showCompleteLoading && (
+        <div style={{ padding: '16px 0 4px' }}>
+          <button
+            onClick={handleCompleteInterview}
+            style={{
+              width: '100%',
+              padding: '15px 28px',
+              borderRadius: '14px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              color: '#fff',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            Mülakatı Tamamla
+          </button>
+        </div>
       )}
 
       {isTerminated && (

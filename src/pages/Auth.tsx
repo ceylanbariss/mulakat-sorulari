@@ -12,14 +12,12 @@ export function Auth() {
   const theme = useAppStore(s => s.theme)
   const d = theme === 'dark'
 
-  // Zaten giriş yapmışsa ana sayfaya yönlendir
   useEffect(() => {
     if (!loading && user) {
       navigate('/', { replace: true })
     }
   }, [user, loading, navigate])
 
-  // Firebase auth yüklenirken boş sayfa göster
   if (loading) return null
 
   return (
@@ -27,30 +25,17 @@ export function Auth() {
       className="min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden"
       style={{ background: d ? '#020817' : 'var(--bg)' }}
     >
-
-      {/* Aurora Background */}
       <AnoAI className="absolute inset-0 w-full h-full z-0 pointer-events-none overflow-hidden" />
 
       <motion.div
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full min-w-[320px] max-w-[460px]"
+        className="relative z-10 w-full"
+        style={{ maxWidth: 680 }}
       >
-        {/* Logo */}
-        <div className="flex flex-col items-center">
-          <img src="/logo.png" alt="logo" className="w-56 h-56 object-contain" />
-          <span
-            className="font-bold text-xl tracking-tight text-center mx-auto"
-            style={{ color: d ? 'white' : 'var(--text)', marginTop: '-20px', marginBottom: '32px' }}
-          >
-            Mülakat Soruları
-          </span>
-        </div>
-
-        {/* Kart */}
         <div
-          className="backdrop-blur-2xl"
+          className="backdrop-blur-2xl w-full"
           style={{
             borderRadius: 20,
             border: d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',

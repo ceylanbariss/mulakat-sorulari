@@ -13,6 +13,18 @@
 }
 
 
+/* ── Login-1 component tokens ── */
+:root {
+  --color-bg: #101214;
+  --color-surface: #161A1D;
+  --color-muted-surface: #1D2125;
+  --color-border: #2C333A;
+  --color-text-secondary: #596773;
+  --color-text-primary: #C7D1DB;
+  --color-heading: #DEE4EA;
+  --color-bg-2: #C7D1DB;
+}
+
 /* ── Theme tokens ── */
 :root {
   --bg: #F8FAFC;

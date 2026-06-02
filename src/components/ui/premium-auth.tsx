@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import {
   Mail, Lock, User, Eye, EyeOff, Shield,
-  AlertTriangle, KeyRound, Phone, Loader2,
+  AlertTriangle, KeyRound, Phone, Loader2, CheckCircle2,
 } from 'lucide-react'
 import {
   loginWithEmail,
@@ -249,15 +249,6 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
-  const [kvkkScrolled, setKvkkScrolled] = useState(false)
-
-  const handleKvkkScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
-    if (scrollHeight - scrollTop <= clientHeight + 10) {
-      setKvkkScrolled(true)
-    }
-  }
-
   React.useEffect(() => {
     const saved = localStorage.getItem('userEmail')
     if (saved && authMode === 'login')
@@ -296,10 +287,11 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
   }, [form, validate])
 
   const validateAll = useCallback(() => {
-    const fields: (keyof FormData)[] = ['email']
-    if (authMode !== 'reset') fields.push('password')
-    if (authMode === 'signup') fields.push('name', 'confirmPassword', 'agreeToTerms', 'agreeToKvkk')
-    if (step === 'verification') fields.push('verificationCode')
+    let fields: (keyof FormData)[] = []
+    if (authMode === 'login') fields = ['email', 'password']
+    else if (authMode === 'signup' && step === 'details') fields = ['name', 'email', 'password', 'confirmPassword']
+    else if (authMode === 'signup' && step === 'verification') fields = ['agreeToTerms', 'agreeToKvkk']
+    else if (authMode === 'reset') fields = ['email']
     const newErr: FormErrors = {}
     fields.forEach(f => { const e = validate(f, form[f]); if (e) newErr[f as keyof FormErrors] = e })
     setErrors(newErr)
@@ -311,6 +303,13 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!validateAll()) return
+
+    // Signup adım 1 → adım 2'ye geç
+    if (authMode === 'signup' && step === 'details') {
+      setStep('verification')
+      return
+    }
+
     setLoading(true); setErrors({})
     try {
       if (authMode === 'login') {
@@ -423,37 +422,101 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       </div>
     )
 
-    // Email Verification
+    // Signup Adım 2 — Sözleşmeler
     if (authMode === 'signup' && step === 'verification') return (
-      <div className="space-y-5">
-        <div className="text-center mb-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/15 mb-4">
-            <Mail className="h-5 w-5 text-indigo-400" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+        {/* İlerleme */}
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
-          <h3 className="text-lg font-semibold mb-1" style={{ color: d ? '#f1f5f9' : '#0f172a' }}>E-postanı Doğrula</h3>
-          <p className="text-sm text-slate-500">
-            <span style={{ color: d ? '#cbd5e1' : '#334155', fontWeight: 500 }}>{form.email}</span> adresine 6 haneli kod gönderdik.
-          </p>
+          <div className="h-0.5 w-10 bg-indigo-600 rounded-full" />
+          <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-white">2</span>
+          </div>
         </div>
 
-        <OtpInput
+        <div className="text-center">
+          <h3 className="text-lg font-semibold" style={{ color: d ? '#f1f5f9' : '#0f172a' }}>Son Adım</h3>
+          <p className="text-sm text-slate-500 mt-1">Sözleşmeleri onaylayın ve hesabınızı oluşturun</p>
+        </div>
+
+        {/* Telefon (isteğe bağlı) */}
+        <InputField
           dark={d}
-          value={form.verificationCode}
-          error={errors.verificationCode}
-          onChange={v => onChange('verificationCode', v)}
-          onBlur={() => onBlur('verificationCode')}
+          icon={<Phone className="h-4 w-4" />}
+          type="tel"
+          placeholder="Telefon Numarası (İsteğe Bağlı)"
+          value={form.phone}
+          onChange={e => onChange('phone', e.target.value)}
+          onBlur={() => onBlur('phone')}
+          error={errors.phone}
         />
+
+        {/* Sözleşmeler */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.agreeToTerms}
+              onChange={e => onChange('agreeToTerms', e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
+            />
+            <span className="text-sm text-slate-500 leading-snug">
+              <Link to="/kullanim-sartlari" target="_blank" className="text-slate-400 underline hover:text-slate-300 transition-colors">Üyelik Sözleşmesi</Link>'ni okudum, kabul ediyorum.{' '}
+              <span className="text-red-400">*</span>
+            </span>
+          </label>
+          {errors.agreeToTerms && (
+            <p className="flex items-center gap-1 text-xs text-red-400 -mt-2">
+              <AlertTriangle className="h-3 w-3" />{errors.agreeToTerms}
+            </p>
+          )}
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.agreeToKvkk}
+              onChange={e => onChange('agreeToKvkk', e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
+            />
+            <span className="text-sm text-slate-500 leading-snug">
+              <Link to="/gizlilik-politikasi" target="_blank" className="text-slate-400 underline hover:text-slate-300 transition-colors">Aydınlatma Metni</Link>'ni okudum, kişisel verilerimin işlenmesini kabul ediyorum.{' '}
+              <span className="text-red-400">*</span>
+            </span>
+          </label>
+          {errors.agreeToKvkk && (
+            <p className="flex items-center gap-1 text-xs text-red-400 -mt-2">
+              <AlertTriangle className="h-3 w-3" />{errors.agreeToKvkk}
+            </p>
+          )}
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.agreeToAI}
+              onChange={e => onChange('agreeToAI', e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
+            />
+            <span className="text-sm text-slate-500 leading-snug">
+              Verilerimin AI analizleri için yurt dışına aktarılmasına{' '}
+              <Link to="/gizlilik-politikasi" target="_blank" className="text-slate-400 underline hover:text-slate-300 transition-colors">açık rıza</Link> veriyorum.{' '}
+              <span className="text-xs text-slate-600">(İsteğe bağlı)</span>
+            </span>
+          </label>
+        </div>
 
         <button
           type="submit"
-          disabled={loading || form.verificationCode.length !== 6}
+          disabled={loading}
           className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white
             bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30
-            hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-500/30
-            disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          style={{ minHeight: 52, padding: '14px 24px' }}
+            hover:opacity-90 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          style={{ minHeight: 52 }}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'E-postayı Doğrula'}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Hesap Oluştur'}
         </button>
 
         <div className="text-center">
@@ -491,192 +554,119 @@ export function AuthForm({ onSuccess, onClose, initialMode = 'login', className 
       </div>
     )
 
-    // Main login / signup
+    // Main login / signup adım 1
     return (
-      <div className="space-y-5" style={{ gap: 20 }}>
-        {authMode === 'signup' && (
-          <InputField
-            dark={d}
-            icon={<User className="h-4 w-4" />}
-            type="text"
-            placeholder="Ad Soyad"
-            value={form.name}
-            onChange={e => onChange('name', e.target.value)}
-            onBlur={() => onBlur('name')}
-            error={errors.name}
-          />
-        )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        <div style={{ paddingBottom: 12 }}>
-          <InputField
-            dark={d}
-            icon={<Mail className="h-4 w-4" />}
-            type="email"
-            placeholder="E-posta Adresi"
-            value={form.email}
-            onChange={e => onChange('email', e.target.value)}
-            onBlur={() => onBlur('email')}
-            error={errors.email}
-          />
-        </div>
-
-        <div>
-          <InputField
-            dark={d}
-            icon={<Lock className="h-4 w-4" />}
-            type={showPw ? 'text' : 'password'}
-            placeholder="Şifre"
-            value={form.password}
-            onChange={e => onChange('password', e.target.value)}
-            onBlur={() => onBlur('password')}
-            error={errors.password}
-            rightElement={<EyeBtn show={showPw} onToggle={() => setShowPw(v => !v)} />}
-          />
-          {authMode === 'signup' && <PasswordStrengthIndicator dark={d} password={form.password} />}
-        </div>
-
-        {authMode === 'signup' && (<>
-          <InputField
-            dark={d}
-            icon={<Shield className="h-4 w-4" />}
-            type={showCPw ? 'text' : 'password'}
-            placeholder="Şifre Tekrar"
-            value={form.confirmPassword}
-            onChange={e => onChange('confirmPassword', e.target.value)}
-            onBlur={() => onBlur('confirmPassword')}
-            error={errors.confirmPassword}
-            rightElement={<EyeBtn show={showCPw} onToggle={() => setShowCPw(v => !v)} />}
-          />
-          <InputField
-            dark={d}
-            icon={<Phone className="h-4 w-4" />}
-            type="tel"
-            placeholder="Telefon Numarası (İsteğe Bağlı)"
-            value={form.phone}
-            onChange={e => onChange('phone', e.target.value)}
-            onBlur={() => onBlur('phone')}
-            error={errors.phone}
-          />
-        </>)}
-
-        <div className="flex items-center justify-between mt-3 mb-3">
-          {authMode === 'login' ? (<>
-            <label className="flex items-center gap-2 cursor-pointer select-none py-2">
-              <input
-                type="checkbox"
-                checked={form.rememberMe}
-                onChange={e => onChange('rememberMe', e.target.checked)}
-                className="w-5 h-5 rounded accent-indigo-500 cursor-pointer"
-                style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', accentColor: '#6366f1' }}
-              />
-              <span className="text-base text-slate-500">Beni hatırla</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => setAuthMode('reset')}
-              className="text-sm text-slate-500 hover:text-blue-400 transition-colors py-2 px-1"
-            >
-              Şifremi unuttum?
-            </button>
-          </>) : (
-            <div className="flex flex-col gap-4">
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={form.agreeToTerms}
-                  onChange={e => onChange('agreeToTerms', e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
-                  style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
-                />
-                <span className="text-sm text-slate-500">
-                  <Link to="/kullanim-sartlari" target="_blank" className="text-slate-400 underline hover:text-slate-300 transition-colors">Üyelik Sözleşmesi</Link>'ni okudum, kabul ediyorum. <span className="text-red-400">*</span>
-                </span>
-              </label>
-
-              <div className="bg-slate-50/5 border border-slate-200/20 rounded-lg p-3" style={{ background: d ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderColor: d ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
-                <div className="text-xs mb-2" style={{ color: d ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }}>Lütfen onaylamak için metnin sonuna kadar okuyun/kaydırın.</div>
-                <div 
-                  onScroll={handleKvkkScroll}
-                  className="h-32 overflow-y-auto text-xs pr-2 mb-3 space-y-2"
-                  style={{ color: d ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}
-                >
-                  <p><strong>KİŞİSEL VERİLERİN İŞLENMESİNE İLİŞKİN AYDINLATMA METNİ</strong></p>
-                  <p><strong>1. Giriş</strong><br/>mulakatsorulari.com.tr platformu olarak kişisel verilerinizin güvenliğine önem veriyoruz. Bu metin, verilerinizin hangi kapsamda işlendiği ve haklarınız hakkında bilgilendirme amacı taşır.</p>
-                  <p><strong>2. Veri Sorumlusu</strong><br/>Kişisel verileriniz, 6698 sayılı KVKK kapsamında veri sorumlusu sıfatıyla İsmail Tayşi (info@mulakatsorulari.com.tr) tarafından işlenmektedir.</p>
-                  <p><strong>3. Hangi Kişisel Verilerinizi İşliyoruz?</strong><br/>Kullanıcı hesap bilgileri, CV içerikleri, yapay zeka destekli mülakat simülasyon yanıtları, performans verileri, IP adresi ve cihaz bilgileri gibi verileriniz işlenmektedir.</p>
-                  <p><strong>4. İşlenme Amaçları ve Hukuki Sebepleri</strong><br/>Sözleşmenin kurulması, üyelik yönetimi, yapay zeka ile mülakat analizi, kişiselleştirilmiş geri bildirim sağlanması, platform deneyiminin geliştirilmesi ve hukuki yükümlülüklerin yerine getirilmesi amaçlarıyla işlenmektedir.</p>
-                  <p><strong>5. Aktarım</strong><br/>Mülakat analizi ve CV değerlendirme hizmetleri için kişisel verileriniz; bulut hizmet sağlayıcılarımıza yurt dışına açık rızanıza istinaden aktarılabilir. Ayrıca yasal zorunluluklarda yetkili kurumlara aktarılabilir.</p>
-                  <p><strong>6. Saklanması ve Korunması</strong><br/>Verileriniz üyelik süresince ve kanuni sürelere uygun şekilde güvenli olarak saklanır. Güvenli bağlantılar ve şifreleme teknolojileri kullanılır.</p>
-                  <p><strong>7. Haklarınız</strong><br/>KVKK md. 11 kapsamındaki haklarınızı info@mulakatsorulari.com.tr adresine başvurarak kullanabilirsiniz.</p>
-                </div>
-                <label className={cn("flex items-start gap-2 select-none transition-opacity", kvkkScrolled ? "cursor-pointer" : "cursor-not-allowed opacity-50")}>
-                  <input
-                    type="checkbox"
-                    disabled={!kvkkScrolled}
-                    checked={form.agreeToKvkk}
-                    onChange={e => onChange('agreeToKvkk', e.target.checked)}
-                    className="w-4 h-4 mt-0.5 rounded accent-indigo-500 flex-shrink-0"
-                    style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', cursor: kvkkScrolled ? 'pointer' : 'not-allowed' }}
-                  />
-                  <span className="text-sm text-slate-500">
-                    Kişisel verilerimin işlenmesine yönelik <Link to="/gizlilik-politikasi" target="_blank" className="text-slate-400 underline hover:text-slate-300">Aydınlatma Metni</Link> kapsamında bilgilendirildim. <span className="text-red-400">*</span>
-                  </span>
-                </label>
+        {authMode === 'signup' ? (
+          /* ── Signup: 2 sütunlu grid ── */
+          <>
+            {/* Adım göstergesi */}
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-white">1</span>
               </div>
-
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={form.agreeToAI}
-                  onChange={e => onChange('agreeToAI', e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded accent-indigo-500 cursor-pointer flex-shrink-0"
-                  style={{ borderColor: d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}
-                />
-                <span className="text-sm text-slate-500">
-                  Verilerimin AI analizleri için yurt dışına aktarılmasına ve profilleme yapılmasına <Link to="/gizlilik-politikasi" target="_blank" className="text-slate-400 underline hover:text-slate-300">Açık Rıza</Link> veriyorum. <span className="text-slate-400 text-xs">(İsteğe bağlı)</span>
-                </span>
-              </label>
+              <div className="h-0.5 w-8 rounded-full" style={{ background: d ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)' }} />
+              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ border: `2px solid ${d ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}` }}>
+                <span className="text-xs font-bold" style={{ color: d ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }}>2</span>
+              </div>
             </div>
-          )}
-        </div>
 
-        {(errors.agreeToTerms || errors.agreeToKvkk) && (
-          <div className="flex flex-col gap-1">
-            {errors.agreeToTerms && (
-              <p className="flex items-center gap-1 text-xs text-red-400">
-                <AlertTriangle className="h-3 w-3" />{errors.agreeToTerms}
-              </p>
-            )}
-            {errors.agreeToKvkk && (
-              <p className="flex items-center gap-1 text-xs text-red-400">
-                <AlertTriangle className="h-3 w-3" />{errors.agreeToKvkk}
-              </p>
-            )}
-          </div>
+            {/* Satır 1: Ad Soyad | E-posta */}
+            <div className="grid grid-cols-2 gap-4">
+              <InputField
+                dark={d} icon={<User className="h-4 w-4" />}
+                type="text" placeholder="Ad Soyad"
+                value={form.name} onChange={e => onChange('name', e.target.value)}
+                onBlur={() => onBlur('name')} error={errors.name}
+              />
+              <InputField
+                dark={d} icon={<Mail className="h-4 w-4" />}
+                type="email" placeholder="E-posta Adresi"
+                value={form.email} onChange={e => onChange('email', e.target.value)}
+                onBlur={() => onBlur('email')} error={errors.email}
+              />
+            </div>
+
+            {/* Satır 2: Şifre | Şifre Tekrar */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <InputField
+                  dark={d} icon={<Lock className="h-4 w-4" />}
+                  type={showPw ? 'text' : 'password'} placeholder="Şifre"
+                  value={form.password} onChange={e => onChange('password', e.target.value)}
+                  onBlur={() => onBlur('password')} error={errors.password}
+                  rightElement={<EyeBtn show={showPw} onToggle={() => setShowPw(v => !v)} />}
+                />
+                <PasswordStrengthIndicator dark={d} password={form.password} />
+              </div>
+              <InputField
+                dark={d} icon={<Shield className="h-4 w-4" />}
+                type={showCPw ? 'text' : 'password'} placeholder="Şifre Tekrar"
+                value={form.confirmPassword} onChange={e => onChange('confirmPassword', e.target.value)}
+                onBlur={() => onBlur('confirmPassword')} error={errors.confirmPassword}
+                rightElement={<EyeBtn show={showCPw} onToggle={() => setShowCPw(v => !v)} />}
+              />
+            </div>
+
+            <button
+              type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white
+                bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30
+                hover:opacity-90 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              style={{ minHeight: 52 }}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Devam Et →'}
+            </button>
+          </>
+        ) : (
+          /* ── Login: tek sütun ── */
+          <>
+            <InputField
+              dark={d} icon={<Mail className="h-4 w-4" />}
+              type="email" placeholder="E-posta Adresi"
+              value={form.email} onChange={e => onChange('email', e.target.value)}
+              onBlur={() => onBlur('email')} error={errors.email}
+            />
+            <div>
+              <InputField
+                dark={d} icon={<Lock className="h-4 w-4" />}
+                type={showPw ? 'text' : 'password'} placeholder="Şifre"
+                value={form.password} onChange={e => onChange('password', e.target.value)}
+                onBlur={() => onBlur('password')} error={errors.password}
+                rightElement={<EyeBtn show={showPw} onToggle={() => setShowPw(v => !v)} />}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer select-none py-1">
+                <input type="checkbox" checked={form.rememberMe}
+                  onChange={e => onChange('rememberMe', e.target.checked)}
+                  className="w-4 h-4 rounded accent-indigo-500 cursor-pointer" style={{ accentColor: '#6366f1' }} />
+                <span className="text-sm text-slate-500">Beni hatırla</span>
+              </label>
+              <button type="button" onClick={() => setAuthMode('reset')}
+                className="text-sm text-slate-500 hover:text-blue-400 transition-colors py-1 px-1">
+                Şifremi unuttum?
+              </button>
+            </div>
+            <button
+              type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white
+                bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30
+                hover:opacity-90 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              style={{ minHeight: 52 }}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Giriş Yap'}
+            </button>
+          </>
         )}
-
-        <div className="pt-5">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-sm text-white
-              bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/30
-              hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-500/30
-              disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            style={{ minHeight: 60, padding: '18px 28px' }}
-          >
-            {loading
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : (authMode === 'login' ? 'Giriş Yap' : 'Hesap Oluştur')
-            }
-          </button>
-        </div>
       </div>
     )
   }
 
   return (
-    <div className={cn(className)} style={{ paddingTop: 72, paddingBottom: 72, paddingLeft: 60, paddingRight: 60 }}>
+    <div className={cn(className)} style={{ paddingTop: 44, paddingBottom: 44, paddingLeft: 56, paddingRight: 56 }}>
       {/* Başarı bildirimi */}
       {successMsg && (
         <div className="flex items-center gap-2 mb-5 rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20">
