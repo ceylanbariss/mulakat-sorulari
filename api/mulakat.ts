@@ -15,6 +15,14 @@ const GREETINGS = [
   'Merhaba! Bugün keyifli bir görüşme olacağını umuyorum. Neden bu pozisyona başvurduğunuzdan başlayalım ister misiniz?',
 ]
 
+const GREETINGS_EN = [
+  "Welcome! Don't be nervous — let's start with a friendly conversation. Could you please introduce yourself?",
+  "Hello! This is meant to be a relaxed chat, not a formal interrogation. Tell me a bit about yourself and what brought you here.",
+  "Hi there! Take a deep breath — I'm here to get to know you. Could you walk me through your background and why you're excited about this role?",
+  "Welcome! Before we dive into the details, let's get acquainted. Please tell me about yourself and your career journey.",
+  "Hello! I'd love to start by hearing your story. Could you introduce yourself and share what draws you to this position?",
+]
+
 const BLOCKED_KEYWORDS = [
   'siktir', 'orospu', 'yarrak', 'sikeyim', 'amına', 'amk',
   'oç', 'piç', 'kahpe', 'fahişe', 'ibne',
@@ -87,6 +95,7 @@ type InterviewType = 'ik' | 'teknik' | 'her-ikisi'
 interface MulakatRequest {
   action: 'start' | 'answer'
   interviewType: InterviewType
+  interviewLanguage?: 'tr' | 'en'
   cvText: string
   jobDescription: string
   history: Array<{ role: 'interviewer' | 'user'; content: string }>
@@ -198,7 +207,7 @@ async function callGemini(
     req.jobDescription.slice(0, MAX_JOB_DESC_LENGTH),
   ].join('\n')
 
-  const detectedLang = detectLanguage(req.cvText, req.jobDescription, req.userAnswer, req.history)
+  const detectedLang: 'en' | 'tr' = req.interviewLanguage ?? detectLanguage(req.cvText, req.jobDescription, req.userAnswer, req.history)
   const basePrompt = buildSystemPrompt(req.interviewType, context, req.questionNumber, detectedLang)
   const empathyNote =
     req.action === 'answer' && Math.random() < 0.2
@@ -293,25 +302,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Uygunsuz içerik kontrolü
   if (body.action === 'answer' && body.userAnswer && containsInappropriateContent(body.userAnswer)) {
+    const lang: 'en' | 'tr' = body.interviewLanguage ?? detectLanguage(body.cvText, body.jobDescription, body.userAnswer, body.history)
     return res.status(200).json({
-      question: 'Bu görüşmeye uygun olmayan bir ifade kullandınız. Mülakat sonlandırılıyor.',
+      question: lang === 'en'
+        ? 'You have used inappropriate language. The interview is being terminated.'
+        : 'Bu görüşmeye uygun olmayan bir ifade kullandınız. Mülakat sonlandırılıyor.',
       isLastQuestion: true,
       isFollowUp: false,
       terminated: true,
       taskType: 'normal',
-      detectedLang: detectLanguage(body.cvText, body.jobDescription, body.userAnswer, body.history),
+      detectedLang: lang,
     })
   }
 
   // İlk mesaj: statik karşılama (Gemini çağrısı yok)
   if (body.action === 'start') {
-    const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+    const lang: 'en' | 'tr' = body.interviewLanguage ?? detectLanguage(body.cvText, body.jobDescription)
+    const pool = lang === 'en' ? GREETINGS_EN : GREETINGS
+    const greeting = pool[Math.floor(Math.random() * pool.length)]
     return res.status(200).json({
       question: greeting,
       isLastQuestion: false,
       isFollowUp: false,
       taskType: 'normal',
-      detectedLang: detectLanguage(body.cvText, body.jobDescription),
+      detectedLang: lang,
     })
   }
 

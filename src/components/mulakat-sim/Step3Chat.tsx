@@ -27,6 +27,7 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
     isFinished,
     questionCount,
     interviewType,
+    interviewLanguage,
     cvText,
     jobDescription,
     cvFileName,
@@ -77,6 +78,7 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
         body: JSON.stringify({
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
           interviewType,
+          interviewLanguage: interviewLanguage ?? 'tr',
           cvText,
           jobDescription,
         }),
@@ -111,6 +113,7 @@ export function Step3Chat({ d, userId, onFinished }: Props) {
       const body = {
         action: userAnswer ? 'answer' : 'start',
         interviewType,
+        interviewLanguage: interviewLanguage ?? 'tr',
         cvText,
         jobDescription,
         history,

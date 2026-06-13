@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 export type InterviewType = 'ik' | 'teknik' | 'her-ikisi'
+export type InterviewLanguage = 'tr' | 'en'
 export type MessageRole = 'interviewer' | 'user'
 
 export interface ChatMessage {
@@ -16,6 +17,7 @@ interface MulakatState {
   cvFileName: string
   jobDescription: string
   interviewType: InterviewType | null
+  interviewLanguage: InterviewLanguage | null
   messages: ChatMessage[]
   currentAnswer: string
   isLoading: boolean
@@ -25,6 +27,7 @@ interface MulakatState {
   setCvText: (text: string, fileName: string) => void
   setJobDescription: (text: string) => void
   setInterviewType: (type: InterviewType) => void
+  setInterviewLanguage: (lang: InterviewLanguage) => void
   addMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void
   setCurrentAnswer: (text: string) => void
   setLoading: (v: boolean) => void
@@ -41,6 +44,7 @@ const initialState = {
   cvFileName: '',
   jobDescription: '',
   interviewType: null,
+  interviewLanguage: null,
   messages: [],
   currentAnswer: '',
   isLoading: false,
@@ -54,6 +58,7 @@ export const useMulakatStore = create<MulakatState>((set) => ({
   setCvText: (text, fileName) => set({ cvText: text, cvFileName: fileName }),
   setJobDescription: (text) => set({ jobDescription: text }),
   setInterviewType: (type) => set({ interviewType: type }),
+  setInterviewLanguage: (lang) => set({ interviewLanguage: lang }),
   addMessage: (msg) =>
     set((state) => ({
       messages: [

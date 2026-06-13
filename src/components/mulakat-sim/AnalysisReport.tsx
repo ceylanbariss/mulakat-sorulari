@@ -1,14 +1,35 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Save, X, RotateCcw, FileEdit, Tag, ChevronRight } from 'lucide-react'
+import {
+  CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Lightbulb,
+  Save, X, RotateCcw, FileEdit, Tag, ChevronRight, Cpu, Users, Zap,
+} from 'lucide-react'
 import { useMulakatStore } from '../../store/useMulakatStore'
 import { useCvStore } from '../../store/useCvStore'
+
+interface AtsDetay {
+  beceriPuani: number
+  deneyimPuani: number
+  egitimPuani: number
+  eslesenTeknikBeceriler: string[]
+  eslesenYumusakBeceriler: string[]
+  stratejikBeklenenKelimeler: string[]
+}
 
 interface CvAnaliz {
   pozisyonUyumPuani: number
   eksikAnahtarKelimeler: string[]
   gelistirilmesiGerekenBolumler: Array<{ bolum: string; oneri: string }>
   gucluUyumlar: string[]
+  atsDetay?: AtsDetay
+}
+
+interface IngilizceYetkinligi {
+  puan: number
+  dilbilgisi: number
+  kelimeBilgisi: number
+  akicilik: number
+  yorum: string
 }
 
 interface AnalysisData {
@@ -18,6 +39,7 @@ interface AnalysisData {
   gelisimAlanlari: Array<{ baslik: string; aciklama: string; oncelik: 'yüksek' | 'orta' | 'düşük' }>
   kendiniIfadeEtme: { puan: number; yorum: string }
   teknikYetkinlik: { puan: number; yorum: string }
+  ingilizceYetkinligi?: IngilizceYetkinligi
   eleyebilecekNoktalar: string[]
   avantajliNoktalar: string[]
   tavsiye: string
@@ -86,6 +108,279 @@ const PRIORITY_STYLES: Record<string, { bg: string; border: string; label: strin
   'yüksek': { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', label: 'Yüksek', color: '#f87171' },
   'orta': { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)', label: 'Orta', color: '#fbbf24' },
   'düşük': { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)', label: 'Düşük', color: '#4ade80' },
+}
+
+function AtsScorePanel({ cvAnaliz, d, text, muted }: {
+  cvAnaliz: CvAnaliz
+  d: boolean
+  text: string
+  muted: string
+}) {
+  const [animate, setAnimate] = useState(false)
+  const [count, setCount] = useState(0)
+  const rafRef = useRef<number | null>(null)
+
+  const score = cvAnaliz.pozisyonUyumPuani
+  const color = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444'
+  const glowColor = score >= 75 ? 'rgba(34,197,94,0.4)' : score >= 50 ? 'rgba(245,158,11,0.4)' : 'rgba(239,68,68,0.4)'
+
+  const r = 62
+  const circ = 2 * Math.PI * r
+  const offset = animate ? circ - (score / 100) * circ : circ
+
+  const ats = cvAnaliz.atsDetay
+  const subBars = [
+    { label: 'Beceri', value: ats?.beceriPuani ?? 0 },
+    { label: 'Deneyim', value: ats?.deneyimPuani ?? 0 },
+    { label: 'Eğitim', value: ats?.egitimPuani ?? 0 },
+  ]
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimate(true), 100)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (!animate) return
+    const duration = 1500
+    const start = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setCount(Math.round(eased * score))
+      if (p < 1) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [animate, score])
+
+  const borderStyle = d ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)'
+  const sectionDivider = d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+
+  return (
+    <div style={{
+      borderRadius: 20,
+      background: d ? 'rgba(8,16,36,0.7)' : 'rgba(255,255,255,0.95)',
+      border: borderStyle,
+      overflow: 'hidden',
+      backdropFilter: 'blur(12px)',
+    }}>
+      {/* Panel header */}
+      <div style={{
+        padding: '13px 20px',
+        background: d ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.02)',
+        borderBottom: `1px solid ${sectionDivider}`,
+        display: 'flex', alignItems: 'center', gap: 10,
+      }}>
+        <div style={{
+          width: 7, height: 7, borderRadius: '50%',
+          background: color,
+          boxShadow: `0 0 10px ${glowColor}, 0 0 20px ${glowColor}`,
+        }} />
+        <span style={{
+          fontSize: 10, fontWeight: 800, letterSpacing: '0.15em',
+          color: muted, textTransform: 'uppercase',
+        }}>
+          ATS Raporu
+        </span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{
+            padding: '3px 10px', borderRadius: 99,
+            background: score >= 75
+              ? 'rgba(34,197,94,0.12)'
+              : score >= 50 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+            border: `1px solid ${color}40`,
+            fontSize: 10, fontWeight: 700, color,
+          }}>
+            {score >= 75 ? 'Yüksek Uyum' : score >= 50 ? 'Orta Uyum' : 'Düşük Uyum'}
+          </div>
+        </div>
+      </div>
+
+      {/* Score + sub-bars */}
+      <div style={{
+        padding: '28px 24px 24px',
+        display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap',
+        borderBottom: `1px solid ${sectionDivider}`,
+      }}>
+        {/* Circular score */}
+        <div style={{ position: 'relative', width: 154, height: 154, flexShrink: 0 }}>
+          <svg width={154} height={154} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+            <defs>
+              <filter id="ats-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            {/* Track ring */}
+            <circle cx={77} cy={77} r={r} fill="none"
+              stroke={d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)'}
+              strokeWidth={11} />
+            {/* Progress ring */}
+            <circle cx={77} cy={77} r={r} fill="none"
+              stroke={color} strokeWidth={11}
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              filter="url(#ats-glow)"
+              style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.22,1,0.36,1)' }}
+            />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{
+              fontSize: 44, fontWeight: 900, color, lineHeight: 1,
+              fontVariantNumeric: 'tabular-nums',
+              filter: animate ? `drop-shadow(0 0 12px ${glowColor})` : 'none',
+              transition: 'filter 0.5s ease',
+            }}>{count}</span>
+            <span style={{ fontSize: 11, color: muted, marginTop: 4, fontWeight: 600, textAlign: 'center', lineHeight: 1.4 }}>
+              Genel Uyum<br />Skoru
+            </span>
+          </div>
+        </div>
+
+        {/* Sub-score bars */}
+        <div style={{ flex: 1, minWidth: 160 }}>
+          {subBars.map((bar, i) => {
+            const bc = bar.value >= 75 ? '#22c55e' : bar.value >= 50 ? '#f59e0b' : '#ef4444'
+            return (
+              <div key={bar.label} style={{ marginBottom: i < 2 ? 16 : 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: text }}>{bar.label}</span>
+                  <span style={{
+                    fontSize: 13, fontWeight: 800, color: bc,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>{bar.value}</span>
+                </div>
+                <div style={{
+                  height: 7, borderRadius: 99,
+                  background: d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: animate ? `${bar.value}%` : '0%',
+                    background: `linear-gradient(90deg, ${bc}99, ${bc})`,
+                    borderRadius: 99,
+                    boxShadow: animate ? `0 0 8px ${bc}66` : 'none',
+                    transition: `width 1.3s cubic-bezier(0.22,1,0.36,1) ${0.25 + i * 0.12}s, box-shadow 0.5s ease ${0.5 + i * 0.12}s`,
+                  }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Keyword sections */}
+      {ats && (
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Teknik beceriler */}
+          {ats.eslesenTeknikBeceriler.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <Cpu size={13} color="#818cf8" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#818cf8', letterSpacing: '0.03em' }}>
+                  Teknik Beceri Eşleşmeleri
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {ats.eslesenTeknikBeceriler.map((kw, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 11px', borderRadius: 99,
+                      background: 'rgba(34,197,94,0.08)',
+                      border: '1px solid rgba(34,197,94,0.22)',
+                      color: '#4ade80', fontSize: 12, fontWeight: 600,
+                      opacity: animate ? 1 : 0,
+                      transform: animate ? 'translateY(0)' : 'translateY(6px)',
+                      transition: `opacity 0.35s ease ${0.6 + i * 0.05}s, transform 0.35s ease ${0.6 + i * 0.05}s`,
+                    }}
+                  >
+                    <CheckCircle2 size={11} color="#4ade80" />
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Yumuşak beceriler */}
+          {ats.eslesenYumusakBeceriler.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <Users size={13} color="#60a5fa" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#60a5fa', letterSpacing: '0.03em' }}>
+                  Yumuşak Beceri Eşleşmeleri
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {ats.eslesenYumusakBeceriler.map((kw, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 11px', borderRadius: 99,
+                      background: 'rgba(96,165,250,0.08)',
+                      border: '1px solid rgba(96,165,250,0.22)',
+                      color: '#93c5fd', fontSize: 12, fontWeight: 600,
+                      opacity: animate ? 1 : 0,
+                      transform: animate ? 'translateY(0)' : 'translateY(6px)',
+                      transition: `opacity 0.35s ease ${0.8 + i * 0.05}s, transform 0.35s ease ${0.8 + i * 0.05}s`,
+                    }}
+                  >
+                    <CheckCircle2 size={11} color="#93c5fd" />
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stratejik beklenen kelimeler */}
+          {ats.stratejikBeklenenKelimeler.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <Zap size={13} color="#fb923c" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fb923c', letterSpacing: '0.03em' }}>
+                  Stratejik Olarak Beklenen Kelimeler
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {ats.stratejikBeklenenKelimeler.map((kw, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 11px', borderRadius: 99,
+                      background: 'rgba(251,146,60,0.08)',
+                      border: '1px solid rgba(251,146,60,0.25)',
+                      color: '#fdba74', fontSize: 12, fontWeight: 600,
+                      opacity: animate ? 1 : 0,
+                      transform: animate ? 'translateY(0)' : 'translateY(6px)',
+                      transition: `opacity 0.35s ease ${1.0 + i * 0.06}s, transform 0.35s ease ${1.0 + i * 0.06}s`,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, lineHeight: 1, fontWeight: 800 }}>+</span>
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: Props) {
@@ -279,39 +574,14 @@ export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: 
               </div>
             ) : (
               <>
-                {/* Pozisyon Uyum Puanı */}
-                <div style={{
-                  background: card, border, borderRadius: 20, padding: 20,
-                  display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-                }}>
-                  {(() => {
-                    const score = analysis.cvAnaliz.pozisyonUyumPuani
-                    const r = 40
-                    const circ = 2 * Math.PI * r
-                    const offset = circ - (score / 100) * circ
-                    const color = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444'
-                    return (
-                      <div style={{ position: 'relative', width: 100, height: 100, flexShrink: 0 }}>
-                        <svg width={100} height={100} style={{ transform: 'rotate(-90deg)' }}>
-                          <circle cx={50} cy={50} r={r} fill="none" stroke={d ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'} strokeWidth={8} />
-                          <circle cx={50} cy={50} r={r} fill="none" stroke={color} strokeWidth={8}
-                            strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-                            style={{ transition: 'stroke-dashoffset 1s ease' }} />
-                        </svg>
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1 }}>{score}</span>
-                          <span style={{ fontSize: 10, color: muted, marginTop: 1 }}>/ 100</span>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                  <div style={{ flex: 1, minWidth: 160 }}>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: text, margin: '0 0 4px' }}>Pozisyon Uyum Puanı</p>
-                    <p style={{ fontSize: 13, color: muted, margin: 0, lineHeight: 1.6 }}>
-                      CV'nin bu iş ilanıyla ne kadar örtüştüğünü gösterir. Düşükse aşağıdaki önerilerle güçlendirebilirsin.
-                    </p>
-                  </div>
-                </div>
+                {/* Animated ATS Panel */}
+                <AtsScorePanel
+                  key="ats-panel"
+                  cvAnaliz={analysis.cvAnaliz}
+                  d={d}
+                  text={text}
+                  muted={muted}
+                />
 
                 {/* Eksik Anahtar Kelimeler */}
                 {analysis.cvAnaliz.eksikAnahtarKelimeler.length > 0 && (
@@ -377,7 +647,7 @@ export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: 
                   </div>
                 )}
 
-                {/* CTA: CV'yi Düzenle */}
+                {/* CTA */}
                 <div style={{
                   padding: '20px', borderRadius: 20,
                   background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(99,102,241,0.12))',
@@ -429,6 +699,32 @@ export function AnalysisReport({ analysis, d, saving = false, onSave, onExit }: 
               <MiniBar label="Kendini İfade Etme" score={analysis.kendiniIfadeEtme.puan} yorum={analysis.kendiniIfadeEtme.yorum} d={d} />
               <MiniBar label="Teknik Yetkinlik" score={analysis.teknikYetkinlik.puan} yorum={analysis.teknikYetkinlik.yorum} d={d} />
             </div>
+
+            {/* İngilizce Yetkinlik */}
+            {analysis.ingilizceYetkinligi && (
+              <div style={{ background: card, border: '1px solid rgba(59,130,246,0.25)', borderRadius: 20, padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                  <span style={{ fontSize: 20 }}>🇬🇧</span>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#60a5fa', margin: 0 }}>İngilizce Yetkinlik</p>
+                  <span style={{
+                    marginLeft: 'auto',
+                    fontSize: 22, fontWeight: 800,
+                    color: analysis.ingilizceYetkinligi.puan >= 7.5 ? '#22c55e' : analysis.ingilizceYetkinligi.puan >= 5 ? '#f59e0b' : '#ef4444',
+                  }}>
+                    {analysis.ingilizceYetkinligi.puan}
+                    <span style={{ fontSize: 12, fontWeight: 400, color: muted }}> / 10</span>
+                  </span>
+                </div>
+                <MiniBar label="Dilbilgisi & Sözdizimi" score={analysis.ingilizceYetkinligi.dilbilgisi} yorum="" d={d} />
+                <MiniBar label="Kelime Bilgisi" score={analysis.ingilizceYetkinligi.kelimeBilgisi} yorum="" d={d} />
+                <MiniBar label="Akıcılık" score={analysis.ingilizceYetkinligi.akicilik} yorum="" d={d} />
+                {analysis.ingilizceYetkinligi.yorum && (
+                  <p style={{ fontSize: 13, color: muted, marginTop: 10, lineHeight: 1.6, margin: '10px 0 0' }}>
+                    {analysis.ingilizceYetkinligi.yorum}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Avantajlı Noktalar */}
             {analysis.avantajliNoktalar.length > 0 && (
