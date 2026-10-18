@@ -9,13 +9,13 @@
 
 > *EN: A Turkish interview-prep platform — question bank with three practice modes, an AI mock interviewer that adapts to your CV and the job posting, CV builder with OCR, and an IT career test.*
 
-Türkçe kaynak eksikliği yüzünden adaylar mülakata İngilizce listelerden ya da dağınık forumlardan hazırlanıyor. Mülakat Soruları; yazılım, kamu, banka ve İK mülakatları için soru bankasını, yapay zeka destekli mülakat simülasyonunu ve CV araçlarını tek bir yerde topluyor. Hesap açmadan kullanılabiliyor.
+Türkçe kaynak eksikliği yüzünden adaylar mülakata İngilizce listelerden ya da dağınık forumlardan hazırlanıyor. Mülakat Soruları; yapay zeka, IT, kamu, banka ve İK mülakatları için 5.200'den fazla soruluk bir bankayı, yapay zeka destekli mülakat simülasyonunu ve CV araçlarını tek bir yerde topluyor. Hesap açmadan kullanılabiliyor.
 
 ## Modüller
 
 | Modül | Ne yapıyor |
 |---|---|
-| **Soru bankası** | 4 kategori (Yazılım, Kamu, Banka, İK), 3 antrenman modu: **Flash Card**, **Quiz**, **Yazılı Cevap**. İlerleme ve istatistik takibi. |
+| **Soru bankası** | 5.200+ soru, 5 kategori (Yapay Zeka, IT / Bilişim, Kamu, Banka, İK), 3 antrenman modu: **Flash Card**, **Quiz**, **Yazılı Cevap**. İlerleme ve istatistik takibi. |
 | **AI Mülakat Simülasyonu** | Kullanıcı CV'sini ve iş ilanını yükler, mülakat türünü seçer; AI mülakatçı CV'ye ve ilana özel 8 soruluk bir görüşme yürütür, cevaba göre **takip sorusu** sorar. Türkçe ve İngilizce, dil otomatik algılanır. |
 | **Mülakat analizi** | Görüşme sonunda her cevap puanlanır; kendini ifade etme, teknik yetkinlik, pozisyon uyumu ve ATS detayları içeren bir rapor üretilir. İngilizce mülakatta dil seviyesi ayrıca değerlendirilir. |
 | **CV Oluşturucu** | Sıfırdan ya da mevcut CV'den (PDF/Word, gerekirse **görsel OCR**) CV oluşturma, ilana göre ATS özet optimizasyonu, PDF çıktısı. |
