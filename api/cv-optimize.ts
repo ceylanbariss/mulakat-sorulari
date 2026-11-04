@@ -42,7 +42,7 @@ SES TONU VARYANTları: String dizisi olan dinamik bölümler için "_v1" ve "_v3
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
       systemInstruction: parseOnly ? PARSE_ONLY_PROMPT : CV_SYSTEM_PROMPT,
     })
 
