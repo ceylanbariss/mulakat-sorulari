@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, type GenerativeModel } from '@google/generative-ai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export const maxDuration = 30
@@ -19,6 +19,24 @@ Only remove filler phrases like 'hedefliyorum', 'amaçlamaktayım' when replacin
 Step 5: Never mention company name or program title from Input 2.
 
 Output: The edited summary only, 4-5 sentences, same language as Input 1.`
+
+// Google ucretsiz katmanda yogunlukta 503/429 donebiliyor; kisa aralikla tekrar dene.
+async function generateWithRetry(
+  model: GenerativeModel,
+  request: Parameters<GenerativeModel['generateContent']>[0],
+) {
+  const startedAt = Date.now()
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await model.generateContent(request)
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status
+      const retryable = status === 503 || status === 429
+      if (!retryable || attempt >= 3 || Date.now() - startedAt > 12000) throw err
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt))
+    }
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -51,7 +69,7 @@ Do not generalize or remove specific facts.`
       systemInstruction: SYSTEM_INSTRUCTION,
     })
 
-    const result = await model.generateContent({
+    const result = await generateWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: userText }] }],
       generationConfig: { maxOutputTokens: 512, temperature: 0.3 },
     })
