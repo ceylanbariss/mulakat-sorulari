@@ -231,7 +231,7 @@ async function callGemini(
   }
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash-lite',
+    model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
     systemInstruction,
   })
 
