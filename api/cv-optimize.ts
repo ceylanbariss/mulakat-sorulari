@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, type GenerativeModel } from '@google/generative-ai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { OptimizedCvData, CvOptimizeRequest } from '../src/types/cv.js'
 import { CV_SYSTEM_PROMPT } from '../src/lib/cvPrompt.js'
@@ -14,6 +14,24 @@ function cleanMarkdown(obj: unknown): unknown {
     )
   }
   return obj
+}
+
+// Google ucretsiz katmanda yogunlukta 503/429 donebiliyor; kisa aralikla tekrar dene.
+async function generateWithRetry(
+  model: GenerativeModel,
+  request: Parameters<GenerativeModel['generateContent']>[0],
+) {
+  const startedAt = Date.now()
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await model.generateContent(request)
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status
+      const retryable = status === 503 || status === 429
+      if (!retryable || attempt >= 3 || Date.now() - startedAt > 12000) throw err
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt))
+    }
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -56,7 +74,7 @@ SES TONU VARYANTları: String dizisi olan dinamik bölümler için "_v1" ve "_v3
     const userText = parseOnly
       ? `CV:\n${cvText.slice(0, 6000)}`
       : `${langNote}${privacyReminder}${adaptationInstruction}\n\nCV: ${cvText.slice(0, 8000)}\n\nİlan: ${(jobDescription || '').slice(0, 3000)}`
-    const result = await model.generateContent({
+    const result = await generateWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: userText }] }],
       generationConfig: {
         maxOutputTokens: 8192,
