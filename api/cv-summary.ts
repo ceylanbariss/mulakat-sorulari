@@ -47,7 +47,7 @@ Do not generalize or remove specific facts.`
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
       systemInstruction: SYSTEM_INSTRUCTION,
     })
 
